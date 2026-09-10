@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Paste these into the Firebase Console: Firestore Database → Rules.
+// Every document lives under users/{uid}/... and only that user may read
+// or write it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
