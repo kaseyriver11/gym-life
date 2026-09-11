@@ -1,5 +1,15 @@
 import clsx from 'clsx'
-import { Database, Dumbbell, Filter, Pencil, Plus, Search, TriangleAlert, X } from 'lucide-react'
+import {
+  Database,
+  Dumbbell,
+  Filter,
+  Pencil,
+  PersonStanding,
+  Plus,
+  Search,
+  TriangleAlert,
+  X,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
@@ -7,6 +17,8 @@ import type { Exercise } from '@/types'
 import { CHEST_EXERCISES } from './catalog-data/chest'
 import { seedCatalog } from './catalog-data/seed'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
+import { MuscleMapModal } from './MuscleMapModal'
+import { buildMuscleData } from './muscle-heat'
 import {
   MUSCLE_GROUPS,
   MUSCLE_SUBGROUPS,
@@ -232,6 +244,7 @@ function SearchExercisePanel({
   const [search, setSearch] = useState('')
   const [groupFilter, setGroupFilter] = useState<MuscleGroup | null>(null)
   const [equipmentFilter, setEquipmentFilter] = useState<Equipment | null>(null)
+  const [muscleMapExercise, setMuscleMapExercise] = useState<ExerciseWithSource | null>(null)
 
   const filtered = items.filter(
     (ex) =>
@@ -375,31 +388,52 @@ function SearchExercisePanel({
                       </p>
                     )}
                   </div>
-                  {exercise.source === 'catalog' ? (
-                    <span className="shrink-0 text-[11px] text-neutral-600">Read-only</span>
-                  ) : (
-                    <div className="flex shrink-0 items-center gap-3">
-                      <button
-                        onClick={() => onEdit(exercise)}
-                        className="text-neutral-500 hover:text-indigo-400"
-                        aria-label="Edit exercise"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => onRemove(exercise.id)}
-                        className="text-xs text-neutral-600 hover:text-red-400"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex shrink-0 items-center gap-3">
+                    <button
+                      onClick={() => setMuscleMapExercise(exercise)}
+                      className="text-neutral-500 hover:text-teal-400"
+                      aria-label="Muscle map"
+                      title="Which muscles this exercise hits"
+                    >
+                      <PersonStanding size={14} />
+                    </button>
+                    {exercise.source === 'catalog' ? (
+                      <span className="text-[11px] text-neutral-600">Read-only</span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => onEdit(exercise)}
+                          className="text-neutral-500 hover:text-indigo-400"
+                          aria-label="Edit exercise"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => onRemove(exercise.id)}
+                          className="text-xs text-neutral-600 hover:text-red-400"
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
         )
       })}
+
+      {muscleMapExercise && (
+        <MuscleMapModal
+          title={muscleMapExercise.name}
+          data={buildMuscleData(
+            [{ exerciseId: muscleMapExercise.id, exerciseName: muscleMapExercise.name, setCount: 1 }],
+            new Map([[muscleMapExercise.id, muscleMapExercise]]),
+          )}
+          onClose={() => setMuscleMapExercise(null)}
+        />
+      )}
     </div>
   )
 }

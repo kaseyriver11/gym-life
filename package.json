@@ -20,6 +20,7 @@
     "firebase": "^12.19.0",
     "lucide-react": "^1.44.0",
     "react": "^19.2.8",
+    "react-body-highlighter": "^2.0.5",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
     "recharts": "^3.10.1"

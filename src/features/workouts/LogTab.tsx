@@ -13,6 +13,7 @@ import {
   MoveDown,
   MoveUp,
   NotebookText,
+  PersonStanding,
   Square,
   Trash2,
   Trophy,
@@ -23,6 +24,8 @@ import { inputClass } from '@/components/form'
 import type { WorkoutExerciseEntry, WorkoutSession } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { muscleGroupStyle } from './muscle-groups'
+import { MuscleMapModal } from './MuscleMapModal'
+import { buildMuscleData } from './muscle-heat'
 import { PlateCalcModal } from './PlateCalcModal'
 import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
 import { suggestDefaultRpe, suggestSets } from './progression'
@@ -227,6 +230,7 @@ function SessionEditor({
   )
   const [calcWeight, setCalcWeight] = useState<number | null>(null)
   const [warmupWeight, setWarmupWeight] = useState<number | null>(null)
+  const [showMuscleMap, setShowMuscleMap] = useState(false)
   const exercisesById = useMemo(
     () => new Map(exercises.map((ex) => [ex.id, ex])),
     [exercises],
@@ -632,12 +636,24 @@ function SessionEditor({
         )
       })}
 
-      <button
-        onClick={() => setAddingMore(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-700 py-3 text-sm text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
-      >
-        <ListPlus size={16} /> Add another exercise
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setAddingMore(true)}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-700 py-3 text-sm text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+        >
+          <ListPlus size={16} /> Add another exercise
+        </button>
+        {entries.length > 0 && (
+          <button
+            onClick={() => setShowMuscleMap(true)}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-700 px-4 text-sm text-neutral-400 hover:border-teal-500 hover:text-teal-400"
+            aria-label="Muscle map"
+            title="Which muscles today's session hits"
+          >
+            <PersonStanding size={16} />
+          </button>
+        )}
+      </div>
 
       {addingMore && (
         <ComposeWorkoutModal
@@ -674,6 +690,21 @@ function SessionEditor({
 
       {warmupWeight != null && (
         <WarmupCalcModal initialWeight={warmupWeight} onClose={() => setWarmupWeight(null)} />
+      )}
+
+      {showMuscleMap && (
+        <MuscleMapModal
+          title="Today's muscle map"
+          data={buildMuscleData(
+            entries.map((e) => ({
+              exerciseId: e.exerciseId,
+              exerciseName: e.exerciseName,
+              setCount: e.sets.filter((s) => s.completed).length,
+            })),
+            exercisesById,
+          )}
+          onClose={() => setShowMuscleMap(false)}
+        />
       )}
     </div>
   )

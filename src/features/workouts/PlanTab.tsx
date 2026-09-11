@@ -1,10 +1,12 @@
 import { format } from 'date-fns'
-import { Pencil, Play, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Pencil, Play, Plus, PersonStanding, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { WorkoutTemplate } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
+import { buildMuscleData } from './muscle-heat'
+import { MuscleMapModal } from './MuscleMapModal'
 import { suggestSets } from './progression'
 import { useAllExercises } from './use-all-exercises'
 import { useWorkoutTemplates } from './use-workout-templates'
@@ -23,6 +25,8 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
   const { items: sessions, add: addSession } = useWorkoutSessions()
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<WorkoutTemplate | null>(null)
+  const [muscleMapTemplate, setMuscleMapTemplate] = useState<WorkoutTemplate | null>(null)
+  const exercisesById = useMemo(() => new Map(exercises.map((ex) => [ex.id, ex])), [exercises])
 
   function startTemplate(template: WorkoutTemplate) {
     const now = Date.now()
@@ -73,6 +77,14 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setMuscleMapTemplate(template)}
+                  className="text-neutral-500 hover:text-teal-400"
+                  aria-label="Muscle map"
+                  title="Which muscles this workout hits"
+                >
+                  <PersonStanding size={14} />
+                </button>
                 <button
                   onClick={() => setEditing(template)}
                   className="text-neutral-500 hover:text-indigo-400"
@@ -129,6 +141,21 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
             update(editing.id, { ...data, updatedAt: Date.now() })
             setEditing(null)
           }}
+        />
+      )}
+
+      {muscleMapTemplate && (
+        <MuscleMapModal
+          title={muscleMapTemplate.name}
+          data={buildMuscleData(
+            muscleMapTemplate.entries.map((e) => ({
+              exerciseId: e.exerciseId,
+              exerciseName: e.exerciseName,
+              setCount: e.plannedSets.length || 1,
+            })),
+            exercisesById,
+          )}
+          onClose={() => setMuscleMapTemplate(null)}
         />
       )}
     </div>
