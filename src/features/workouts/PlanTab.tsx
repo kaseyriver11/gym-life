@@ -1,11 +1,11 @@
 import { format } from 'date-fns'
-import { Pencil, Play, Plus, PersonStanding, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Play, Plus, PersonStanding, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { WorkoutTemplate } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
-import { buildMuscleData } from './muscle-heat'
+import { buildMuscleData, dominantMuscleLabel } from './muscle-heat'
 import { MuscleMapModal } from './MuscleMapModal'
 import { suggestSets } from './progression'
 import { useAllExercises } from './use-all-exercises'
@@ -19,6 +19,16 @@ function todayISO() {
   return format(new Date(), 'yyyy-MM-dd')
 }
 
+function formatPlannedSets(sets: PlannedSet[]) {
+  const hasReal = sets.some((s) => s.reps > 0 || s.weight > 0)
+  if (!hasReal) return `${sets.length} set${sets.length === 1 ? '' : 's'} · auto-suggested`
+  const allSame = sets.every((s) => s.reps === sets[0].reps && s.weight === sets[0].weight)
+  if (allSame) {
+    return `${sets.length} × ${sets[0].reps} reps${sets[0].weight ? ` @ ${sets[0].weight} lb` : ''}`
+  }
+  return sets.map((s) => `${s.reps}×${s.weight || 0}`).join(', ')
+}
+
 export function PlanTab({ onStarted }: { onStarted: () => void }) {
   const { items: templates, add, update, remove } = useWorkoutTemplates()
   const { items: exercises, add: addExercise } = useAllExercises()
@@ -26,6 +36,7 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<WorkoutTemplate | null>(null)
   const [muscleMapTemplate, setMuscleMapTemplate] = useState<WorkoutTemplate | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const exercisesById = useMemo(() => new Map(exercises.map((ex) => [ex.id, ex])), [exercises])
 
   function startTemplate(template: WorkoutTemplate) {
@@ -66,17 +77,43 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
 
       {templates.map((template) => {
         const totalSets = template.entries.reduce((sum, e) => sum + e.plannedSets.length, 0)
+        const muscleData = buildMuscleData(
+          template.entries.map((e) => ({
+            exerciseId: e.exerciseId,
+            exerciseName: e.exerciseName,
+            setCount: e.plannedSets.length || 1,
+          })),
+          exercisesById,
+        )
+        const dominant = dominantMuscleLabel(muscleData)
+        const expanded = expandedId === template.id
         return (
           <div key={template.id} className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-medium text-neutral-100">{template.name}</p>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {template.entries.length} exercise{template.entries.length === 1 ? '' : 's'} ·{' '}
-                  {totalSets} planned set{totalSets === 1 ? '' : 's'}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() => setExpandedId(expanded ? null : template.id)}
+                className="flex min-w-0 flex-1 items-start gap-1.5 text-left"
+              >
+                {expanded ? (
+                  <ChevronUp size={16} className="mt-0.5 shrink-0 text-neutral-600" />
+                ) : (
+                  <ChevronDown size={16} className="mt-0.5 shrink-0 text-neutral-600" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-100">{template.name}</p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {template.entries.length} exercise{template.entries.length === 1 ? '' : 's'} ·{' '}
+                    {totalSets} planned set{totalSets === 1 ? '' : 's'}
+                    {dominant && (
+                      <>
+                        {' '}
+                        · <span className="text-teal-400">{dominant}-dominant</span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </button>
+              <div className="flex shrink-0 items-center gap-3">
                 <button
                   onClick={() => setMuscleMapTemplate(template)}
                   className="text-neutral-500 hover:text-teal-400"
@@ -101,6 +138,23 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
                 </button>
               </div>
             </div>
+
+            {expanded && (
+              <ul className="mt-3 space-y-1.5 border-t border-neutral-800 pt-3">
+                {template.entries.map((entry) => (
+                  <li
+                    key={entry.exerciseId}
+                    className="flex items-center justify-between gap-2 text-xs"
+                  >
+                    <span className="truncate text-neutral-300">{entry.exerciseName}</span>
+                    <span className="shrink-0 text-neutral-500">
+                      {formatPlannedSets(entry.plannedSets)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <button
               onClick={() => startTemplate(template)}
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white hover:bg-indigo-500"

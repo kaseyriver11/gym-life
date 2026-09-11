@@ -1,4 +1,4 @@
-import type { IExerciseData } from 'react-body-highlighter'
+import type { IExerciseData, Muscle } from 'react-body-highlighter'
 import { slugsForExercise, type ExerciseLike } from './body-map'
 
 /** Green -> red, 8 steps. react-body-highlighter clamps to the last color
@@ -44,4 +44,49 @@ export function buildMuscleData(
     }
   }
   return data
+}
+
+const SLUG_LABELS: Record<Muscle, string> = {
+  chest: 'Chest',
+  triceps: 'Triceps',
+  biceps: 'Biceps',
+  'front-deltoids': 'Front Delts',
+  'back-deltoids': 'Rear Delts',
+  trapezius: 'Traps',
+  'upper-back': 'Upper Back',
+  'lower-back': 'Lower Back',
+  abs: 'Abs',
+  obliques: 'Obliques',
+  quadriceps: 'Quads',
+  hamstring: 'Hamstrings',
+  adductor: 'Adductors',
+  abductors: 'Abductors',
+  calves: 'Calves',
+  gluteal: 'Glutes',
+  forearm: 'Forearms',
+  head: 'Head',
+  neck: 'Neck',
+  knees: 'Knees',
+  'left-soleus': 'Calves',
+  'right-soleus': 'Calves',
+}
+
+/** The single most-worked muscle in a data set, as a friendly label —
+ * e.g. "Chest" for a bench-heavy day. Null when there's nothing logged. */
+export function dominantMuscleLabel(data: IExerciseData[]): string | null {
+  const totals = new Map<Muscle, number>()
+  for (const entry of data) {
+    for (const muscle of entry.muscles) {
+      totals.set(muscle, (totals.get(muscle) ?? 0) + (entry.frequency ?? 1))
+    }
+  }
+  let best: Muscle | null = null
+  let bestScore = 0
+  for (const [muscle, score] of totals) {
+    if (score > bestScore) {
+      best = muscle
+      bestScore = score
+    }
+  }
+  return best ? SLUG_LABELS[best] : null
 }
