@@ -23,7 +23,7 @@ function Gate() {
 
   return (
     <Routes>
-      <Route element={<AppShell title="Life" />}>
+      <Route element={<AppShell title="Gym-Life" />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/today" element={<DailyPage />} />
         <Route path="/list" element={<LongTermPage />} />

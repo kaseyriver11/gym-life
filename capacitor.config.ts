@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.kaseyriver.life',
-  appName: 'Life',
+  appName: 'Gym-Life',
   webDir: 'dist',
   server: {
     // Uncomment and point at your machine's LAN IP while developing to get
