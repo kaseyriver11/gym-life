@@ -1,77 +1,545 @@
-import { Plus } from 'lucide-react'
+import clsx from 'clsx'
+import { Dumbbell, Filter, Pencil, Plus, Search, TriangleAlert, X } from 'lucide-react'
 import { useState } from 'react'
-import { inputClass } from '@/components/form'
+import { Modal } from '@/components/Modal'
+import { inputClass, primaryButtonClass } from '@/components/form'
+import type { Exercise } from '@/types'
+import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
+import {
+  MUSCLE_GROUPS,
+  MUSCLE_SUBGROUPS,
+  muscleGroupStyle,
+  type MuscleGroup,
+} from './muscle-groups'
 import { useExercises } from './use-exercises'
 
-export function ExercisesTab() {
-  const { items, add, remove } = useExercises()
-  const [name, setName] = useState('')
-  const [muscleGroup, setMuscleGroup] = useState('')
+type Mode = 'add' | 'search'
 
-  async function handleAdd(e: React.FormEvent) {
+function tagLine(ex: { muscleGroup?: string; muscleSubgroup?: string; equipment?: string }) {
+  return [ex.muscleGroup, ex.muscleSubgroup, ex.equipment].filter(Boolean).join(' · ')
+}
+
+export function ExercisesTab() {
+  const { items, add, update, remove } = useExercises()
+  const [mode, setMode] = useState<Mode>('add')
+  const [editing, setEditing] = useState<Exercise | null>(null)
+
+  return (
+    <div className="space-y-5">
+      <div className="flex gap-1 rounded-xl bg-neutral-900 p-1">
+        <button
+          onClick={() => setMode('add')}
+          className={clsx(
+            'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-medium transition',
+            mode === 'add' ? 'bg-neutral-800 text-neutral-50' : 'text-neutral-500 hover:text-neutral-300',
+          )}
+        >
+          <Plus size={14} /> Add
+        </button>
+        <button
+          onClick={() => setMode('search')}
+          className={clsx(
+            'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-medium transition',
+            mode === 'search'
+              ? 'bg-neutral-800 text-neutral-50'
+              : 'text-neutral-500 hover:text-neutral-300',
+          )}
+        >
+          <Search size={14} /> Search
+        </button>
+      </div>
+
+      {mode === 'add' ? (
+        <AddExercisePanel items={items} add={add} onEditExisting={setEditing} />
+      ) : (
+        <SearchExercisePanel items={items} onEdit={setEditing} onRemove={remove} />
+      )}
+
+      {editing && (
+        <EditExerciseModal
+          exercise={editing}
+          onClose={() => setEditing(null)}
+          onSave={(patch) => {
+            update(editing.id, patch)
+            setEditing(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AddExercisePanel({
+  items,
+  add,
+  onEditExisting,
+}: {
+  items: Exercise[]
+  add: (data: Omit<Exercise, 'id'>) => unknown
+  onEditExisting: (exercise: Exercise) => void
+}) {
+  const [name, setName] = useState('')
+  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>(null)
+  const [muscleSubgroup, setMuscleSubgroup] = useState<string | null>(null)
+  const [equipment, setEquipment] = useState<Equipment | null>(null)
+  const [repRangeLow, setRepRangeLow] = useState('')
+  const [repRangeHigh, setRepRangeHigh] = useState('')
+
+  function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
-    await add({
+    if (!name.trim() || !muscleGroup) return
+    add({
       name: name.trim(),
-      muscleGroup: muscleGroup.trim() || undefined,
+      muscleGroup,
+      muscleSubgroup: muscleSubgroup ?? undefined,
+      equipment: equipment ?? undefined,
+      repRangeLow: repRangeLow ? Number(repRangeLow) : undefined,
+      repRangeHigh: repRangeHigh ? Number(repRangeHigh) : undefined,
       createdAt: Date.now(),
     })
     setName('')
-    setMuscleGroup('')
+    setMuscleGroup(null)
+    setMuscleSubgroup(null)
+    setEquipment(null)
+    setRepRangeLow('')
+    setRepRangeHigh('')
   }
 
-  const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name))
+  const query = name.trim().toLowerCase()
+  const potentialMatches =
+    query.length >= 2 ? items.filter((ex) => ex.name.toLowerCase().includes(query)) : []
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleAdd} className="flex gap-2">
-        <input
-          placeholder="Exercise name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+    <form
+      onSubmit={handleAdd}
+      className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-3"
+    >
+      <ExerciseFields
+        name={name}
+        onNameChange={setName}
+        muscleGroup={muscleGroup}
+        onMuscleGroupChange={(g) => {
+          setMuscleGroup(g)
+          setMuscleSubgroup(null)
+        }}
+        muscleSubgroup={muscleSubgroup}
+        onMuscleSubgroupChange={setMuscleSubgroup}
+        equipment={equipment}
+        onEquipmentChange={setEquipment}
+        repRangeLow={repRangeLow}
+        onRepRangeLowChange={setRepRangeLow}
+        repRangeHigh={repRangeHigh}
+        onRepRangeHighChange={setRepRangeHigh}
+      />
+
+      {potentialMatches.length > 0 && (
+        <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-amber-400">
+            <TriangleAlert size={12} /> Already in your library — did you mean one of these?
+          </p>
+          <ul className="space-y-1">
+            {potentialMatches.map((ex) => (
+              <li key={ex.id}>
+                <button
+                  type="button"
+                  onClick={() => onEditExisting(ex)}
+                  className="flex w-full items-center justify-between rounded-md bg-neutral-900/60 px-2 py-1.5 text-left hover:bg-neutral-900"
+                >
+                  <span className="text-sm text-neutral-200">{ex.name}</span>
+                  <span className="text-xs text-neutral-500">{tagLine(ex)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={!name.trim() || !muscleGroup}
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-40"
+      >
+        <Plus size={16} /> Add to library
+      </button>
+    </form>
+  )
+}
+
+function SearchExercisePanel({
+  items,
+  onEdit,
+  onRemove,
+}: {
+  items: Exercise[]
+  onEdit: (exercise: Exercise) => void
+  onRemove: (id: string) => void
+}) {
+  const [search, setSearch] = useState('')
+  const [groupFilter, setGroupFilter] = useState<MuscleGroup | null>(null)
+  const [equipmentFilter, setEquipmentFilter] = useState<Equipment | null>(null)
+
+  const filtered = items.filter(
+    (ex) =>
+      ex.name.toLowerCase().includes(search.trim().toLowerCase()) &&
+      (!groupFilter || ex.muscleGroup === groupFilter) &&
+      (!equipmentFilter || ex.equipment === equipmentFilter),
+  )
+  const groupsPresent = MUSCLE_GROUPS.filter((g) => items.some((ex) => ex.muscleGroup === g))
+  const equipmentPresent = EQUIPMENT_TYPES.filter((e) => items.some((ex) => ex.equipment === e))
+  const filtersActive = groupFilter || equipmentFilter || search.trim()
+  const groups = groupByMuscle(filtered)
+
+  return (
+    <div className="space-y-5">
+      {items.length > 0 && (
+        <div className="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/60 p-3">
+          <div className="relative">
+            <Search
+              size={15}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
+            />
+            <input
+              autoFocus
+              placeholder="Search exercises"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`${inputClass} pl-9`}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-400">
+              <Filter size={12} /> Filter
+            </p>
+            {filtersActive && (
+              <button
+                onClick={() => {
+                  setSearch('')
+                  setGroupFilter(null)
+                  setEquipmentFilter(null)
+                }}
+                className="flex items-center gap-0.5 text-xs text-neutral-500 hover:text-neutral-300"
+              >
+                <X size={12} /> Clear
+              </button>
+            )}
+          </div>
+          {groupsPresent.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              {groupsPresent.map((group) => (
+                <button
+                  key={group}
+                  onClick={() => setGroupFilter(groupFilter === group ? null : group)}
+                  className={clsx(
+                    'rounded-full px-3 py-1 text-xs font-medium transition',
+                    groupFilter === group
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+                  )}
+                >
+                  {group}
+                </button>
+              ))}
+            </div>
+          )}
+          {equipmentPresent.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              {equipmentPresent.map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setEquipmentFilter(equipmentFilter === item ? null : item)}
+                  className={clsx(
+                    'rounded-full px-3 py-1 text-xs font-medium transition',
+                    equipmentFilter === item
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+                  )}
+                >
+                  {EQUIPMENT_ICONS[item]} {item}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {items.length === 0 && (
+        <p className="py-6 text-center text-sm text-neutral-500">
+          No exercises yet — switch to Add to build your library.
+        </p>
+      )}
+
+      {items.length > 0 && filtered.length === 0 && (
+        <p className="py-6 text-center text-sm text-neutral-500">
+          No exercises match that search.
+        </p>
+      )}
+
+      {groups.map(([group, exercises]) => {
+        const style = muscleGroupStyle(group)
+        return (
+          <div key={group}>
+            <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              <span className={clsx('h-2 w-2 rounded-full', style.dot)} />
+              {group} <span className="text-neutral-700">· {exercises.length}</span>
+            </h3>
+            <ul className="space-y-2">
+              {exercises.map((exercise) => (
+                <li
+                  key={exercise.id}
+                  className={clsx(
+                    'flex items-center justify-between rounded-xl border-y border-r border-l-4 border-y-neutral-800 border-r-neutral-800 bg-neutral-900 p-3',
+                    style.border,
+                  )}
+                >
+                  <div>
+                    <p className="text-sm text-neutral-100">{exercise.name}</p>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      {exercise.muscleSubgroup && (
+                        <span className="text-xs text-neutral-500">{exercise.muscleSubgroup}</span>
+                      )}
+                      {exercise.equipment && (
+                        <span className="flex items-center gap-1 text-xs text-neutral-500">
+                          <Dumbbell size={11} /> {EQUIPMENT_ICONS[exercise.equipment as Equipment]}{' '}
+                          {exercise.equipment}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => onEdit(exercise)}
+                      className="text-neutral-500 hover:text-indigo-400"
+                      aria-label="Edit exercise"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => onRemove(exercise.id)}
+                      className="text-xs text-neutral-600 hover:text-red-400"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function ExerciseFields({
+  name,
+  onNameChange,
+  muscleGroup,
+  onMuscleGroupChange,
+  muscleSubgroup,
+  onMuscleSubgroupChange,
+  equipment,
+  onEquipmentChange,
+  repRangeLow,
+  onRepRangeLowChange,
+  repRangeHigh,
+  onRepRangeHighChange,
+}: {
+  name: string
+  onNameChange: (value: string) => void
+  muscleGroup: MuscleGroup | null
+  onMuscleGroupChange: (value: MuscleGroup) => void
+  muscleSubgroup: string | null
+  onMuscleSubgroupChange: (value: string | null) => void
+  equipment: Equipment | null
+  onEquipmentChange: (value: Equipment | null) => void
+  repRangeLow: string
+  onRepRangeLowChange: (value: string) => void
+  repRangeHigh: string
+  onRepRangeHighChange: (value: string) => void
+}) {
+  const subOptions = muscleGroup ? MUSCLE_SUBGROUPS[muscleGroup] : undefined
+
+  return (
+    <>
+      <input
+        autoFocus
+        placeholder="Exercise name, e.g. Bench Press"
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        className={inputClass}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="mb-1 block text-xs text-neutral-500">Muscle group</label>
+          <select
+            value={muscleGroup ?? ''}
+            onChange={(e) => onMuscleGroupChange(e.target.value as MuscleGroup)}
+            className={inputClass}
+          >
+            <option value="" disabled>
+              Select…
+            </option>
+            {MUSCLE_GROUPS.map((group) => (
+              <option key={group} value={group}>
+                {group}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-neutral-500">Specific area</label>
+          <select
+            value={muscleSubgroup ?? ''}
+            onChange={(e) => onMuscleSubgroupChange(e.target.value || null)}
+            disabled={!subOptions}
+            className={clsx(inputClass, !subOptions && 'opacity-40')}
+          >
+            <option value="">{subOptions ? 'Any' : '—'}</option>
+            {subOptions?.map((sub) => (
+              <option key={sub} value={sub}>
+                {sub}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-neutral-500">Equipment</label>
+        <select
+          value={equipment ?? ''}
+          onChange={(e) => onEquipmentChange((e.target.value || null) as Equipment | null)}
           className={inputClass}
-        />
-        <input
-          placeholder="Muscle group"
-          value={muscleGroup}
-          onChange={(e) => setMuscleGroup(e.target.value)}
-          className={`${inputClass} max-w-32`}
+        >
+          <option value="">No equipment specified</option>
+          {EQUIPMENT_TYPES.map((item) => (
+            <option key={item} value={item}>
+              {EQUIPMENT_ICONS[item]} {item}
+            </option>
+          ))}
+        </select>
+        {equipment && (
+          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-medium text-teal-300">
+            {EQUIPMENT_ICONS[equipment]} {equipment}
+          </span>
+        )}
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-neutral-500">
+          Target rep range <span className="text-neutral-700">(optional, defaults to 8-12)</span>
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            placeholder="8"
+            value={repRangeLow}
+            onChange={(e) => onRepRangeLowChange(e.target.value)}
+            className={`${inputClass} py-1.5 text-center`}
+          />
+          <span className="text-neutral-600">–</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            placeholder="12"
+            value={repRangeHigh}
+            onChange={(e) => onRepRangeHighChange(e.target.value)}
+            className={`${inputClass} py-1.5 text-center`}
+          />
+        </div>
+      </div>
+    </>
+  )
+}
+
+function EditExerciseModal({
+  exercise,
+  onClose,
+  onSave,
+}: {
+  exercise: Exercise
+  onClose: () => void
+  onSave: (patch: {
+    name: string
+    muscleGroup: MuscleGroup
+    muscleSubgroup?: string
+    equipment?: Equipment
+    repRangeLow?: number
+    repRangeHigh?: number
+  }) => void
+}) {
+  const [name, setName] = useState(exercise.name)
+  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>(
+    (exercise.muscleGroup as MuscleGroup) ?? null,
+  )
+  const [muscleSubgroup, setMuscleSubgroup] = useState<string | null>(
+    exercise.muscleSubgroup ?? null,
+  )
+  const [equipment, setEquipment] = useState<Equipment | null>(
+    (exercise.equipment as Equipment) ?? null,
+  )
+  const [repRangeLow, setRepRangeLow] = useState(exercise.repRangeLow?.toString() ?? '')
+  const [repRangeHigh, setRepRangeHigh] = useState(exercise.repRangeHigh?.toString() ?? '')
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim() || !muscleGroup) return
+    onSave({
+      name: name.trim(),
+      muscleGroup,
+      muscleSubgroup: muscleSubgroup ?? undefined,
+      equipment: equipment ?? undefined,
+      repRangeLow: repRangeLow ? Number(repRangeLow) : undefined,
+      repRangeHigh: repRangeHigh ? Number(repRangeHigh) : undefined,
+    })
+  }
+
+  return (
+    <Modal title="Edit exercise" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <ExerciseFields
+          name={name}
+          onNameChange={setName}
+          muscleGroup={muscleGroup}
+          onMuscleGroupChange={(g) => {
+            setMuscleGroup(g)
+            setMuscleSubgroup(null)
+          }}
+          muscleSubgroup={muscleSubgroup}
+          onMuscleSubgroupChange={setMuscleSubgroup}
+          equipment={equipment}
+          onEquipmentChange={setEquipment}
+          repRangeLow={repRangeLow}
+          onRepRangeLowChange={setRepRangeLow}
+          repRangeHigh={repRangeHigh}
+          onRepRangeHighChange={setRepRangeHigh}
         />
         <button
           type="submit"
-          className="shrink-0 rounded-lg bg-indigo-600 px-3 text-white hover:bg-indigo-500"
-          aria-label="Add exercise"
+          disabled={!name.trim() || !muscleGroup}
+          className={`${primaryButtonClass} disabled:opacity-40`}
         >
-          <Plus size={18} />
+          Save changes
         </button>
       </form>
+    </Modal>
+  )
+}
 
-      <ul className="space-y-2">
-        {sorted.map((exercise) => (
-          <li
-            key={exercise.id}
-            className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900 p-3"
-          >
-            <div>
-              <p className="text-sm text-neutral-100">{exercise.name}</p>
-              {exercise.muscleGroup && (
-                <p className="text-xs text-neutral-500">{exercise.muscleGroup}</p>
-              )}
-            </div>
-            <button
-              onClick={() => remove(exercise.id)}
-              className="text-xs text-neutral-600 hover:text-red-400"
-            >
-              Remove
-            </button>
-          </li>
-        ))}
-        {sorted.length === 0 && (
-          <p className="py-6 text-center text-sm text-neutral-500">
-            No exercises yet — add the ones you train regularly.
-          </p>
-        )}
-      </ul>
-    </div>
+function groupByMuscle<T extends { name: string; muscleGroup?: string }>(items: T[]) {
+  const buckets = new Map<string, T[]>()
+  for (const item of items) {
+    const key = item.muscleGroup || 'Other'
+    const bucket = buckets.get(key)
+    if (bucket) bucket.push(item)
+    else buckets.set(key, [item])
+  }
+  for (const bucket of buckets.values()) {
+    bucket.sort((a, b) => a.name.localeCompare(b.name))
+  }
+  const order = [...MUSCLE_GROUPS, 'Other']
+  return [...buckets.entries()].sort(
+    (a, b) => order.indexOf(a[0]) - order.indexOf(b[0]),
   )
 }

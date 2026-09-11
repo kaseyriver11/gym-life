@@ -1,4 +1,5 @@
-import { format, parseISO } from 'date-fns'
+import clsx from 'clsx'
+import { format, parseISO, subDays } from 'date-fns'
 import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -10,8 +11,63 @@ import {
   YAxis,
 } from 'recharts'
 import { inputClass } from '@/components/form'
+import type { WorkoutSession } from '@/types'
+import { muscleGroupStyle } from './muscle-groups'
 import { useExercises } from './use-exercises'
 import { useWorkoutSessions } from './use-workout-sessions'
+
+function WeeklyVolumeSection({
+  sessions,
+  exercises,
+}: {
+  sessions: WorkoutSession[]
+  exercises: { id: string; muscleGroup?: string }[]
+}) {
+  const data = useMemo(() => {
+    const groupByExercise = new Map(exercises.map((ex) => [ex.id, ex.muscleGroup]))
+    const cutoff = format(subDays(new Date(), 6), 'yyyy-MM-dd')
+    const counts = new Map<string, number>()
+    for (const session of sessions) {
+      if (session.date < cutoff) continue
+      for (const entry of session.entries) {
+        const group = groupByExercise.get(entry.exerciseId) ?? 'Other'
+        const completedSets = entry.sets.filter((s) => s.completed).length
+        if (completedSets === 0) continue
+        counts.set(group, (counts.get(group) ?? 0) + completedSets)
+      }
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])
+  }, [sessions, exercises])
+
+  const max = Math.max(1, ...data.map(([, count]) => count))
+
+  return (
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+      <p className="mb-3 text-xs font-medium text-neutral-400">Sets by muscle group — last 7 days</p>
+      {data.length === 0 ? (
+        <p className="py-4 text-center text-sm text-neutral-500">No sets logged this week yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {data.map(([group, count]) => {
+            const style = muscleGroupStyle(group)
+            return (
+              <div key={group} className="flex items-center gap-2">
+                <span className="w-20 shrink-0 truncate text-xs text-neutral-400">{group}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-800">
+                  <div
+                    className={clsx('h-full rounded-full', style.dot)}
+                    style={{ width: `${(count / max) * 100}%` }}
+                  />
+                </div>
+                <span className="w-6 shrink-0 text-right text-xs text-neutral-500">{count}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function ProgressTab() {
   const { items: exercises } = useExercises()
@@ -34,6 +90,8 @@ export function ProgressTab() {
 
   return (
     <div className="space-y-4">
+      <WeeklyVolumeSection sessions={sessions} exercises={exercises} />
+
       <select
         value={exerciseId}
         onChange={(e) => setExerciseId(e.target.value)}

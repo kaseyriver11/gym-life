@@ -47,3 +47,46 @@ export async function scheduleTaskReminder(params: {
 export async function cancelTaskReminder(taskId: string) {
   await LocalNotifications.cancel({ notifications: [{ id: idFromString(taskId) }] })
 }
+
+/** Capacitor weekday: 1=Sun..7=Sat. Our weekday: 0=Sun..6=Sat. */
+function toCapacitorWeekday(weekday: number) {
+  return weekday + 1
+}
+
+function recurringId(taskId: string, weekday: number) {
+  // Offset so a task's 7 possible weekday notifications never collide with
+  // each other or with its one-time-task id.
+  return (idFromString(taskId) % 2000000000) * 10 + weekday
+}
+
+export async function scheduleRecurringReminder(params: {
+  taskId: string
+  title: string
+  body?: string
+  repeatDays: number[]
+  /** "HH:mm" */
+  time: string
+}) {
+  const { taskId, title, body, repeatDays, time } = params
+  const [hours, minutes] = time.split(':').map(Number)
+
+  await LocalNotifications.schedule({
+    notifications: repeatDays.map((weekday) => ({
+      id: recurringId(taskId, weekday),
+      title,
+      body: body ?? 'Due today',
+      schedule: {
+        on: { weekday: toCapacitorWeekday(weekday), hour: hours, minute: minutes },
+        allowWhileIdle: true,
+      },
+    })),
+  })
+}
+
+export async function cancelRecurringReminder(taskId: string) {
+  await LocalNotifications.cancel({
+    notifications: Array.from({ length: 7 }, (_, weekday) => ({
+      id: recurringId(taskId, weekday),
+    })),
+  })
+}

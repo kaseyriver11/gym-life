@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { Smartphone } from 'lucide-react'
+import { Droplet, Smartphone } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -49,6 +49,15 @@ export function HealthPage() {
     }
   }
 
+  async function addWater(ounces: number) {
+    const next = Math.max(0, (todaySnapshot?.waterOz ?? 0) + ounces)
+    if (todaySnapshot) {
+      await update(todaySnapshot.id, { waterOz: next })
+    } else {
+      await add({ date: today, waterOz: next, source: 'manual' })
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-dashed border-neutral-700 bg-neutral-900/50 p-3">
@@ -61,6 +70,26 @@ export function HealthPage() {
           plugin, tested on your phone. Log manually below for now; we'll wire this up once
           the app is running on your device.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3">
+        <div className="flex items-center justify-between">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-sky-300">
+            <Droplet size={15} /> Water
+          </p>
+          <p className="text-sm text-neutral-300">{todaySnapshot?.waterOz ?? 0} oz today</p>
+        </div>
+        <div className="mt-2 flex gap-1.5">
+          {[8, 16, 32].map((oz) => (
+            <button
+              key={oz}
+              onClick={() => addWater(oz)}
+              className="flex-1 rounded-lg bg-sky-500/20 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/30"
+            >
+              +{oz} oz
+            </button>
+          ))}
+        </div>
       </div>
 
       <form onSubmit={saveToday} className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-3">

@@ -1,16 +1,12 @@
 import { useUserCollection } from '@/lib/use-collection'
-import type { LongTermTask } from '@/types'
+import type { LongTermTask, TaskListDef } from '@/types'
 
 export function useLongTermTasks() {
   return useUserCollection<Omit<LongTermTask, 'id'>>('longTermTasks')
 }
 
-export const CATEGORY_LABELS: Record<LongTermTask['category'], string> = {
-  home: 'Home',
-  errands: 'Errands',
-  projects: 'Projects',
-  shopping: 'Shopping',
-  other: 'Other',
+export function useTaskLists() {
+  return useUserCollection<Omit<TaskListDef, 'id'>>('taskLists')
 }
 
 export const PRIORITY_ORDER: Record<LongTermTask['priority'], number> = {
