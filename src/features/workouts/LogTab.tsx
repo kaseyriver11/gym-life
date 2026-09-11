@@ -27,7 +27,7 @@ import { PlateCalcModal } from './PlateCalcModal'
 import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
 import { suggestDefaultRpe, suggestSets } from './progression'
 import { RestTimerBar } from './RestTimerBar'
-import { useExercises } from './use-exercises'
+import { useAllExercises } from './use-all-exercises'
 import { formatTime, useRestTimer, type RestTimer } from './use-rest-timer'
 import { useWorkoutSessions } from './use-workout-sessions'
 import { WarmupCalcModal } from './WarmupCalcModal'
@@ -53,7 +53,7 @@ function plural(count: number, word: string) {
 export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
   const [date, setDate] = useState(todayISO())
   const { items: sessions, add, update } = useWorkoutSessions()
-  const { items: exercises, add: addExercise } = useExercises()
+  const { items: exercises, add: addExercise } = useAllExercises()
   const session = sessions.find((s) => s.date === date)
   const [composing, setComposing] = useState(false)
   const [quickLogging, setQuickLogging] = useState(false)

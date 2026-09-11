@@ -1,9 +1,11 @@
 import clsx from 'clsx'
-import { Dumbbell, Filter, Pencil, Plus, Search, TriangleAlert, X } from 'lucide-react'
+import { Database, Dumbbell, Filter, Pencil, Plus, Search, TriangleAlert, X } from 'lucide-react'
 import { useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { Exercise } from '@/types'
+import { CHEST_EXERCISES } from './catalog-data/chest'
+import { seedCatalog } from './catalog-data/seed'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
 import {
   MUSCLE_GROUPS,
@@ -11,7 +13,7 @@ import {
   muscleGroupStyle,
   type MuscleGroup,
 } from './muscle-groups'
-import { useExercises } from './use-exercises'
+import { useAllExercises, type ExerciseWithSource } from './use-all-exercises'
 
 type Mode = 'add' | 'search'
 
@@ -19,13 +21,51 @@ function tagLine(ex: { muscleGroup?: string; muscleSubgroup?: string; equipment?
   return [ex.muscleGroup, ex.muscleSubgroup, ex.equipment].filter(Boolean).join(' · ')
 }
 
+/** Dev-only tool for seeding the shared catalog — invisible in production
+ * builds. Reusable for future muscle groups by adding more batches here. */
+function CatalogSeedTool() {
+  const [status, setStatus] = useState<string | null>(null)
+  const batches: { label: string; data: Omit<Exercise, 'id'>[] }[] = [
+    { label: 'Chest', data: CHEST_EXERCISES },
+  ]
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-2 text-xs">
+      <Database size={12} className="shrink-0 text-amber-400" />
+      {batches.map((batch) => (
+        <button
+          key={batch.label}
+          type="button"
+          onClick={async () => {
+            setStatus(`Seeding ${batch.label}…`)
+            try {
+              const count = await seedCatalog(batch.data)
+              setStatus(`Seeded ${count} ${batch.label} exercises`)
+            } catch (err) {
+              setStatus(
+                `Failed: ${err instanceof Error ? err.message : String(err)} — check Firestore rules allow writes to exerciseCatalog.`,
+              )
+            }
+          }}
+          className="rounded-full bg-amber-500/20 px-2 py-1 font-medium text-amber-300 hover:bg-amber-500/30"
+        >
+          Seed {batch.label} ({batch.data.length})
+        </button>
+      ))}
+      {status && <span className="text-neutral-500">{status}</span>}
+    </div>
+  )
+}
+
 export function ExercisesTab() {
-  const { items, add, update, remove } = useExercises()
+  const { items, add, update, remove } = useAllExercises()
   const [mode, setMode] = useState<Mode>('add')
   const [editing, setEditing] = useState<Exercise | null>(null)
 
   return (
     <div className="space-y-5">
+      {import.meta.env.DEV && <CatalogSeedTool />}
+
       <div className="flex gap-1 rounded-xl bg-neutral-900 p-1">
         <button
           onClick={() => setMode('add')}
@@ -74,7 +114,7 @@ function AddExercisePanel({
   add,
   onEditExisting,
 }: {
-  items: Exercise[]
+  items: ExerciseWithSource[]
   add: (data: Omit<Exercise, 'id'>) => unknown
   onEditExisting: (exercise: Exercise) => void
 }) {
@@ -138,18 +178,33 @@ function AddExercisePanel({
             <TriangleAlert size={12} /> Already in your library — did you mean one of these?
           </p>
           <ul className="space-y-1">
-            {potentialMatches.map((ex) => (
-              <li key={ex.id}>
-                <button
-                  type="button"
-                  onClick={() => onEditExisting(ex)}
-                  className="flex w-full items-center justify-between rounded-md bg-neutral-900/60 px-2 py-1.5 text-left hover:bg-neutral-900"
+            {potentialMatches.map((ex) =>
+              ex.source === 'catalog' ? (
+                <li
+                  key={ex.id}
+                  className="flex items-center justify-between rounded-md bg-neutral-900/60 px-2 py-1.5"
                 >
-                  <span className="text-sm text-neutral-200">{ex.name}</span>
+                  <span className="flex items-center gap-1.5 text-sm text-neutral-200">
+                    {ex.name}
+                    <span className="rounded-full bg-teal-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-teal-300">
+                      Catalog
+                    </span>
+                  </span>
                   <span className="text-xs text-neutral-500">{tagLine(ex)}</span>
-                </button>
-              </li>
-            ))}
+                </li>
+              ) : (
+                <li key={ex.id}>
+                  <button
+                    type="button"
+                    onClick={() => onEditExisting(ex)}
+                    className="flex w-full items-center justify-between rounded-md bg-neutral-900/60 px-2 py-1.5 text-left hover:bg-neutral-900"
+                  >
+                    <span className="text-sm text-neutral-200">{ex.name}</span>
+                    <span className="text-xs text-neutral-500">{tagLine(ex)}</span>
+                  </button>
+                </li>
+              ),
+            )}
           </ul>
         </div>
       )}
@@ -170,7 +225,7 @@ function SearchExercisePanel({
   onEdit,
   onRemove,
 }: {
-  items: Exercise[]
+  items: ExerciseWithSource[]
   onEdit: (exercise: Exercise) => void
   onRemove: (id: string) => void
 }) {
@@ -291,8 +346,15 @@ function SearchExercisePanel({
                     style.border,
                   )}
                 >
-                  <div>
-                    <p className="text-sm text-neutral-100">{exercise.name}</p>
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-sm text-neutral-100">
+                      {exercise.name}
+                      {exercise.source === 'catalog' && (
+                        <span className="shrink-0 rounded-full bg-teal-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-teal-300">
+                          Catalog
+                        </span>
+                      )}
+                    </p>
                     <div className="mt-0.5 flex items-center gap-2">
                       {exercise.muscleSubgroup && (
                         <span className="text-xs text-neutral-500">{exercise.muscleSubgroup}</span>
@@ -304,22 +366,34 @@ function SearchExercisePanel({
                         </span>
                       )}
                     </div>
+                    {exercise.targetMuscles && exercise.targetMuscles.length > 0 && (
+                      <p className="mt-0.5 truncate text-[11px] text-neutral-600">
+                        {exercise.targetMuscles
+                          .filter((t) => t.role === 'primary')
+                          .map((t) => t.muscle)
+                          .join(', ')}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => onEdit(exercise)}
-                      className="text-neutral-500 hover:text-indigo-400"
-                      aria-label="Edit exercise"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={() => onRemove(exercise.id)}
-                      className="text-xs text-neutral-600 hover:text-red-400"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  {exercise.source === 'catalog' ? (
+                    <span className="shrink-0 text-[11px] text-neutral-600">Read-only</span>
+                  ) : (
+                    <div className="flex shrink-0 items-center gap-3">
+                      <button
+                        onClick={() => onEdit(exercise)}
+                        className="text-neutral-500 hover:text-indigo-400"
+                        aria-label="Edit exercise"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => onRemove(exercise.id)}
+                        className="text-xs text-neutral-600 hover:text-red-400"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

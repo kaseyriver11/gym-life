@@ -13,6 +13,13 @@ interface ExerciseOption {
   equipment?: string
   repRangeLow?: number
   repRangeHigh?: number
+  targetMuscles?: { muscle: string; role: 'primary' | 'secondary' | 'stabilizer' }[]
+  source?: 'catalog' | 'custom'
+}
+
+function primaryMuscleLine(ex: ExerciseOption) {
+  const primaries = ex.targetMuscles?.filter((t) => t.role === 'primary').map((t) => t.muscle)
+  return primaries && primaries.length > 0 ? primaries.join(', ') : null
 }
 
 export function ComposeWorkoutModal({
@@ -165,10 +172,22 @@ export function ComposeWorkoutModal({
                       {checked && '✓'}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm text-neutral-100">{ex.name}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="block truncate text-sm text-neutral-100">{ex.name}</span>
+                        {ex.source === 'catalog' && (
+                          <span className="shrink-0 rounded-full bg-teal-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-teal-300">
+                            Catalog
+                          </span>
+                        )}
+                      </span>
                       {(ex.muscleGroup || ex.equipment) && (
-                        <span className="text-xs text-neutral-500">
+                        <span className="block text-xs text-neutral-500">
                           {[ex.muscleGroup, ex.equipment].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                      {primaryMuscleLine(ex) && (
+                        <span className="block truncate text-[11px] text-neutral-600">
+                          {primaryMuscleLine(ex)}
                         </span>
                       )}
                     </span>

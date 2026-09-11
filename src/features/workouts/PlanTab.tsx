@@ -6,7 +6,7 @@ import { inputClass, primaryButtonClass } from '@/components/form'
 import type { WorkoutTemplate } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { suggestSets } from './progression'
-import { useExercises } from './use-exercises'
+import { useAllExercises } from './use-all-exercises'
 import { useWorkoutTemplates } from './use-workout-templates'
 import { useWorkoutSessions } from './use-workout-sessions'
 
@@ -19,7 +19,7 @@ function todayISO() {
 
 export function PlanTab({ onStarted }: { onStarted: () => void }) {
   const { items: templates, add, update, remove } = useWorkoutTemplates()
-  const { items: exercises, add: addExercise } = useExercises()
+  const { items: exercises, add: addExercise } = useAllExercises()
   const { items: sessions, add: addSession } = useWorkoutSessions()
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<WorkoutTemplate | null>(null)

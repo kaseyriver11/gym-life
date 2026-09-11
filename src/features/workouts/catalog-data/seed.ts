@@ -1,0 +1,25 @@
+import { doc, writeBatch } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import type { Exercise } from '@/types'
+
+function slugify(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+/**
+ * Writes catalog exercises with deterministic ids (slug of the name), so
+ * re-running this is safe — it overwrites the same docs rather than
+ * creating duplicates.
+ */
+export async function seedCatalog(exercises: Omit<Exercise, 'id'>[]) {
+  const batch = writeBatch(db)
+  for (const exercise of exercises) {
+    const id = slugify(exercise.name)
+    batch.set(doc(db, 'exerciseCatalog', id), exercise)
+  }
+  await batch.commit()
+  return exercises.length
+}

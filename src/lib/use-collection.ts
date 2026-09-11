@@ -78,5 +78,42 @@ export function useUserCollection<T extends object>(
   return { items, loading, add, update, remove }
 }
 
+/**
+ * Subscribes to a top-level collection (not scoped under a user) in real
+ * time — for shared, read-only data like the exercise catalog. Still
+ * requires being signed in, matching rules of the form
+ * `allow read: if request.auth != null`.
+ */
+export function useCollectionAt<T extends object>(
+  path: string,
+  constraints: QueryConstraint[] = [],
+) {
+  const { user } = useAuth()
+  const [items, setItems] = useState<(T & { id: string })[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user) {
+      setItems([])
+      setLoading(false)
+      return
+    }
+    const ref = collection(db, path)
+    const q = query(ref, ...constraints)
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setItems(snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as T) })))
+        setLoading(false)
+      },
+      (err) => console.error('[useCollectionAt] error on', path, err),
+    )
+    return unsubscribe
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, path])
+
+  return { items, loading }
+}
+
 export { orderBy, where }
 export type { QueryConstraint }

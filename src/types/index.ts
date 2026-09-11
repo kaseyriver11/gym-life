@@ -68,6 +68,11 @@ export interface LongTermTask {
   updatedAt: number
 }
 
+export interface MuscleTarget {
+  muscle: string
+  role: 'primary' | 'secondary' | 'stabilizer'
+}
+
 export interface Exercise {
   id: ID
   name: string
@@ -79,6 +84,10 @@ export interface Exercise {
    * in code (progression.ts) when unset, so this is never required input. */
   repRangeLow?: number
   repRangeHigh?: number
+  /** Detailed muscle breakdown (research-backed catalog entries only) —
+   * more precise than muscleGroup/muscleSubgroup, e.g. distinguishing the
+   * clavicular vs sternocostal pec head rather than just "Chest". */
+  targetMuscles?: MuscleTarget[]
   createdAt: number
 }
 
