@@ -115,6 +115,9 @@ export interface Exercise {
 export interface WorkoutSet {
   reps: number
   weight: number
+  /** Set when logging a unilateral exercise (single-arm row, split squat,
+   * etc.) per side instead of as one bilateral set. Absent = bilateral. */
+  side?: 'left' | 'right'
   /** Seconds held/performed — for timed exercises like planks. */
   durationSeconds?: number
   /** true once the set has actually been performed (vs. planned) */

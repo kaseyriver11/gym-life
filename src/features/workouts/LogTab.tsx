@@ -427,6 +427,24 @@ function SessionEditor({
     commit(next)
   }
 
+  /** For unilateral exercises — adds a left/right pair instead of one
+   * bilateral set, so each side is logged and progressed independently. */
+  function addSetPair(entryIndex: number) {
+    const next = entries.map((entry, i) =>
+      i === entryIndex
+        ? {
+            ...entry,
+            sets: [
+              ...entry.sets,
+              { reps: 0, weight: 0, completed: false, side: 'left' as const },
+              { reps: 0, weight: 0, completed: false, side: 'right' as const },
+            ],
+          }
+        : entry,
+    )
+    commit(next)
+  }
+
   function updateSet(
     entryIndex: number,
     setIndex: number,
@@ -571,7 +589,15 @@ function SessionEditor({
           <div className="space-y-1.5">
             {entry.sets.map((set, setIndex) => (
               <div key={setIndex} className="flex items-center gap-2">
-                <span className="w-4 text-xs text-neutral-500">{setIndex + 1}</span>
+                <span
+                  className={clsx(
+                    'w-4 text-xs',
+                    set.side ? 'font-semibold text-teal-400' : 'text-neutral-500',
+                  )}
+                  title={set.side === 'left' ? 'Left side' : set.side === 'right' ? 'Right side' : undefined}
+                >
+                  {set.side ? (set.side === 'left' ? 'L' : 'R') : setIndex + 1}
+                </span>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -743,9 +769,18 @@ function SessionEditor({
             ))}
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <button onClick={() => addSet(entryIndex)} className="text-xs text-indigo-400 hover:underline">
-              + Add set
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => addSet(entryIndex)} className="text-xs text-indigo-400 hover:underline">
+                + Add set
+              </button>
+              <button
+                onClick={() => addSetPair(entryIndex)}
+                className="text-xs text-teal-400 hover:underline"
+                title="Add a left + right pair for a unilateral exercise"
+              >
+                + Add L/R
+              </button>
+            </div>
             {entryIndex < entries.length - 1 &&
               !(
                 entry.supersetGroup != null &&
