@@ -71,6 +71,11 @@ const SLUG_LABELS: Record<Muscle, string> = {
   'right-soleus': 'Calves',
 }
 
+/** Friendly display name for a muscle slug, e.g. "chest" -> "Chest". */
+export function muscleLabel(muscle: Muscle): string {
+  return SLUG_LABELS[muscle] ?? muscle
+}
+
 /** The single most-worked muscle in a data set, as a friendly label —
  * e.g. "Chest" for a bench-heavy day. Null when there's nothing logged. */
 export function dominantMuscleLabel(data: IExerciseData[]): string | null {
@@ -88,5 +93,5 @@ export function dominantMuscleLabel(data: IExerciseData[]): string | null {
       bestScore = score
     }
   }
-  return best ? SLUG_LABELS[best] : null
+  return best ? muscleLabel(best) : null
 }

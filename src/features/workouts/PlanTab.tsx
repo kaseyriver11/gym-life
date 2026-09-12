@@ -1,12 +1,12 @@
 import { format } from 'date-fns'
-import { ChevronDown, ChevronUp, Pencil, Play, Plus, PersonStanding, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { WorkoutTemplate } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { buildMuscleData, dominantMuscleLabel } from './muscle-heat'
-import { MuscleMapModal } from './MuscleMapModal'
+import { MuscleMapView } from './MuscleMapView'
 import { suggestSets } from './progression'
 import { useAllExercises } from './use-all-exercises'
 import { useWorkoutTemplates } from './use-workout-templates'
@@ -35,7 +35,6 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
   const { items: sessions, add: addSession } = useWorkoutSessions()
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<WorkoutTemplate | null>(null)
-  const [muscleMapTemplate, setMuscleMapTemplate] = useState<WorkoutTemplate | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const exercisesById = useMemo(() => new Map(exercises.map((ex) => [ex.id, ex])), [exercises])
 
@@ -115,14 +114,6 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
               </button>
               <div className="flex shrink-0 items-center gap-3">
                 <button
-                  onClick={() => setMuscleMapTemplate(template)}
-                  className="text-neutral-500 hover:text-teal-400"
-                  aria-label="Muscle map"
-                  title="Which muscles this workout hits"
-                >
-                  <PersonStanding size={14} />
-                </button>
-                <button
                   onClick={() => setEditing(template)}
                   className="text-neutral-500 hover:text-indigo-400"
                   aria-label="Edit plan"
@@ -140,19 +131,22 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
             </div>
 
             {expanded && (
-              <ul className="mt-3 space-y-1.5 border-t border-neutral-800 pt-3">
-                {template.entries.map((entry) => (
-                  <li
-                    key={entry.exerciseId}
-                    className="flex items-center justify-between gap-2 text-xs"
-                  >
-                    <span className="truncate text-neutral-300">{entry.exerciseName}</span>
-                    <span className="shrink-0 text-neutral-500">
-                      {formatPlannedSets(entry.plannedSets)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-3 border-t border-neutral-800 pt-3">
+                <MuscleMapView data={muscleData} size="6.5rem" />
+                <ul className="mt-3 space-y-1.5">
+                  {template.entries.map((entry) => (
+                    <li
+                      key={entry.exerciseId}
+                      className="flex items-center justify-between gap-2 text-xs"
+                    >
+                      <span className="truncate text-neutral-300">{entry.exerciseName}</span>
+                      <span className="shrink-0 text-neutral-500">
+                        {formatPlannedSets(entry.plannedSets)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             <button
@@ -198,20 +192,6 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
         />
       )}
 
-      {muscleMapTemplate && (
-        <MuscleMapModal
-          title={muscleMapTemplate.name}
-          data={buildMuscleData(
-            muscleMapTemplate.entries.map((e) => ({
-              exerciseId: e.exerciseId,
-              exerciseName: e.exerciseName,
-              setCount: e.plannedSets.length || 1,
-            })),
-            exercisesById,
-          )}
-          onClose={() => setMuscleMapTemplate(null)}
-        />
-      )}
     </div>
   )
 }
