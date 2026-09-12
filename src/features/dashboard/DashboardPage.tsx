@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { addDays, format } from 'date-fns'
-import { CalendarCheck, Droplet, Footprints, Plus, SlidersHorizontal } from 'lucide-react'
+import { CalendarCheck, Droplet, Dumbbell, Footprints, Plus, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CircularProgress } from '@/components/CircularProgress'
@@ -47,6 +47,8 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      <ActiveWorkoutBanner />
+
       <div className="flex items-start justify-between">
         <GreetingHeader />
         <button
@@ -135,6 +137,38 @@ export function DashboardPage() {
         />
       )}
     </div>
+  )
+}
+
+/** The app always cold-starts on the Dashboard (no deep-link back into
+ * wherever you were), so a workout left mid-session on the Log tab is easy
+ * to mistake for lost data on relaunch. Surface it here as the first thing
+ * you see, with one tap back in. */
+function ActiveWorkoutBanner() {
+  const { items: sessions } = useWorkoutSessions()
+  const session = sessions.find((s) => s.date === todayISO())
+  if (!session || session.entries.length === 0) return null
+
+  const totalSets = session.entries.reduce((n, e) => n + e.sets.length, 0)
+  const completedSets = session.entries.reduce(
+    (n, e) => n + e.sets.filter((s) => s.completed).length,
+    0,
+  )
+  if (totalSets > 0 && completedSets === totalSets) return null
+
+  return (
+    <Link
+      to="/workouts"
+      className="flex items-center justify-between rounded-2xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-3"
+    >
+      <div>
+        <p className="text-sm font-semibold text-indigo-300">Workout in progress</p>
+        <p className="text-xs text-indigo-400/80">
+          {completedSets}/{totalSets} sets logged today · tap to continue
+        </p>
+      </div>
+      <Dumbbell size={20} className="shrink-0 text-indigo-400" />
+    </Link>
   )
 }
 
