@@ -150,11 +150,18 @@ function ActiveWorkoutBanner() {
   if (!session || session.entries.length === 0) return null
 
   const totalSets = session.entries.reduce((n, e) => n + e.sets.length, 0)
-  const completedSets = session.entries.reduce(
-    (n, e) => n + e.sets.filter((s) => s.completed).length,
+  // "Logged" here means you've actually entered a real number — not the
+  // separate completed-toggle (that's a workout-flow gesture that starts the
+  // rest timer), and not an untouched suggested/estimated value either.
+  const loggedSets = session.entries.reduce(
+    (n, e) =>
+      n +
+      e.sets.filter(
+        (s) => !s.isEstimate && (s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0),
+      ).length,
     0,
   )
-  if (totalSets > 0 && completedSets === totalSets) return null
+  if (totalSets > 0 && loggedSets === totalSets) return null
 
   return (
     <Link
@@ -164,7 +171,7 @@ function ActiveWorkoutBanner() {
       <div>
         <p className="text-sm font-semibold text-indigo-300">Workout in progress</p>
         <p className="text-xs text-indigo-400/80">
-          {completedSets}/{totalSets} sets logged today · tap to continue
+          {loggedSets}/{totalSets} sets logged today · tap to continue
         </p>
       </div>
       <Dumbbell size={20} className="shrink-0 text-indigo-400" />
