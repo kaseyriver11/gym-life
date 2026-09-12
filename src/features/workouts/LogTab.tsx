@@ -42,6 +42,7 @@ type ExerciseInfo = {
   id: string
   name: string
   muscleGroup?: string
+  muscleSubgroup?: string
   equipment?: string
   repRangeLow?: number
   repRangeHigh?: number
@@ -907,6 +908,8 @@ function SessionEditor({
                 name: entry.exerciseName,
                 notes: info?.notes,
                 targetMuscles: info?.targetMuscles,
+                muscleGroup: info?.muscleGroup,
+                muscleSubgroup: info?.muscleSubgroup,
               }}
               sessions={sessions}
               excludeSessionId={session.id}

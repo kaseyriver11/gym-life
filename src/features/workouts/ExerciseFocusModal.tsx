@@ -1,11 +1,11 @@
 import clsx from 'clsx'
 import { format, parseISO } from 'date-fns'
 import { useState } from 'react'
-import type { Muscle } from 'react-body-highlighter'
+import type { IExerciseData, Muscle } from 'react-body-highlighter'
 import { Modal } from '@/components/Modal'
 import type { MuscleTarget, WorkoutSession } from '@/types'
-import { MUSCLE_PICKER_OPTIONS } from './body-map'
-import { buildMuscleData, muscleLabel } from './muscle-heat'
+import { MUSCLE_PICKER_OPTIONS, slugsForExercise } from './body-map'
+import { muscleLabel } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
 import { estimatedOneRepMax } from './prs'
 
@@ -14,7 +14,17 @@ interface FocusExercise {
   name: string
   notes?: string
   targetMuscles?: MuscleTarget[]
+  muscleGroup?: string
+  muscleSubgroup?: string
 }
+
+// This view answers "how much does THIS exercise work each muscle", not
+// "how much volume have I logged" — buildMuscleData's per-set session heat
+// scale would show even a heavy compound lift as barely-worked "light green"
+// at a single simulated set. Primary muscles get a high explicit frequency
+// (heavy/red end of the scale) and secondary/stabilizer a low one instead.
+const PRIMARY_FREQUENCY = 7
+const SECONDARY_FREQUENCY = 3
 
 /** "Focus this exercise" view — your own notes/angle, an optional personal
  * muscle-target override, past history, and a mini heatmap for just this
@@ -48,10 +58,19 @@ export function ExerciseFocusModal({
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 6)
 
-  const heatData = buildMuscleData(
-    [{ exerciseId: exercise.id, exerciseName: exercise.name, setCount: 1 }],
-    new Map([[exercise.id, { targetMuscles: exercise.targetMuscles }]]),
-  )
+  const { primary, secondary } = slugsForExercise(exercise)
+  const heatData: IExerciseData[] = [
+    ...primary.map((muscle) => ({
+      name: exercise.name,
+      muscles: [muscle],
+      frequency: PRIMARY_FREQUENCY,
+    })),
+    ...secondary.map((muscle) => ({
+      name: exercise.name,
+      muscles: [muscle],
+      frequency: SECONDARY_FREQUENCY,
+    })),
+  ]
 
   function persist(nextNotes: string, nextMuscles: Muscle[]) {
     onSaveNote({
