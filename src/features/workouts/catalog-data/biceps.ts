@@ -12,7 +12,12 @@ import type { Exercise } from '@/types'
  * head via a deeper stretch; wide-grip barbell curls similarly bias the
  * long head, though EMG evidence on grip-width head-bias is mixed. Chin-ups
  * are included as a compound, loaded biceps-emphasis movement (underhand
- * grip drives significant biceps EMG activation alongside the lats).
+ * grip drives significant biceps EMG activation alongside the lats). A
+ * close grip on a barbell/EZ-bar further biases the short head (mirroring
+ * the wide-grip long-head bias above), and cable variants run at different
+ * pulley heights and arm paths — low unilateral, and high/lateral for a
+ * peak-contraction squeeze — to vary the resistance curve and line of pull
+ * beyond what a straight- or low-pulley cable curl provides.
  */
 export const BICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -221,6 +226,64 @@ export const BICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 12,
     repRangeHigh: 20,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Arm Cable Curl (Low Pulley)',
+    muscleGroup: 'Biceps',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii', role: 'primary' },
+      { muscle: 'Brachialis', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Close-Grip EZ-Bar Curl',
+    muscleGroup: 'Biceps',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii (Short Head)', role: 'primary' },
+      { muscle: 'Brachialis', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Seated Incline Hammer Curl',
+    muscleGroup: 'Biceps',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii (Long Head)', role: 'primary' },
+      { muscle: 'Brachialis', role: 'secondary' },
+      { muscle: 'Brachioradialis', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'High Cable Curl (Peak Contraction)',
+    muscleGroup: 'Biceps',
+    equipment: 'Cable',
+    targetMuscles: [{ muscle: 'Biceps Brachii', role: 'primary' }],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: "Waiter's Curl (Dumbbell)",
+    muscleGroup: 'Biceps',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii', role: 'primary' },
+      { muscle: 'Brachialis', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
     createdAt: Date.now(),
   },
 ]

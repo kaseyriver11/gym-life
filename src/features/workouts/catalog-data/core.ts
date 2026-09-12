@@ -11,7 +11,11 @@ import type { Exercise } from '@/types'
  * rank at or near the top of ACE/peer-reviewed EMG comparisons for combined
  * rectus/oblique recruitment; loaded carries and quadruped anti-rotation
  * work (bird dog) round out anti-lateral-flexion and anti-extension demands
- * not covered by crunch or plank patterns alone.
+ * not covered by crunch or plank patterns alone. Decline sit-ups extend
+ * rectus abdominis loading through a longer range of motion than flat
+ * sit-ups; unstable-surface anti-rotation work (stir-the-pot) and long-lever
+ * holds (dragon flag, L-sit) add progression variants distinct from their
+ * floor-based counterparts.
  */
 export const CORE_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -328,6 +332,73 @@ export const CORE_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 8,
     repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Decline Sit-Up',
+    muscleGroup: 'Core',
+    muscleSubgroup: 'Upper Abs',
+    equipment: 'Other',
+    targetMuscles: [
+      { muscle: 'Rectus Abdominis (Upper)', role: 'primary' },
+      { muscle: 'Hip Flexors', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Stir-the-Pot (Stability Ball Plank)',
+    muscleGroup: 'Core',
+    equipment: 'Other',
+    targetMuscles: [
+      { muscle: 'Transverse Abdominis', role: 'primary' },
+      { muscle: 'Core (anti-rotation)', role: 'primary' },
+      { muscle: 'Obliques', role: 'secondary' },
+    ],
+    repRangeLow: 1,
+    repRangeHigh: 3,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Dragon Flag',
+    muscleGroup: 'Core',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Rectus Abdominis (Upper)', role: 'primary' },
+      { muscle: 'Rectus Abdominis (Lower)', role: 'primary' },
+      { muscle: 'Hip Flexors', role: 'secondary' },
+      { muscle: 'Obliques', role: 'secondary' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 8,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'L-Sit',
+    muscleGroup: 'Core',
+    muscleSubgroup: 'Lower Abs',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Rectus Abdominis (Lower)', role: 'primary' },
+      { muscle: 'Hip Flexors', role: 'primary' },
+      { muscle: 'Transverse Abdominis', role: 'secondary' },
+    ],
+    repRangeLow: 1,
+    repRangeHigh: 3,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Plank with Shoulder Tap',
+    muscleGroup: 'Core',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Core (anti-rotation)', role: 'primary' },
+      { muscle: 'Obliques', role: 'secondary' },
+      { muscle: 'Transverse Abdominis', role: 'secondary' },
+    ],
+    repRangeLow: 16,
+    repRangeHigh: 20,
     createdAt: Date.now(),
   },
 ]

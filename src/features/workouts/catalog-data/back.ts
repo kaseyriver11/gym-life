@@ -15,6 +15,11 @@ import type { Exercise } from '@/types'
  * the floor each rep (no stretch reflex, more horizontal torso) versus the
  * continuous-tension bent-over row. Farmer's carries load the traps
  * isometrically under a walked load rather than through a shrugging ROM.
+ * Deficit deadlifts extend the pulling range of motion to raise time under
+ * tension for the erectors and hamstrings off the floor; snatch-grip
+ * deadlifts widen the grip to increase torso angle and upper-back/trap
+ * demand versus a conventional pull. Unilateral cable work (single-arm lat
+ * pulldown) adds an anti-rotation core demand that bilateral pulldowns don't.
  */
 export const BACK_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -399,6 +404,82 @@ export const BACK_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 10,
     repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Arm Lat Pulldown (Cable)',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Lats',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Latissimus Dorsi', role: 'primary' },
+      { muscle: 'Teres Major', role: 'secondary' },
+      { muscle: 'Biceps Brachii', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Wide-Grip Seated Cable Row',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Rhomboids',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Rhomboids', role: 'primary' },
+      { muscle: 'Posterior Deltoid', role: 'primary' },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'secondary' },
+      { muscle: 'Latissimus Dorsi', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Deficit Deadlift',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Lower Back',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Erector Spinae', role: 'primary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Quadriceps', role: 'secondary' },
+      { muscle: 'Latissimus Dorsi', role: 'stabilizer' },
+    ],
+    repRangeLow: 3,
+    repRangeHigh: 6,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Snatch-Grip Deadlift',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Traps',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Erector Spinae', role: 'primary' },
+      { muscle: 'Trapezius (Upper)', role: 'primary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Latissimus Dorsi', role: 'secondary' },
+    ],
+    repRangeLow: 3,
+    repRangeHigh: 6,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Banded Pull-Apart',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Rhomboids',
+    equipment: 'Bands',
+    targetMuscles: [
+      { muscle: 'Rhomboids', role: 'primary' },
+      { muscle: 'Posterior Deltoid', role: 'primary' },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'secondary' },
+    ],
+    repRangeLow: 15,
+    repRangeHigh: 20,
     createdAt: Date.now(),
   },
 ]

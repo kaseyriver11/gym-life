@@ -15,6 +15,15 @@ import type { Exercise } from '@/types'
  * where rounding the upper back and posteriorly tilting the pelvis shifts
  * emphasis from the erectors to the glutes relative to the neutral-spine
  * Reverse Hyperextension already in this file.
+ *
+ * Second-pass additions cover unilateral-loading and equipment variants
+ * that are staples in glute-specialization programs but were absent above:
+ * an elevated single-leg hip thrust (distinct from the floor-level
+ * Single-Leg Glute Bridge via greater hip ROM), the B-stance and
+ * plate-loaded machine hip thrust variants popularized in Contreras-style
+ * programming, a selectorized standing kickback machine (isolates the
+ * glute with less hamstring carryover than the cable version), and a
+ * banded hip thrust for constant-tension, minimal-equipment loading.
  */
 export const GLUTES_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -230,6 +239,66 @@ export const GLUTES_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 10,
     repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Leg Hip Thrust (Bodyweight)',
+    muscleGroup: 'Glutes',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Gluteus Maximus', role: 'primary' },
+      { muscle: 'Gluteus Medius', role: 'secondary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'B-Stance Hip Thrust',
+    muscleGroup: 'Glutes',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Gluteus Maximus', role: 'primary' },
+      { muscle: 'Gluteus Medius', role: 'secondary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Hip Thrust Machine (Plate-Loaded)',
+    muscleGroup: 'Glutes',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Gluteus Maximus', role: 'primary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Standing Glute Kickback Machine',
+    muscleGroup: 'Glutes',
+    equipment: 'Machine',
+    targetMuscles: [{ muscle: 'Gluteus Maximus', role: 'primary' }],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Banded Hip Thrust',
+    muscleGroup: 'Glutes',
+    equipment: 'Bands',
+    targetMuscles: [
+      { muscle: 'Gluteus Maximus', role: 'primary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 20,
     createdAt: Date.now(),
   },
 ]

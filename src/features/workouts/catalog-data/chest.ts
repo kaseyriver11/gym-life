@@ -13,7 +13,13 @@ import type { Exercise } from '@/types'
  * adds a sustained horizontal-adduction (squeeze) component absent from a
  * standard dumbbell press, which EMG shows drives meaningfully higher pec
  * activation, especially at the shortened/top position — a genuinely
- * distinct stimulus, not just a grip tweak.
+ * distinct stimulus, not just a grip tweak. Spoto and Larsen presses are
+ * technique-focused barbell variants — pausing off the chest vs. removing
+ * leg drive entirely — that change time-under-tension and stabilizer/core
+ * demand without altering which pec head is primary. Unilateral variants
+ * (single-arm DB press, single-arm cable crossover, archer push-up) load
+ * one side at a time, driving anti-rotation core recruitment that bilateral
+ * pressing doesn't demand.
  */
 export const CHEST_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -449,6 +455,81 @@ export const CHEST_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 10,
     repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Arm Dumbbell Bench Press (Flat)',
+    muscleGroup: 'Chest',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'primary' },
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+      { muscle: 'Rotator Cuff', role: 'stabilizer' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Arm Cable Crossover (Standing)',
+    muscleGroup: 'Chest',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Spoto Press',
+    muscleGroup: 'Chest',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'primary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 8,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Larsen Press',
+    muscleGroup: 'Chest',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'primary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 6,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Archer Push-Up',
+    muscleGroup: 'Chest',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'secondary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+      { muscle: 'Serratus Anterior', role: 'stabilizer' },
+    ],
+    repRangeLow: 6,
+    repRangeHigh: 10,
     createdAt: Date.now(),
   },
 ]

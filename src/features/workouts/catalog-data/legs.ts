@@ -14,7 +14,12 @@ import type { Exercise } from '@/types'
  * stretch/erector involvement over glute drive; the Copenhagen plank is the
  * standout adductor isolation movement in the sports-med literature,
  * producing the highest adductor longus EMG among common adductor drills
- * while also loading the obliques heavily.
+ * while also loading the obliques heavily. Single-leg hip-hinge and
+ * eccentric-stretch quad work round out the accessory pool: unilateral
+ * RDLs drive markedly higher gluteus medius and biceps femoris activity
+ * than their bilateral counterparts thanks to the balance demand, and the
+ * reverse Nordic curl loads the quadriceps through a deep eccentric
+ * stretch that concentric-only machine work can't replicate.
  */
 export const LEGS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -428,6 +433,68 @@ export const LEGS_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 8,
     repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Leg Romanian Deadlift (Dumbbell)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Hamstrings',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Hamstrings', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Gluteus Medius', role: 'stabilizer' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Reverse Nordic Curl',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Bodyweight',
+    targetMuscles: [{ muscle: 'Quadriceps', role: 'primary' }],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Box Squat (Barbell)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Quadriceps', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Erector Spinae', role: 'secondary' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 8,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Dumbbell Step-Down',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Quadriceps', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Wall Sit',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Bodyweight',
+    targetMuscles: [{ muscle: 'Quadriceps', role: 'primary' }],
+    repRangeLow: 1,
+    repRangeHigh: 3,
     createdAt: Date.now(),
   },
 ]

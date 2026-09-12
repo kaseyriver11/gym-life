@@ -10,7 +10,10 @@ import type { Exercise } from '@/types'
  * matters on pushdown-pattern moves: a neutral (V-bar) grip lets the elbows
  * track slightly wider for a fuller lockout, while a reverse (underhand)
  * grip shifts more of the load onto the medial head (no dedicated slug for
- * that head, so it's logged under the generic Triceps Brachii entry).
+ * that head, so it's logged under the generic Triceps Brachii entry). Bench
+ * angle on skull crushers matters too: inclined and dumbbell variants add
+ * shoulder flexion that stretches and biases the long head, while a decline
+ * angle shifts more work onto the lateral head instead.
  */
 export const TRICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -245,6 +248,61 @@ export const TRICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
     equipment: 'Machine',
     targetMuscles: [{ muscle: 'Triceps Brachii (Long Head)', role: 'primary' }],
     repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Skull Crusher (Dumbbell, Flat)',
+    muscleGroup: 'Triceps',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii (Long Head)', role: 'primary' },
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Skull Crusher (Decline, to Forehead)',
+    muscleGroup: 'Triceps',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' },
+      { muscle: 'Triceps Brachii (Long Head)', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Close-Grip Smith Machine Bench Press',
+    muscleGroup: 'Triceps',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' },
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+    ],
+    repRangeLow: 6,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Cross-Body Cable Triceps Extension',
+    muscleGroup: 'Triceps',
+    equipment: 'Cable',
+    targetMuscles: [{ muscle: 'Triceps Brachii (Long Head)', role: 'primary' }],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Resistance Band Triceps Pushdown',
+    muscleGroup: 'Triceps',
+    equipment: 'Bands',
+    targetMuscles: [{ muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' }],
+    repRangeLow: 12,
     repRangeHigh: 15,
     createdAt: Date.now(),
   },

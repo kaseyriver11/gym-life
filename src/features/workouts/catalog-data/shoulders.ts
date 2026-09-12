@@ -13,7 +13,11 @@ import type { Exercise } from '@/types'
  * both are useful but train slightly different things. Behind-the-neck press
  * EMG shows it edges out front-loaded pressing for lateral and posterior
  * deltoid activation, which is why it's filed under Side Delts here rather
- * than Front Delts.
+ * than Front Delts. Kettlebell and banded variants round out equipment
+ * coverage: the kettlebell's offset center of mass adds an anti-tilt
+ * stabilization demand pressing and presses lack, while bands impose a
+ * strengthening (not descending) resistance curve that peaks at end-range
+ * abduction rather than the mid-range peak of free weights.
  */
 export const SHOULDERS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -351,6 +355,70 @@ export const SHOULDERS_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 10,
     repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Arm Cable Front Raise',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Front Delts',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Anterior Deltoid', role: 'primary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Kettlebell Shoulder Press',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Front Delts',
+    equipment: 'Kettlebell',
+    targetMuscles: [
+      { muscle: 'Anterior Deltoid', role: 'primary' },
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Plate Front Raise',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Front Delts',
+    equipment: 'Other',
+    targetMuscles: [
+      { muscle: 'Anterior Deltoid', role: 'primary' },
+      { muscle: 'Trapezius (Upper)', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Resistance Band Lateral Raise',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Side Delts',
+    equipment: 'Bands',
+    targetMuscles: [{ muscle: 'Lateral Deltoid', role: 'primary' }],
+    repRangeLow: 15,
+    repRangeHigh: 20,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Kettlebell Halo',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Front Delts',
+    equipment: 'Kettlebell',
+    targetMuscles: [
+      { muscle: 'Anterior Deltoid', role: 'primary' },
+      { muscle: 'Rotator Cuff', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 10,
     createdAt: Date.now(),
   },
 ]
