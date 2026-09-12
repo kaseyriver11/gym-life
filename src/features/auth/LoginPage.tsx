@@ -1,6 +1,9 @@
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication'
+import { Capacitor } from '@capacitor/core'
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
 } from 'firebase/auth'
@@ -37,7 +40,19 @@ export function LoginPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await signInWithPopup(auth, googleProvider)
+      if (Capacitor.isNativePlatform()) {
+        // Popups can't work inside a native WebView — Google blocks OAuth
+        // there outright. Sign in with the real native Google Sign-In, then
+        // hand the resulting credential to the web SDK so the rest of the
+        // app (which reads `auth.currentUser`) sees the same session.
+        const result = await FirebaseAuthentication.signInWithGoogle()
+        const idToken = result.credential?.idToken
+        if (!idToken) throw new Error('Google sign-in did not return a token')
+        const credential = GoogleAuthProvider.credential(idToken)
+        await signInWithCredential(auth, credential)
+      } else {
+        await signInWithPopup(auth, googleProvider)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {

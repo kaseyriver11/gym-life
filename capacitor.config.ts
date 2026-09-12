@@ -10,6 +10,12 @@ const config: CapacitorConfig = {
     // url: 'http://192.168.1.23:5173',
     // cleartext: true,
   },
+  plugins: {
+    FirebaseAuthentication: {
+      skipNativeAuth: false,
+      providers: ['google.com'],
+    },
+  },
 }
 
 export default config
