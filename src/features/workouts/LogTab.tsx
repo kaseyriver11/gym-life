@@ -12,6 +12,7 @@ import {
   ListPlus,
   MoveDown,
   MoveUp,
+  NotebookPen,
   NotebookText,
   PersonStanding,
   Square,
@@ -21,8 +22,9 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { inputClass } from '@/components/form'
-import type { WorkoutExerciseEntry, WorkoutSession } from '@/types'
+import type { MuscleTarget, WorkoutExerciseEntry, WorkoutSession } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
+import { ExerciseFocusModal } from './ExerciseFocusModal'
 import { muscleGroupStyle } from './muscle-groups'
 import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
@@ -43,6 +45,8 @@ type ExerciseInfo = {
   equipment?: string
   repRangeLow?: number
   repRangeHigh?: number
+  notes?: string
+  targetMuscles?: MuscleTarget[]
 }
 
 function todayISO() {
@@ -99,7 +103,7 @@ function WorkoutTimerBar({ session, onToggle }: { session: WorkoutSession; onTog
 export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
   const [date, setDate] = useState(todayISO())
   const { items: sessions, add, update } = useWorkoutSessions()
-  const { items: exercises, add: addExercise } = useAllExercises()
+  const { items: exercises, add: addExercise, saveNote } = useAllExercises()
   const session = sessions.find((s) => s.date === date)
   const [composing, setComposing] = useState(false)
   const [quickLogging, setQuickLogging] = useState(false)
@@ -199,6 +203,7 @@ export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
           onSave={(entries) => update(session.id, { entries, updatedAt: Date.now() })}
           timer={timer}
           onCreateExercise={addExercise}
+          onSaveNote={saveNote}
           suggestSetsFor={(exerciseId, exercise) => suggestSets(sessions, exerciseId, exercise)}
         />
       )}
@@ -254,6 +259,7 @@ function SessionEditor({
   onSave,
   timer,
   onCreateExercise,
+  onSaveNote,
   suggestSetsFor,
 }: {
   session: WorkoutSession
@@ -267,6 +273,10 @@ function SessionEditor({
     equipment?: string
     createdAt: number
   }) => Promise<{ id: string }>
+  onSaveNote: (
+    exerciseId: string,
+    data: { notes?: string; targetMuscles?: MuscleTarget[] },
+  ) => void
   suggestSetsFor: (
     exerciseId: string,
     exercise?: ExerciseInfo,
@@ -281,6 +291,7 @@ function SessionEditor({
   const [warmupWeight, setWarmupWeight] = useState<number | null>(null)
   const [showMuscleMap, setShowMuscleMap] = useState(false)
   const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<number | null>(null)
+  const [focusEntryIndex, setFocusEntryIndex] = useState<number | null>(null)
   const confirmDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function requestRemoveEntry(index: number) {
@@ -504,6 +515,17 @@ function SessionEditor({
               </div>
             </div>
             <div className="flex items-center text-neutral-600">
+              <button
+                onClick={() => setFocusEntryIndex(entryIndex)}
+                className={clsx(
+                  'flex h-8 w-8 items-center justify-center hover:text-teal-400',
+                  info?.notes || info?.targetMuscles ? 'text-teal-500' : 'text-neutral-600',
+                )}
+                aria-label="Focus this exercise"
+                title="Notes, muscle targets, and history for this exercise"
+              >
+                <NotebookPen size={15} />
+              </button>
               <button
                 onClick={() => setWarmupWeight(entry.sets[0]?.weight || 0)}
                 className="flex h-8 w-8 items-center justify-center hover:text-orange-400"
@@ -813,6 +835,27 @@ function SessionEditor({
       {warmupWeight != null && (
         <WarmupCalcModal initialWeight={warmupWeight} onClose={() => setWarmupWeight(null)} />
       )}
+
+      {focusEntryIndex != null &&
+        entries[focusEntryIndex] &&
+        (() => {
+          const entry = entries[focusEntryIndex]
+          const info = exercisesById.get(entry.exerciseId)
+          return (
+            <ExerciseFocusModal
+              exercise={{
+                id: entry.exerciseId,
+                name: entry.exerciseName,
+                notes: info?.notes,
+                targetMuscles: info?.targetMuscles,
+              }}
+              sessions={sessions}
+              excludeSessionId={session.id}
+              onSaveNote={(data) => onSaveNote(entry.exerciseId, data)}
+              onClose={() => setFocusEntryIndex(null)}
+            />
+          )
+        })()}
 
       {showMuscleMap && (
         <MuscleMapModal

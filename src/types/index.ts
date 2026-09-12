@@ -87,6 +87,11 @@ export interface LongTermTask {
 export interface MuscleTarget {
   muscle: string
   role: 'primary' | 'secondary' | 'stabilizer'
+  /** Optional 0-10 EMG/biomechanics-backed load score for this muscle on
+   * this specific exercise, finer-grained than `role`. Unset today for the
+   * whole catalog (role alone drives the heatmap) — reserved for when
+   * real per-exercise intensity research gets added, rather than guessing. */
+  intensity?: number
 }
 
 export interface Exercise {
