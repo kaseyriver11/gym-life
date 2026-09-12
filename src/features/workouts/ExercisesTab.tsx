@@ -16,8 +16,15 @@ import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { Exercise } from '@/types'
 import { MUSCLE_PICKER_OPTIONS } from './body-map'
+import { BACK_EXERCISES } from './catalog-data/back'
+import { BICEPS_EXERCISES } from './catalog-data/biceps'
 import { CHEST_EXERCISES } from './catalog-data/chest'
+import { CORE_EXERCISES } from './catalog-data/core'
+import { GLUTES_EXERCISES } from './catalog-data/glutes'
+import { LEGS_EXERCISES } from './catalog-data/legs'
 import { seedCatalog } from './catalog-data/seed'
+import { SHOULDERS_EXERCISES } from './catalog-data/shoulders'
+import { TRICEPS_EXERCISES } from './catalog-data/triceps'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
 import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData, muscleLabel } from './muscle-heat'
@@ -41,6 +48,13 @@ function CatalogSeedTool() {
   const [status, setStatus] = useState<string | null>(null)
   const batches: { label: string; data: Omit<Exercise, 'id'>[] }[] = [
     { label: 'Chest', data: CHEST_EXERCISES },
+    { label: 'Back', data: BACK_EXERCISES },
+    { label: 'Shoulders', data: SHOULDERS_EXERCISES },
+    { label: 'Biceps', data: BICEPS_EXERCISES },
+    { label: 'Triceps', data: TRICEPS_EXERCISES },
+    { label: 'Legs', data: LEGS_EXERCISES },
+    { label: 'Glutes', data: GLUTES_EXERCISES },
+    { label: 'Core', data: CORE_EXERCISES },
   ]
 
   return (
@@ -66,6 +80,26 @@ function CatalogSeedTool() {
           Seed {batch.label} ({batch.data.length})
         </button>
       ))}
+      <button
+        type="button"
+        onClick={async () => {
+          setStatus('Seeding all…')
+          try {
+            let total = 0
+            for (const batch of batches) {
+              total += await seedCatalog(batch.data)
+            }
+            setStatus(`Seeded ${total} exercises across ${batches.length} groups`)
+          } catch (err) {
+            setStatus(
+              `Failed: ${err instanceof Error ? err.message : String(err)} — check Firestore rules allow writes to exerciseCatalog.`,
+            )
+          }
+        }}
+        className="rounded-full bg-amber-500 px-2 py-1 font-semibold text-neutral-950 hover:bg-amber-400"
+      >
+        Seed All ({batches.reduce((sum, b) => sum + b.data.length, 0)})
+      </button>
       {status && <span className="text-neutral-500">{status}</span>}
     </div>
   )
