@@ -441,6 +441,48 @@ function SessionEditor({
     return entryIndex === Math.max(...indices)
   }
 
+  function focusById(id: string) {
+    const el = document.getElementById(id)
+    if (el instanceof HTMLInputElement) {
+      el.focus()
+      el.select()
+    }
+  }
+
+  /** Enter on reps jumps straight to that same set's weight field. */
+  function handleRepsEnter(
+    e: React.KeyboardEvent<HTMLInputElement>,
+    entryIndex: number,
+    setIndex: number,
+  ) {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    focusById(`weight-${entryIndex}-${setIndex}`)
+  }
+
+  /** Enter on weight jumps to the next set's reps field — or the next
+   * exercise's first set if this was the last one — instead of landing on
+   * whatever happens to be next in tab order (the plate calculator icon). */
+  function handleWeightEnter(
+    e: React.KeyboardEvent<HTMLInputElement>,
+    entryIndex: number,
+    setIndex: number,
+  ) {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    const currentSets = entries[entryIndex]?.sets ?? []
+    if (setIndex + 1 < currentSets.length) {
+      focusById(`reps-${entryIndex}-${setIndex + 1}`)
+      return
+    }
+    const nextEntry = entries[entryIndex + 1]
+    if (nextEntry && nextEntry.sets.length > 0) {
+      focusById(`reps-${entryIndex + 1}-0`)
+      return
+    }
+    e.currentTarget.blur()
+  }
+
   function addSet(entryIndex: number) {
     const next = entries.map((entry, i) =>
       i === entryIndex
@@ -627,6 +669,7 @@ function SessionEditor({
                   type="number"
                   inputMode="numeric"
                   min={0}
+                  id={`reps-${entryIndex}-${setIndex}`}
                   placeholder="reps"
                   value={set.reps || ''}
                   onChange={(e) =>
@@ -635,7 +678,7 @@ function SessionEditor({
                       isEstimate: false,
                     })
                   }
-                  onKeyDown={blurOnEnter}
+                  onKeyDown={(e) => handleRepsEnter(e, entryIndex, setIndex)}
                   className={clsx(
                     `${inputClass} py-1.5`,
                     set.isEstimate && 'text-neutral-500',
@@ -645,6 +688,7 @@ function SessionEditor({
                   type="number"
                   inputMode="decimal"
                   min={0}
+                  id={`weight-${entryIndex}-${setIndex}`}
                   placeholder="lbs"
                   value={set.weight || ''}
                   onChange={(e) =>
@@ -653,7 +697,7 @@ function SessionEditor({
                       isEstimate: false,
                     })
                   }
-                  onKeyDown={blurOnEnter}
+                  onKeyDown={(e) => handleWeightEnter(e, entryIndex, setIndex)}
                   className={clsx(
                     `${inputClass} py-1.5`,
                     set.isEstimate && 'text-neutral-500',
