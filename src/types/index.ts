@@ -4,6 +4,19 @@ export type ID = string
 
 export type TaskTrackingType = 'checkbox' | 'quantity'
 
+export type HealthLinkType = 'workout' | 'exercise' | 'cardio' | 'medicine'
+
+/**
+ * Marks a daily task as health-related and, for workout/exercise, ties it to
+ * a specific saved template or exercise (denormalized `refName` so the list
+ * doesn't need a join to display it).
+ */
+export interface HealthLink {
+  type: HealthLinkType
+  refId?: ID
+  refName?: string
+}
+
 /**
  * A task's definition/schedule. One-off tasks pin a single `date`; recurring
  * tasks instead set `repeatDays` (0=Sun..6=Sat) and show up on every matching
@@ -27,6 +40,9 @@ export interface DailyTaskDef {
   date?: string
   /** Weekdays this recurs on, 0=Sun..6=Sat. Set when isOneTime is false. */
   repeatDays?: number[]
+  /** Set when this task is a workout, exercise, cardio, or medicine item
+   * rather than a plain to-do. */
+  healthLink?: HealthLink
   createdAt: number
   updatedAt: number
 }

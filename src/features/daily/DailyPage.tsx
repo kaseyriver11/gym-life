@@ -1,21 +1,42 @@
 import clsx from 'clsx'
 import { addDays, format, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, Minus, Pencil, Plus, Repeat } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Dumbbell,
+  HeartPulse,
+  Minus,
+  Pencil,
+  Pill,
+  Plus,
+  Repeat,
+} from 'lucide-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
+import { useAllExercises } from '@/features/workouts/use-all-exercises'
+import { useWorkoutTemplates } from '@/features/workouts/use-workout-templates'
 import {
   cancelRecurringReminder,
   cancelTaskReminder,
   scheduleRecurringReminder,
   scheduleTaskReminder,
 } from '@/lib/notifications'
-import type { DailyTaskDef, TaskTrackingType } from '@/types'
+import type { DailyTaskDef, HealthLink, HealthLinkType, TaskTrackingType } from '@/types'
 import { occurrencesForDate, sortTaskDefs, useTaskDefs, useTaskLogs } from './use-daily-tasks'
 import { WEEKDAY_LABELS } from './weekdays'
 
 function todayISO() {
   return format(new Date(), 'yyyy-MM-dd')
+}
+
+const HEALTH_LINK_ICONS: Record<HealthLinkType, typeof Dumbbell> = {
+  workout: Dumbbell,
+  exercise: Dumbbell,
+  cardio: HeartPulse,
+  medicine: Pill,
 }
 
 type TaskDraft = {
@@ -28,6 +49,7 @@ type TaskDraft = {
   isOneTime: boolean
   date?: string
   repeatDays?: number[]
+  healthLink?: HealthLink
 }
 
 async function applyReminder(taskId: string, draft: TaskDraft) {
@@ -176,11 +198,26 @@ export function DailyPage() {
                 <div className="min-w-0 flex-1">
                   <p
                     className={clsx(
-                      'truncate text-sm',
+                      'flex items-center gap-1.5 truncate text-sm',
                       done ? 'text-neutral-500 line-through' : 'text-neutral-100',
                     )}
                   >
-                    {task.title}
+                    {task.healthLink &&
+                      (() => {
+                        const Icon = HEALTH_LINK_ICONS[task.healthLink.type]
+                        return <Icon size={12} className="shrink-0 text-teal-400" />
+                      })()}
+                    {task.healthLink?.type === 'workout' || task.healthLink?.type === 'exercise' ? (
+                      <Link
+                        to="/workouts"
+                        onClick={(e) => e.stopPropagation()}
+                        className="truncate hover:underline"
+                      >
+                        {task.title}
+                      </Link>
+                    ) : (
+                      <span className="truncate">{task.title}</span>
+                    )}
                   </p>
                   <div className="flex items-center gap-2 text-xs text-neutral-500">
                     {task.time && (
@@ -274,6 +311,7 @@ export function DailyPage() {
               isOneTime: draft.isOneTime,
               date: draft.date,
               repeatDays: draft.repeatDays,
+              healthLink: draft.healthLink,
               createdAt: now,
               updatedAt: now,
             })
@@ -301,6 +339,7 @@ export function DailyPage() {
               isOneTime: draft.isOneTime,
               date: draft.date,
               repeatDays: draft.repeatDays,
+              healthLink: draft.healthLink,
               updatedAt: Date.now(),
             })
             await applyReminder(editing.id, draft)
@@ -336,7 +375,14 @@ function TaskModal({
   )
   const [unit, setUnit] = useState(existing?.unit ?? '')
   const [targetValue, setTargetValue] = useState(existing?.targetValue?.toString() ?? '')
+  const [linkType, setLinkType] = useState<HealthLinkType | 'none'>(
+    existing?.healthLink?.type ?? 'none',
+  )
+  const [linkRefId, setLinkRefId] = useState(existing?.healthLink?.refId ?? '')
   const [submitting, setSubmitting] = useState(false)
+
+  const { items: templates } = useWorkoutTemplates()
+  const { items: exercises } = useAllExercises()
 
   function toggleDay(day: number) {
     setRepeatDays((prev) =>
@@ -344,11 +390,33 @@ function TaskModal({
     )
   }
 
+  function selectLinkType(type: HealthLinkType | 'none') {
+    setLinkType(type)
+    setLinkRefId('')
+  }
+
+  function selectRef(id: string, name: string) {
+    setLinkRefId(id)
+    if (!taskTitle.trim()) setTaskTitle(name)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!taskTitle.trim()) return
     if (!isOneTime && repeatDays.length === 0) return
     if (trackingType === 'quantity' && (!unit.trim() || !targetValue)) return
+
+    let healthLink: HealthLink | undefined
+    if (linkType === 'workout') {
+      const t = templates.find((tpl) => tpl.id === linkRefId)
+      healthLink = { type: 'workout', refId: linkRefId || undefined, refName: t?.name }
+    } else if (linkType === 'exercise') {
+      const ex = exercises.find((e) => e.id === linkRefId)
+      healthLink = { type: 'exercise', refId: linkRefId || undefined, refName: ex?.name }
+    } else if (linkType === 'cardio' || linkType === 'medicine') {
+      healthLink = { type: linkType }
+    }
+
     setSubmitting(true)
     try {
       await onSubmit({
@@ -361,6 +429,7 @@ function TaskModal({
         isOneTime,
         date: isOneTime ? oneTimeDate : undefined,
         repeatDays: isOneTime ? undefined : repeatDays,
+        healthLink,
       })
     } finally {
       setSubmitting(false)
@@ -378,6 +447,71 @@ function TaskModal({
           onChange={(e) => setTaskTitle(e.target.value)}
           className={inputClass}
         />
+
+        <div>
+          <p className="mb-1.5 text-xs text-neutral-500">Type</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                { key: 'none', label: 'General' },
+                { key: 'workout', label: 'Workout' },
+                { key: 'exercise', label: 'Exercise' },
+                { key: 'cardio', label: 'Cardio' },
+                { key: 'medicine', label: 'Medicine' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => selectLinkType(opt.key)}
+                className={clsx(
+                  'rounded-full px-3 py-1 text-xs font-medium transition',
+                  linkType === opt.key
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {linkType === 'workout' && (
+            <select
+              value={linkRefId}
+              onChange={(e) => {
+                const t = templates.find((tpl) => tpl.id === e.target.value)
+                selectRef(e.target.value, t?.name ?? '')
+              }}
+              className={`${inputClass} mt-2`}
+            >
+              <option value="">Pick a saved workout…</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {linkType === 'exercise' && (
+            <select
+              value={linkRefId}
+              onChange={(e) => {
+                const ex = exercises.find((item) => item.id === e.target.value)
+                selectRef(e.target.value, ex?.name ?? '')
+              }}
+              className={`${inputClass} mt-2`}
+            >
+              <option value="">Pick an exercise…</option>
+              {[...exercises]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((ex) => (
+                  <option key={ex.id} value={ex.id}>
+                    {ex.name}
+                  </option>
+                ))}
+            </select>
+          )}
+        </div>
 
         <div>
           <p className="mb-1.5 text-xs text-neutral-500">Schedule</p>

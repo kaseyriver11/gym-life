@@ -1,16 +1,8 @@
 import clsx from 'clsx'
 import { addDays, format } from 'date-fns'
-import {
-  CalendarCheck,
-  Droplet,
-  Footprints,
-  ListChecks,
-  Plus,
-  SlidersHorizontal,
-  Star,
-} from 'lucide-react'
+import { CalendarCheck, Droplet, Footprints, Plus, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { CircularProgress } from '@/components/CircularProgress'
 import { inputClass } from '@/components/form'
 import { WidgetCard } from '@/components/WidgetCard'
@@ -22,7 +14,6 @@ import {
   useTaskLogs,
 } from '@/features/daily/use-daily-tasks'
 import { useHealthSnapshots } from '@/features/health/use-health'
-import { useLongTermTasks, useTaskLists } from '@/features/longterm/use-long-term-tasks'
 import { useWorkoutSessions } from '@/features/workouts/use-workout-sessions'
 import { GoalModal, GoalRing } from './GoalWidget'
 import { useDashboardPrefs } from './use-dashboard-prefs'
@@ -30,8 +21,6 @@ import { useGoals } from './use-goals'
 
 const WIDGETS = [
   { key: 'today', label: 'Today' },
-  { key: 'priority', label: 'Priority to-dos' },
-  { key: 'lists', label: 'Lists' },
   { key: 'steps', label: 'Steps' },
   { key: 'water', label: 'Water' },
   { key: 'workoutsWeek', label: 'Workouts this week' },
@@ -133,11 +122,7 @@ export function DashboardPage() {
           ))}
       </div>
 
-      <div className="space-y-3">
-        {show('today') && <TodayWidget />}
-        {show('priority') && <PriorityWidget />}
-        {show('lists') && <LongTermWidget />}
-      </div>
+      <div className="space-y-3">{show('today') && <TodayWidget />}</div>
 
       {addingGoal && (
         <GoalModal
@@ -329,92 +314,3 @@ function TodayWidget() {
   )
 }
 
-function PriorityWidget() {
-  const navigate = useNavigate()
-  const today = todayISO()
-  const { items: defs } = useTaskDefs()
-  const { items: logs } = useTaskLogs(today)
-  const { items: lists } = useTaskLists()
-  const { items: tasks } = useLongTermTasks()
-
-  const nextTimed = sortTaskDefs(occurrencesForDate(defs, today)).find((t) => {
-    const done = (logs.find((l) => l.taskId === t.id)?.value ?? 0) >= (t.targetValue ?? 1)
-    return t.time && !done
-  })
-
-  const highPriority = tasks
-    .filter((t) => !t.completed && t.priority === 'high' && lists.some((l) => l.id === t.listId))
-    .slice(0, 3)
-
-  const nothing = !nextTimed && highPriority.length === 0
-
-  return (
-    <WidgetCard
-      title="Priority to-dos"
-      icon={<Star size={16} />}
-      accent="violet"
-      onClick={() => navigate('/list')}
-    >
-      {nothing ? (
-        <p className="text-sm text-neutral-500">Nothing urgent right now.</p>
-      ) : (
-        <ul className="space-y-1.5">
-          {nextTimed && (
-            <li>
-              <Link
-                to="/today"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-2 rounded-lg py-1 text-sm text-neutral-300 hover:text-neutral-50"
-              >
-                <span className="text-xs text-indigo-400">{nextTimed.time}</span>
-                <span className="truncate">{nextTimed.title}</span>
-              </Link>
-            </li>
-          )}
-          {highPriority.map((t) => (
-            <li key={t.id}>
-              <Link
-                to={`/list?open=${t.listId}`}
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-2 rounded-lg py-1 text-sm text-neutral-300 hover:text-neutral-50"
-              >
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
-                <span className="truncate">{t.title}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </WidgetCard>
-  )
-}
-
-function LongTermWidget() {
-  const { items: lists } = useTaskLists()
-  const { items: tasks } = useLongTermTasks()
-  // Guard against tasks whose list no longer exists (shouldn't happen once
-  // LongTermPage's orphan-recovery has run, but keep counts honest either way).
-  const open = tasks.filter((t) => !t.completed && lists.some((l) => l.id === t.listId))
-  const byList = lists
-    .map((list) => ({ id: list.id, name: list.name, count: open.filter((t) => t.listId === list.id).length }))
-    .filter((l) => l.count > 0)
-
-  return (
-    <WidgetCard title="Lists" icon={<ListChecks size={16} />} accent="amber" to="/list">
-      <p className="mb-2 text-2xl font-semibold text-neutral-50">
-        {open.length} <span className="text-base font-normal text-neutral-500">open</span>
-      </p>
-      <div className="flex flex-wrap gap-1.5">
-        {byList.map((l) => (
-          <span
-            key={l.id}
-            className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400"
-          >
-            {l.name} · {l.count}
-          </span>
-        ))}
-        {open.length === 0 && <p className="text-sm text-neutral-500">All caught up.</p>}
-      </div>
-    </WidgetCard>
-  )
-}

@@ -1,11 +1,10 @@
 import clsx from 'clsx'
-import { CalendarCheck, Dumbbell, HeartPulse, LayoutGrid, ListTodo } from 'lucide-react'
+import { CalendarCheck, Dumbbell, HeartPulse, LayoutGrid } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const tabs = [
   { to: '/', label: 'Home', icon: LayoutGrid, end: true },
   { to: '/today', label: 'Today', icon: CalendarCheck, end: false },
-  { to: '/list', label: 'List', icon: ListTodo, end: false },
   { to: '/workouts', label: 'Gym', icon: Dumbbell, end: false },
   { to: '/health', label: 'Health', icon: HeartPulse, end: false },
 ]
