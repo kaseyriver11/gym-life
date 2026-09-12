@@ -59,6 +59,43 @@ function blurOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.key === 'Enter') e.currentTarget.blur()
 }
 
+function formatDuration(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  const mm = hours > 0 ? minutes.toString().padStart(2, '0') : minutes.toString()
+  const ss = seconds.toString().padStart(2, '0')
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
+}
+
+function WorkoutTimerBar({ session, onToggle }: { session: WorkoutSession; onToggle: () => void }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (session.endedAt) return
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [session.endedAt])
+
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor(((session.endedAt ?? now) - session.createdAt) / 1000),
+  )
+
+  return (
+    <div className="flex items-center justify-between rounded-lg bg-neutral-900 px-3 py-2">
+      <span className="flex items-center gap-1.5 text-xs tabular-nums text-neutral-400">
+        <Clock size={13} />
+        {formatDuration(elapsedSeconds)}
+        {session.endedAt && <span className="text-neutral-600">&nbsp;· finished</span>}
+      </span>
+      <button onClick={onToggle} className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
+        {session.endedAt ? 'Reopen' : 'Finish workout'}
+      </button>
+    </div>
+  )
+}
+
 export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
   const [date, setDate] = useState(todayISO())
   const { items: sessions, add, update } = useWorkoutSessions()
@@ -119,6 +156,12 @@ export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
         </button>
       </div>
 
+      {session && (
+        <WorkoutTimerBar
+          session={session}
+          onToggle={() => update(session.id, { endedAt: session.endedAt ? undefined : Date.now() })}
+        />
+      )}
       {session && <RestTimerBar timer={timer} />}
 
       {!session ? (

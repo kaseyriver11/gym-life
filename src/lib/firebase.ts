@@ -22,4 +22,8 @@ export const auth = getAuth(app)
 // errors if the app is ever open in two tabs at once.
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  // Nested optional fields (e.g. a set's rpe/durationSeconds inside a
+  // session's entries array) get written as plain `undefined` when cleared.
+  // Without this, Firestore rejects the whole write outright.
+  ignoreUndefinedProperties: true,
 })

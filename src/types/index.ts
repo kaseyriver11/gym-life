@@ -138,6 +138,9 @@ export interface WorkoutSession {
   title?: string
   entries: WorkoutExerciseEntry[]
   notes?: string
+  /** Set when the workout is marked finished — freezes the duration shown
+   * from createdAt. Cleared again if the workout is reopened. */
+  endedAt?: number
   createdAt: number
   updatedAt: number
 }

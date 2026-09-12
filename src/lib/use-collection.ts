@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   orderBy,
@@ -23,6 +24,18 @@ function omitUndefined(data: object): DocumentData {
   const result: DocumentData = {}
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined) result[key] = value
+  }
+  return result
+}
+
+// For updates (unlike creates) a caller passing `field: undefined` means
+// "clear this field" — e.g. reopening a finished workout clears `endedAt`.
+// updateDoc() needs the explicit deleteField() sentinel for that; simply
+// omitting the key would leave the document's existing value untouched.
+function toUpdatePayload(data: object): DocumentData {
+  const result: DocumentData = {}
+  for (const [key, value] of Object.entries(data)) {
+    result[key] = value === undefined ? deleteField() : value
   }
   return result
 }
@@ -66,7 +79,7 @@ export function useUserCollection<T extends object>(
   async function update(id: string, data: Partial<T>) {
     if (!user) throw new Error('Not signed in')
     const ref = doc(db, 'users', user.uid, path, id)
-    return updateDoc(ref, omitUndefined(data))
+    return updateDoc(ref, toUpdatePayload(data))
   }
 
   async function remove(id: string) {
