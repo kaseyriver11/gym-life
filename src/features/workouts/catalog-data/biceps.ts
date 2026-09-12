@@ -7,6 +7,12 @@ import type { Exercise } from '@/types'
  * brachii itself; incline curls stretch the long head for greater long-head
  * emphasis; preacher curls isolate the short head but only over a short arc;
  * pronated reverse curls hit the brachioradialis and forearm extensors.
+ * Drag curls and overhead/"Bayesian" cable curls keep the upper arm behind
+ * or in line with the torso (shoulder extension), which biases the long
+ * head via a deeper stretch; wide-grip barbell curls similarly bias the
+ * long head, though EMG evidence on grip-width head-bias is mixed. Chin-ups
+ * are included as a compound, loaded biceps-emphasis movement (underhand
+ * grip drives significant biceps EMG activation alongside the lats).
  */
 export const BICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -167,6 +173,54 @@ export const BICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
     targetMuscles: [{ muscle: 'Biceps Brachii', role: 'primary' }],
     repRangeLow: 10,
     repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Drag Curl (Barbell)',
+    muscleGroup: 'Biceps',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii (Long Head)', role: 'primary' },
+      { muscle: 'Brachialis', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Overhead Cable Curl (Bayesian Curl)',
+    muscleGroup: 'Biceps',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii (Long Head)', role: 'primary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Wide-Grip Barbell Curl',
+    muscleGroup: 'Biceps',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii (Long Head)', role: 'primary' },
+      { muscle: 'Brachialis', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Band Curl',
+    muscleGroup: 'Biceps',
+    equipment: 'Bands',
+    targetMuscles: [
+      { muscle: 'Biceps Brachii', role: 'primary' },
+      { muscle: 'Brachialis', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 20,
     createdAt: Date.now(),
   },
 ]

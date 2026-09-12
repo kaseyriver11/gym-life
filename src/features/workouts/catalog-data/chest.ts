@@ -9,7 +9,11 @@ import type { Exercise } from '@/types'
  * stabilizer demand. Push-up angle mechanics run opposite to bench angle
  * mechanics — hands-elevated (incline push-up) biases lower chest, feet-
  * elevated (decline push-up) biases upper chest — since it's the body's
- * incline relative to gravity that matters, not the bench's.
+ * incline relative to gravity that matters, not the bench's. The Hex Press
+ * adds a sustained horizontal-adduction (squeeze) component absent from a
+ * standard dumbbell press, which EMG shows drives meaningfully higher pec
+ * activation, especially at the shortened/top position — a genuinely
+ * distinct stimulus, not just a grip tweak.
  */
 export const CHEST_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -399,6 +403,49 @@ export const CHEST_EXERCISES: Omit<Exercise, 'id'>[] = [
       { muscle: 'Latissimus Dorsi', role: 'secondary' },
       { muscle: 'Triceps Brachii (long head)', role: 'secondary' },
       { muscle: 'Serratus Anterior', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Hex Press (Dumbbell Squeeze Press, Flat)',
+    muscleGroup: 'Chest',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'primary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Decline Dumbbell Fly',
+    muscleGroup: 'Chest',
+    muscleSubgroup: 'Lower Chest',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Rotator Cuff', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Resistance Band Chest Press (Standing)',
+    muscleGroup: 'Chest',
+    equipment: 'Bands',
+    targetMuscles: [
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'primary' },
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'primary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
     ],
     repRangeLow: 10,
     repRangeHigh: 15,

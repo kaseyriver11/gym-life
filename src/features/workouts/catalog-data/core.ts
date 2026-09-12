@@ -7,6 +7,11 @@ import type { Exercise } from '@/types'
  * and reverse crunches activate the lower rectus abdominis and obliques
  * significantly more than crunches; plank variations with hollowing raise
  * oblique activation without changing rectus abdominis activation much.
+ * Bicycle crunch and vertical leg raise variants (toes-to-bar) consistently
+ * rank at or near the top of ACE/peer-reviewed EMG comparisons for combined
+ * rectus/oblique recruitment; loaded carries and quadruped anti-rotation
+ * work (bird dog) round out anti-lateral-flexion and anti-extension demands
+ * not covered by crunch or plank patterns alone.
  */
 export const CORE_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -206,6 +211,123 @@ export const CORE_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 10,
     repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Sit-Up',
+    muscleGroup: 'Core',
+    muscleSubgroup: 'Upper Abs',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Rectus Abdominis (Upper)', role: 'primary' },
+      { muscle: 'Hip Flexors', role: 'secondary' },
+    ],
+    repRangeLow: 15,
+    repRangeHigh: 20,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Bicycle Crunch',
+    muscleGroup: 'Core',
+    muscleSubgroup: 'Obliques',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Obliques', role: 'primary' },
+      { muscle: 'Rectus Abdominis (Upper)', role: 'secondary' },
+    ],
+    repRangeLow: 15,
+    repRangeHigh: 20,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Flutter Kicks',
+    muscleGroup: 'Core',
+    muscleSubgroup: 'Lower Abs',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Rectus Abdominis (Lower)', role: 'primary' },
+      { muscle: 'Hip Flexors', role: 'secondary' },
+    ],
+    repRangeLow: 20,
+    repRangeHigh: 30,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Toes-to-Bar',
+    muscleGroup: 'Core',
+    muscleSubgroup: 'Lower Abs',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Rectus Abdominis (Lower)', role: 'primary' },
+      { muscle: 'Hip Flexors', role: 'secondary' },
+      { muscle: 'Latissimus Dorsi', role: 'secondary' },
+    ],
+    repRangeLow: 6,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Mountain Climber',
+    muscleGroup: 'Core',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Hip Flexors', role: 'primary' },
+      { muscle: 'Rectus Abdominis (Upper)', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 20,
+    repRangeHigh: 30,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Bird Dog',
+    muscleGroup: 'Core',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Transverse Abdominis', role: 'primary' },
+      { muscle: 'Erector Spinae', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Hollow Body Hold',
+    muscleGroup: 'Core',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Rectus Abdominis (Upper)', role: 'primary' },
+      { muscle: 'Rectus Abdominis (Lower)', role: 'primary' },
+      { muscle: 'Transverse Abdominis', role: 'secondary' },
+    ],
+    repRangeLow: 1,
+    repRangeHigh: 3,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Suitcase Carry',
+    muscleGroup: 'Core',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Obliques', role: 'primary' },
+      { muscle: 'Transverse Abdominis', role: 'stabilizer' },
+    ],
+    repRangeLow: 1,
+    repRangeHigh: 3,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Landmine 180 (Rotation)',
+    muscleGroup: 'Core',
+    muscleSubgroup: 'Obliques',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Obliques', role: 'primary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
     createdAt: Date.now(),
   },
 ]

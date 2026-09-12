@@ -7,7 +7,14 @@ import type { Exercise } from '@/types'
  * than Romanian deadlifts (~2x rectus femoris activation), while RDLs bias
  * the hamstrings (biceps femoris) over the erectors — an exception among
  * hip-hinge movements; leg press gives moderate hamstring activation at
- * deep knee flexion but far less than direct hamstring work.
+ * deep knee flexion but far less than direct hamstring work. Belt squats
+ * match back-squat quad activation while cutting lumbar erector load
+ * roughly in half (hips carry the load, not the spine); stiff-leg deadlifts
+ * differ from RDLs by keeping the knees nearly locked, biasing hamstring
+ * stretch/erector involvement over glute drive; the Copenhagen plank is the
+ * standout adductor isolation movement in the sports-med literature,
+ * producing the highest adductor longus EMG among common adductor drills
+ * while also loading the obliques heavily.
  */
 export const LEGS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -248,6 +255,178 @@ export const LEGS_EXERCISES: Omit<Exercise, 'id'>[] = [
     equipment: 'Cable',
     targetMuscles: [{ muscle: 'Hip Abductors', role: 'primary' }],
     repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Sissy Squat',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Bodyweight',
+    targetMuscles: [{ muscle: 'Quadriceps', role: 'primary' }],
+    repRangeLow: 8,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Pistol Squat',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Quadriceps', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Belt Squat',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Quadriceps', role: 'primary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Smith Machine Squat',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Quadriceps', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Leg Press (Machine)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Quadriceps', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Lateral Lunge (Dumbbell)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Quads',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Quadriceps', role: 'primary' },
+      { muscle: 'Adductors', role: 'secondary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Stiff-Leg Deadlift (Barbell)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Hamstrings',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Hamstrings', role: 'primary' },
+      { muscle: 'Erector Spinae', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Glute-Ham Raise',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Hamstrings',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Hamstrings', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Erector Spinae', role: 'secondary' },
+    ],
+    repRangeLow: 6,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Standing Leg Curl (Machine)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Hamstrings',
+    equipment: 'Machine',
+    targetMuscles: [{ muscle: 'Hamstrings', role: 'primary' }],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Calf Press (Leg Press Machine)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Calves',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Gastrocnemius', role: 'primary' },
+      { muscle: 'Soleus', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Leg Calf Raise (Dumbbell)',
+    muscleGroup: 'Legs',
+    muscleSubgroup: 'Calves',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Gastrocnemius', role: 'primary' },
+      { muscle: 'Soleus', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Hip Adduction Machine (Seated)',
+    muscleGroup: 'Legs',
+    equipment: 'Machine',
+    targetMuscles: [{ muscle: 'Adductors', role: 'primary' }],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Hip Abduction Machine (Seated)',
+    muscleGroup: 'Legs',
+    equipment: 'Machine',
+    targetMuscles: [{ muscle: 'Hip Abductors', role: 'primary' }],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Copenhagen Plank',
+    muscleGroup: 'Legs',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Adductors', role: 'primary' },
+      { muscle: 'Obliques', role: 'secondary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 8,
     repRangeHigh: 15,
     createdAt: Date.now(),
   },

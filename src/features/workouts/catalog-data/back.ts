@@ -7,7 +7,14 @@ import type { Exercise } from '@/types'
  * traps and rhomboids with the lats acting more as stabilizers; straight-arm
  * pulldowns isolate the lats with minimal biceps; conventional deadlifts hit
  * the quads and erectors harder than Romanian deadlifts, which bias the
- * hamstrings instead.
+ * hamstrings instead. Trap bar deadlifts use a neutral grip and a more
+ * upright torso than conventional/sumo pulls, shifting load toward the
+ * quads and easing peak erector demand; rack pulls shorten the range to the
+ * lockout portion, overloading the erectors and upper back with heavier
+ * weight than a full pull allows. Pendlay rows are performed dead-stop from
+ * the floor each rep (no stretch reflex, more horizontal torso) versus the
+ * continuous-tension bent-over row. Farmer's carries load the traps
+ * isometrically under a walked load rather than through a shrugging ROM.
  */
 export const BACK_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -290,6 +297,108 @@ export const BACK_EXERCISES: Omit<Exercise, 'id'>[] = [
     ],
     repRangeLow: 8,
     repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Pendlay Row (Barbell)',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Rhomboids',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Rhomboids', role: 'primary' },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'primary' },
+      { muscle: 'Latissimus Dorsi', role: 'secondary' },
+      { muscle: 'Posterior Deltoid', role: 'secondary' },
+      { muscle: 'Biceps Brachii', role: 'secondary' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 8,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Trap Bar Deadlift',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Lower Back',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Erector Spinae', role: 'primary' },
+      { muscle: 'Quadriceps', role: 'secondary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+      { muscle: 'Trapezius (Upper)', role: 'secondary' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 8,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Rack Pull',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Lower Back',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Erector Spinae', role: 'primary' },
+      { muscle: 'Trapezius (Upper)', role: 'secondary' },
+      { muscle: 'Latissimus Dorsi', role: 'secondary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+    ],
+    repRangeLow: 3,
+    repRangeHigh: 6,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Superman (Prone Back Extension)',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Lower Back',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Erector Spinae', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Reverse Hyperextension (Machine)',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Lower Back',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Erector Spinae', role: 'primary' },
+      { muscle: 'Gluteus Maximus', role: 'secondary' },
+      { muscle: 'Hamstrings', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: "Farmer's Carry",
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Traps',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Trapezius (Upper)', role: 'primary' },
+      { muscle: 'Forearm Flexors', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 20,
+    repRangeHigh: 40,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Scapular Pull-Up',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Traps',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Trapezius (Mid/Lower)', role: 'primary' },
+      { muscle: 'Rhomboids', role: 'secondary' },
+      { muscle: 'Latissimus Dorsi', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
     createdAt: Date.now(),
   },
 ]

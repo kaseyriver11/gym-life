@@ -6,7 +6,11 @@ import type { Exercise } from '@/types'
  * overhead extensions produce the highest long-head EMG of any triceps
  * exercise; pushdowns bias the lateral head and are gentlest on the elbows;
  * skull crushers hit all three heads, more so than pushdowns for the long
- * head when lowered behind the head rather than to the forehead.
+ * head when lowered behind the head rather than to the forehead. Grip also
+ * matters on pushdown-pattern moves: a neutral (V-bar) grip lets the elbows
+ * track slightly wider for a fuller lockout, while a reverse (underhand)
+ * grip shifts more of the load onto the medial head (no dedicated slug for
+ * that head, so it's logged under the generic Triceps Brachii entry).
  */
 export const TRICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -159,6 +163,87 @@ export const TRICEPS_EXERCISES: Omit<Exercise, 'id'>[] = [
     muscleGroup: 'Triceps',
     equipment: 'Dumbbell',
     targetMuscles: [{ muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' }],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'V-Bar Cable Pushdown',
+    muscleGroup: 'Triceps',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' },
+      { muscle: 'Triceps Brachii (Long Head)', role: 'secondary' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Reverse-Grip (Underhand) Cable Pushdown',
+    muscleGroup: 'Triceps',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii', role: 'primary' },
+      { muscle: 'Forearm Flexors', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Single-Arm Cable Pushdown',
+    muscleGroup: 'Triceps',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' },
+      { muscle: 'Core (anti-rotation)', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'EZ-Bar Overhead Triceps Extension (French Press)',
+    muscleGroup: 'Triceps',
+    equipment: 'Barbell',
+    targetMuscles: [{ muscle: 'Triceps Brachii (Long Head)', role: 'primary' }],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Close-Grip Push-Up (Diamond)',
+    muscleGroup: 'Triceps',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' },
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'secondary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 10,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Machine-Assisted Triceps Dip',
+    muscleGroup: 'Triceps',
+    equipment: 'Machine',
+    targetMuscles: [
+      { muscle: 'Triceps Brachii (Lateral Head)', role: 'primary' },
+      { muscle: 'Anterior Deltoid', role: 'secondary' },
+      { muscle: 'Pec Major (Sternocostal / Mid-Lower Chest)', role: 'secondary' },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Machine Overhead Triceps Extension',
+    muscleGroup: 'Triceps',
+    equipment: 'Machine',
+    targetMuscles: [{ muscle: 'Triceps Brachii (Long Head)', role: 'primary' }],
     repRangeLow: 10,
     repRangeHigh: 15,
     createdAt: Date.now(),

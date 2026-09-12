@@ -6,7 +6,14 @@ import type { Exercise } from '@/types'
  * (bent-arm especially) maximize lateral/middle deltoid; rear-delt-specific
  * work (rear raises, reverse flyes, face pulls) maximizes posterior deltoid,
  * which barely fires during pressing (~11% MVIC on overhead press vs ~24%
- * on lateral raise).
+ * on lateral raise). Face pulls and scarecrows add external-rotation demand,
+ * recruiting the rotator cuff (infraspinatus/teres minor) alongside the rear
+ * delt; EMG on external-rotation exercises shows posterior deltoid EMG rises
+ * with load while cuff activation stays comparatively load-insensitive, so
+ * both are useful but train slightly different things. Behind-the-neck press
+ * EMG shows it edges out front-loaded pressing for lateral and posterior
+ * deltoid activation, which is why it's filed under Side Delts here rather
+ * than Front Delts.
  */
 export const SHOULDERS_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
@@ -232,6 +239,117 @@ export const SHOULDERS_EXERCISES: Omit<Exercise, 'id'>[] = [
       { muscle: 'Posterior Deltoid', role: 'secondary' },
     ],
     repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Z Press',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Front Delts',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Anterior Deltoid', role: 'primary' },
+      { muscle: 'Lateral Deltoid', role: 'secondary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Core', role: 'stabilizer' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 8,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Handstand Push-Up',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Front Delts',
+    equipment: 'Bodyweight',
+    targetMuscles: [
+      { muscle: 'Anterior Deltoid', role: 'primary' },
+      { muscle: 'Lateral Deltoid', role: 'secondary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+    ],
+    repRangeLow: 5,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Behind-the-Neck Press',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Side Delts',
+    equipment: 'Barbell',
+    targetMuscles: [
+      { muscle: 'Lateral Deltoid', role: 'primary' },
+      { muscle: 'Posterior Deltoid', role: 'secondary' },
+      { muscle: 'Triceps Brachii', role: 'secondary' },
+      { muscle: 'Trapezius (Upper)', role: 'secondary' },
+    ],
+    repRangeLow: 6,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Lean-Away Cable Lateral Raise',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Side Delts',
+    equipment: 'Cable',
+    targetMuscles: [{ muscle: 'Lateral Deltoid', role: 'primary' }],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Chest-Supported Dumbbell Reverse Fly',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Rear Delts',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Posterior Deltoid', role: 'primary' },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'secondary' },
+      { muscle: 'Rhomboids', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Scarecrow (Dumbbell)',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Rear Delts',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Posterior Deltoid', role: 'primary' },
+      { muscle: 'Rotator Cuff', role: 'primary' },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'W-Raise (Dumbbell)',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Rear Delts',
+    equipment: 'Dumbbell',
+    targetMuscles: [
+      { muscle: 'Posterior Deltoid', role: 'primary' },
+      { muscle: 'Rhomboids', role: 'secondary' },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'secondary' },
+      { muscle: 'Rotator Cuff', role: 'secondary' },
+    ],
+    repRangeLow: 12,
+    repRangeHigh: 15,
+    createdAt: Date.now(),
+  },
+  {
+    name: 'Wide-Grip Rear Delt Row (Cable)',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Rear Delts',
+    equipment: 'Cable',
+    targetMuscles: [
+      { muscle: 'Posterior Deltoid', role: 'primary' },
+      { muscle: 'Rhomboids', role: 'secondary' },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'secondary' },
+    ],
+    repRangeLow: 10,
     repRangeHigh: 15,
     createdAt: Date.now(),
   },
