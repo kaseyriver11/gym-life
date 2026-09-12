@@ -561,7 +561,7 @@ function SessionEditor({
           )}
         >
           <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+            <div className="flex min-w-0 items-center gap-2.5">
               <span
                 className={clsx(
                   'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold',
@@ -570,8 +570,16 @@ function SessionEditor({
               >
                 {entryIndex + 1}
               </span>
-              <div>
-                <p className="text-sm font-medium text-neutral-100">{entry.exerciseName}</p>
+              <div className="min-w-0">
+                <button
+                  onClick={() => setFocusEntryIndex(entryIndex)}
+                  className="text-left"
+                  title="Notes, muscle targets, and history for this exercise"
+                >
+                  <p className="truncate text-sm font-medium text-neutral-100 hover:text-indigo-300">
+                    {entry.exerciseName}
+                  </p>
+                </button>
                 {(info?.muscleGroup || info?.equipment || entry.supersetGroup != null) && (
                   <div className="mt-0.5 flex items-center gap-1.5">
                     {info?.muscleGroup && (
