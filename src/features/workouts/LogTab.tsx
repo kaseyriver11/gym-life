@@ -19,7 +19,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { inputClass } from '@/components/form'
 import type { WorkoutExerciseEntry, WorkoutSession } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
@@ -51,6 +51,12 @@ function todayISO() {
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? '' : 's'}`
+}
+
+/** Enter/Done on a numeric keypad should dismiss the field like a real form,
+ * not leave the user to tap elsewhere to close the keyboard. */
+function blurOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (e.key === 'Enter') e.currentTarget.blur()
 }
 
 export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
@@ -231,9 +237,27 @@ function SessionEditor({
   const [calcWeight, setCalcWeight] = useState<number | null>(null)
   const [warmupWeight, setWarmupWeight] = useState<number | null>(null)
   const [showMuscleMap, setShowMuscleMap] = useState(false)
+  const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<number | null>(null)
+  const confirmDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function requestRemoveEntry(index: number) {
+    if (confirmDeleteEntry === index) {
+      if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+      setConfirmDeleteEntry(null)
+      removeEntry(index)
+      return
+    }
+    setConfirmDeleteEntry(index)
+    if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+    confirmDeleteTimeout.current = setTimeout(() => setConfirmDeleteEntry(null), 2500)
+  }
   const exercisesById = useMemo(
     () => new Map(exercises.map((ex) => [ex.id, ex])),
     [exercises],
+  )
+  const anySetCompleted = useMemo(
+    () => entries.some((e) => e.sets.some((s) => s.completed)),
+    [entries],
   )
   const groupLabels = useMemo(() => {
     const map = new Map<number, string>()
@@ -244,12 +268,40 @@ function SessionEditor({
     }
     return map
   }, [entries])
+  // Consecutive entries sharing a supersetGroup render inside one bracketed
+  // wrapper instead of each carrying its own inline "Superset A" badge.
+  const groupedEntries = useMemo(() => {
+    const groups: {
+      key: string
+      items: { entry: WorkoutExerciseEntry; index: number }[]
+    }[] = []
+    entries.forEach((entry, index) => {
+      const last = groups[groups.length - 1]
+      const lastItem = last?.items[last.items.length - 1]
+      if (
+        entry.supersetGroup != null &&
+        lastItem &&
+        lastItem.entry.supersetGroup === entry.supersetGroup
+      ) {
+        last.items.push({ entry, index })
+      } else {
+        groups.push({ key: `${entry.exerciseId}-${index}`, items: [{ entry, index }] })
+      }
+    })
+    return groups
+  }, [entries])
 
   // Reset local edit buffer when switching to a different session/day.
   useEffect(() => {
     setEntries(session.entries)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id])
+
+  useEffect(() => {
+    return () => {
+      if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+    }
+  }, [])
 
   function commit(next: WorkoutExerciseEntry[]) {
     setEntries(next)
@@ -360,9 +412,7 @@ function SessionEditor({
     return candidate > Math.max(historyBest, todayBest)
   }
 
-  return (
-    <div className="space-y-3">
-      {entries.map((entry, entryIndex) => {
+  function renderCard(entry: WorkoutExerciseEntry, entryIndex: number) {
         const info = exercisesById.get(entry.exerciseId)
         const style = muscleGroupStyle(info?.muscleGroup)
         return (
@@ -410,38 +460,47 @@ function SessionEditor({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1 text-neutral-600">
+            <div className="flex items-center text-neutral-600">
               <button
                 onClick={() => setWarmupWeight(entry.sets[0]?.weight || 0)}
-                className="hover:text-orange-400"
+                className="flex h-8 w-8 items-center justify-center hover:text-orange-400"
                 aria-label="Warm-up calculator"
                 title="Suggest a warm-up ramp for this exercise"
               >
-                <Flame size={14} />
+                <Flame size={15} />
               </button>
               <button
                 onClick={() => moveEntry(entryIndex, -1)}
                 disabled={entryIndex === 0}
-                className="hover:text-neutral-300 disabled:opacity-30"
+                className="flex h-8 w-8 items-center justify-center hover:text-neutral-300 disabled:opacity-30"
                 aria-label="Move up"
               >
-                <MoveUp size={14} />
+                <MoveUp size={15} />
               </button>
               <button
                 onClick={() => moveEntry(entryIndex, 1)}
                 disabled={entryIndex === entries.length - 1}
-                className="hover:text-neutral-300 disabled:opacity-30"
+                className="flex h-8 w-8 items-center justify-center hover:text-neutral-300 disabled:opacity-30"
                 aria-label="Move down"
               >
-                <MoveDown size={14} />
+                <MoveDown size={15} />
               </button>
-              <button
-                onClick={() => removeEntry(entryIndex)}
-                className="ml-1 hover:text-red-400"
-                aria-label="Remove exercise"
-              >
-                <Trash2 size={14} />
-              </button>
+              {confirmDeleteEntry === entryIndex ? (
+                <button
+                  onClick={() => requestRemoveEntry(entryIndex)}
+                  className="ml-1 flex h-8 items-center justify-center rounded-full bg-red-500/20 px-2.5 text-[11px] font-semibold text-red-400"
+                >
+                  Confirm?
+                </button>
+              ) : (
+                <button
+                  onClick={() => requestRemoveEntry(entryIndex)}
+                  className="ml-1 flex h-8 w-8 items-center justify-center hover:text-red-400"
+                  aria-label="Remove exercise"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -460,6 +519,7 @@ function SessionEditor({
                       isEstimate: false,
                     })
                   }
+                  onKeyDown={blurOnEnter}
                   className={clsx(
                     `${inputClass} py-1.5`,
                     set.isEstimate && 'text-neutral-500',
@@ -477,6 +537,7 @@ function SessionEditor({
                       isEstimate: false,
                     })
                   }
+                  onKeyDown={blurOnEnter}
                   className={clsx(
                     `${inputClass} py-1.5`,
                     set.isEstimate && 'text-neutral-500',
@@ -484,10 +545,10 @@ function SessionEditor({
                 />
                 <button
                   onClick={() => setCalcWeight(set.weight)}
-                  className="text-neutral-600 hover:text-indigo-400"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-indigo-400"
                   aria-label="Plate calculator"
                 >
-                  <Calculator size={13} />
+                  <Calculator size={15} />
                 </button>
                 <button
                   onClick={() => {
@@ -511,7 +572,7 @@ function SessionEditor({
                     updateSet(entryIndex, setIndex, patch)
                     if (nowCompleted && isLastInGroup(entryIndex)) timer.start()
                   }}
-                  className={`h-5 w-5 shrink-0 rounded-full border-2 ${
+                  className={`h-7 w-7 shrink-0 rounded-full border-2 ${
                     set.completed ? 'border-indigo-500 bg-indigo-500' : 'border-neutral-600'
                   }`}
                   aria-label="Set completed"
@@ -531,6 +592,7 @@ function SessionEditor({
                         rpe: e.target.value ? Number(e.target.value) : undefined,
                       })
                     }
+                    onKeyDown={blurOnEnter}
                     className="w-11 shrink-0 rounded-lg border border-neutral-700 bg-neutral-800 px-1 py-1.5 text-center text-xs text-neutral-50 outline-none focus:border-indigo-500"
                   />
                 )}
@@ -577,16 +639,16 @@ function SessionEditor({
                             timer.startStopwatch(entry.exerciseName)
                           }}
                           disabled={!timer.idle}
-                          className="flex items-center gap-1 text-xs text-neutral-400 hover:text-teal-400 disabled:opacity-40"
+                          className="flex h-8 items-center gap-1 text-xs text-neutral-400 hover:text-teal-400 disabled:opacity-40"
                         >
-                          <Clock size={11} /> {formatTime(set.durationSeconds)}
+                          <Clock size={12} /> {formatTime(set.durationSeconds)}
                         </button>
                         <button
                           onClick={() => updateSet(entryIndex, setIndex, { durationSeconds: undefined })}
-                          className="text-neutral-700 hover:text-red-400"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-700 hover:text-red-400"
                           aria-label="Clear time"
                         >
-                          <X size={11} />
+                          <X size={13} />
                         </button>
                       </span>
                     )
@@ -598,18 +660,19 @@ function SessionEditor({
                         timer.startStopwatch(entry.exerciseName)
                       }}
                       disabled={!timer.idle}
-                      className="text-neutral-600 hover:text-teal-400 disabled:opacity-30"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-teal-400 disabled:opacity-30"
                       aria-label="Time this set"
                     >
-                      <Clock size={14} />
+                      <Clock size={15} />
                     </button>
                   )
                 })()}
                 <button
                   onClick={() => removeSet(entryIndex, setIndex)}
-                  className="text-neutral-700 hover:text-red-400"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-700 hover:text-red-400"
+                  aria-label="Remove set"
                 >
-                  <Trash2 size={12} />
+                  <Trash2 size={13} />
                 </button>
               </div>
             ))}
@@ -634,9 +697,25 @@ function SessionEditor({
           </div>
         </div>
         )
-      })}
+  }
 
-      <div className="flex gap-2">
+  return (
+    <div className="space-y-3">
+      {groupedEntries.map((group) =>
+        group.items.length > 1 ? (
+          <div
+            key={group.key}
+            className="relative space-y-1.5 rounded-xl bg-teal-500/[0.04] py-1.5 pl-4 pr-1.5"
+          >
+            <div className="absolute bottom-3 left-2 top-3 w-0.5 rounded-full bg-teal-500/70" />
+            {group.items.map(({ entry, index }) => renderCard(entry, index))}
+          </div>
+        ) : (
+          renderCard(group.items[0].entry, group.items[0].index)
+        ),
+      )}
+
+      <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-neutral-900 bg-neutral-950/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
         <button
           onClick={() => setAddingMore(true)}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-700 py-3 text-sm text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
@@ -696,11 +775,17 @@ function SessionEditor({
         <MuscleMapModal
           title="Today's muscle map"
           data={buildMuscleData(
-            entries.map((e) => ({
-              exerciseId: e.exerciseId,
-              exerciseName: e.exerciseName,
-              setCount: e.sets.filter((s) => s.completed).length,
-            })),
+            entries.map((e) => {
+              const completedCount = e.sets.filter((s) => s.completed).length
+              return {
+                exerciseId: e.exerciseId,
+                exerciseName: e.exerciseName,
+                // Before anything's checked off, show the planned session
+                // (like the Plan tab preview) instead of an empty map —
+                // completed counts take over once a set is logged.
+                setCount: anySetCompleted ? completedCount : e.sets.length,
+              }
+            }),
             exercisesById,
           )}
           onClose={() => setShowMuscleMap(false)}
