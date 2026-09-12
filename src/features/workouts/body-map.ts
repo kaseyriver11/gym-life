@@ -53,6 +53,63 @@ const SUBGROUP_FALLBACK_SLUGS: Partial<Record<string, Muscle[]>> = {
   Obliques: ['obliques'],
 }
 
+/** Every slug the body model can render — used to validate a directly
+ * user-picked muscle (as opposed to one of our own freeform research
+ * strings above). */
+const ALL_MUSCLE_SLUGS = new Set<string>([
+  'chest',
+  'triceps',
+  'biceps',
+  'front-deltoids',
+  'back-deltoids',
+  'trapezius',
+  'upper-back',
+  'lower-back',
+  'abs',
+  'obliques',
+  'quadriceps',
+  'hamstring',
+  'adductor',
+  'abductors',
+  'calves',
+  'gluteal',
+  'forearm',
+  'head',
+  'neck',
+  'knees',
+  'left-soleus',
+  'right-soleus',
+])
+
+/** Curated subset offered in the "which muscles does this work" picker when
+ * a user adds their own exercise — leaves out overly fringe/duplicate slugs
+ * (head, knees, left/right-soleus) that aren't useful to pick manually. */
+export const MUSCLE_PICKER_OPTIONS: Muscle[] = [
+  'chest',
+  'upper-back',
+  'lower-back',
+  'trapezius',
+  'front-deltoids',
+  'back-deltoids',
+  'biceps',
+  'triceps',
+  'forearm',
+  'abs',
+  'obliques',
+  'quadriceps',
+  'hamstring',
+  'adductor',
+  'abductors',
+  'calves',
+  'gluteal',
+  'neck',
+]
+
+function resolveSlug(name: string): Muscle | null {
+  if (name in MUSCLE_NAME_TO_SLUG) return MUSCLE_NAME_TO_SLUG[name]
+  return ALL_MUSCLE_SLUGS.has(name) ? (name as Muscle) : null
+}
+
 export interface MuscleSlugRoles {
   primary: Muscle[]
   secondary: Muscle[]
@@ -65,7 +122,7 @@ export function slugsForExercise(ex: ExerciseLike): MuscleSlugRoles {
     const primary = new Set<Muscle>()
     const secondary = new Set<Muscle>()
     for (const target of ex.targetMuscles) {
-      const slug = MUSCLE_NAME_TO_SLUG[target.muscle]
+      const slug = resolveSlug(target.muscle)
       if (!slug) continue
       if (target.role === 'primary') primary.add(slug)
       else secondary.add(slug)

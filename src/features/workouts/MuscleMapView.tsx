@@ -17,7 +17,6 @@ export function MuscleMapView({
   const dominant = dominantMuscleLabel(data)
 
   function handleClick({ muscle, data: stats }: IMuscleStats) {
-    if (stats.frequency === 0) return
     setSelected({ label: muscleLabel(muscle), exercises: [...new Set(stats.exercises)] })
   }
 
@@ -69,11 +68,15 @@ export function MuscleMapView({
         </div>
         <span className="text-[10px] text-neutral-600">Heavy</span>
       </div>
-      <p className="text-center text-[10px] text-neutral-600">Tap a colored muscle for details</p>
+      <p className="text-center text-[10px] text-neutral-600">Tap any muscle for details</p>
       {selected && (
         <div className="rounded-lg bg-neutral-800/70 p-2.5 text-center">
           <p className="text-sm font-medium text-teal-300">{selected.label}</p>
-          <p className="mt-0.5 text-xs text-neutral-400">{selected.exercises.join(', ')}</p>
+          <p className="mt-0.5 text-xs text-neutral-400">
+            {selected.exercises.length > 0
+              ? selected.exercises.join(', ')
+              : 'Not worked by this workout'}
+          </p>
         </div>
       )}
     </div>

@@ -11,14 +11,16 @@ import {
   X,
 } from 'lucide-react'
 import { useState } from 'react'
+import type { Muscle } from 'react-body-highlighter'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { Exercise } from '@/types'
+import { MUSCLE_PICKER_OPTIONS } from './body-map'
 import { CHEST_EXERCISES } from './catalog-data/chest'
 import { seedCatalog } from './catalog-data/seed'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
 import { MuscleMapModal } from './MuscleMapModal'
-import { buildMuscleData } from './muscle-heat'
+import { buildMuscleData, muscleLabel } from './muscle-heat'
 import {
   MUSCLE_GROUPS,
   MUSCLE_SUBGROUPS,
@@ -136,6 +138,7 @@ function AddExercisePanel({
   const [equipment, setEquipment] = useState<Equipment | null>(null)
   const [repRangeLow, setRepRangeLow] = useState('')
   const [repRangeHigh, setRepRangeHigh] = useState('')
+  const [targetMuscles, setTargetMuscles] = useState<Muscle[]>([])
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -147,6 +150,10 @@ function AddExercisePanel({
       equipment: equipment ?? undefined,
       repRangeLow: repRangeLow ? Number(repRangeLow) : undefined,
       repRangeHigh: repRangeHigh ? Number(repRangeHigh) : undefined,
+      targetMuscles:
+        targetMuscles.length > 0
+          ? targetMuscles.map((muscle) => ({ muscle, role: 'primary' as const }))
+          : undefined,
       createdAt: Date.now(),
     })
     setName('')
@@ -155,6 +162,7 @@ function AddExercisePanel({
     setEquipment(null)
     setRepRangeLow('')
     setRepRangeHigh('')
+    setTargetMuscles([])
   }
 
   const query = name.trim().toLowerCase()
@@ -182,6 +190,8 @@ function AddExercisePanel({
         onRepRangeLowChange={setRepRangeLow}
         repRangeHigh={repRangeHigh}
         onRepRangeHighChange={setRepRangeHigh}
+        targetMuscles={targetMuscles}
+        onTargetMusclesChange={setTargetMuscles}
       />
 
       {potentialMatches.length > 0 && (
@@ -451,6 +461,8 @@ function ExerciseFields({
   onRepRangeLowChange,
   repRangeHigh,
   onRepRangeHighChange,
+  targetMuscles,
+  onTargetMusclesChange,
 }: {
   name: string
   onNameChange: (value: string) => void
@@ -464,6 +476,8 @@ function ExerciseFields({
   onRepRangeLowChange: (value: string) => void
   repRangeHigh: string
   onRepRangeHighChange: (value: string) => void
+  targetMuscles: Muscle[]
+  onTargetMusclesChange: (value: Muscle[]) => void
 }) {
   const subOptions = muscleGroup ? MUSCLE_SUBGROUPS[muscleGroup] : undefined
 
@@ -557,6 +571,38 @@ function ExerciseFields({
           />
         </div>
       </div>
+      <div>
+        <label className="mb-1 block text-xs text-neutral-500">
+          Which muscles does this work?{' '}
+          <span className="text-neutral-700">(optional — powers the muscle map)</span>
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {MUSCLE_PICKER_OPTIONS.map((muscle) => {
+            const active = targetMuscles.includes(muscle)
+            return (
+              <button
+                key={muscle}
+                type="button"
+                onClick={() =>
+                  onTargetMusclesChange(
+                    active
+                      ? targetMuscles.filter((m) => m !== muscle)
+                      : [...targetMuscles, muscle],
+                  )
+                }
+                className={clsx(
+                  'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                  active
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+                )}
+              >
+                {muscleLabel(muscle)}
+              </button>
+            )
+          })}
+        </div>
+      </div>
     </>
   )
 }
@@ -575,6 +621,7 @@ function EditExerciseModal({
     equipment?: Equipment
     repRangeLow?: number
     repRangeHigh?: number
+    targetMuscles?: { muscle: Muscle; role: 'primary' }[]
   }) => void
 }) {
   const [name, setName] = useState(exercise.name)
@@ -589,6 +636,9 @@ function EditExerciseModal({
   )
   const [repRangeLow, setRepRangeLow] = useState(exercise.repRangeLow?.toString() ?? '')
   const [repRangeHigh, setRepRangeHigh] = useState(exercise.repRangeHigh?.toString() ?? '')
+  const [targetMuscles, setTargetMuscles] = useState<Muscle[]>(
+    () => exercise.targetMuscles?.map((t) => t.muscle as Muscle) ?? [],
+  )
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -600,6 +650,10 @@ function EditExerciseModal({
       equipment: equipment ?? undefined,
       repRangeLow: repRangeLow ? Number(repRangeLow) : undefined,
       repRangeHigh: repRangeHigh ? Number(repRangeHigh) : undefined,
+      targetMuscles:
+        targetMuscles.length > 0
+          ? targetMuscles.map((muscle) => ({ muscle, role: 'primary' as const }))
+          : undefined,
     })
   }
 
@@ -622,6 +676,8 @@ function EditExerciseModal({
           onRepRangeLowChange={setRepRangeLow}
           repRangeHigh={repRangeHigh}
           onRepRangeHighChange={setRepRangeHigh}
+          targetMuscles={targetMuscles}
+          onTargetMusclesChange={setTargetMuscles}
         />
         <button
           type="submit"
