@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { inputClass } from '@/components/form'
-import type { MuscleTarget, WorkoutExerciseEntry, WorkoutSession } from '@/types'
+import type { MuscleTarget, WorkoutExerciseEntry, WorkoutSession, WorkoutSet } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { ExerciseFocusModal } from './ExerciseFocusModal'
 import { muscleGroupStyle } from './muscle-groups'
@@ -61,6 +61,28 @@ function plural(count: number, word: string) {
  * not leave the user to tap elsewhere to close the keyboard. */
 function blurOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.key === 'Enter') e.currentTarget.blur()
+}
+
+/** A left/right pair (added via "+ Add L/R") shares one set number instead
+ * of counting as two separate sets — e.g. set 3 becomes "3L"/"3R" rather
+ * than bumping every set after it up by one. */
+function computeSetNumbers(sets: WorkoutSet[]): number[] {
+  const numbers: number[] = []
+  let n = 0
+  let i = 0
+  while (i < sets.length) {
+    if (sets[i].side === 'left' && sets[i + 1]?.side === 'right') {
+      n += 1
+      numbers[i] = n
+      numbers[i + 1] = n
+      i += 2
+    } else {
+      n += 1
+      numbers[i] = n
+      i += 1
+    }
+  }
+  return numbers
 }
 
 function formatDuration(totalSeconds: number) {
@@ -587,16 +609,18 @@ function SessionEditor({
             </div>
           </div>
           <div className="space-y-1.5">
-            {entry.sets.map((set, setIndex) => (
+            {(() => {
+              const setNumbers = computeSetNumbers(entry.sets)
+              return entry.sets.map((set, setIndex) => (
               <div key={setIndex} className="flex items-center gap-2">
                 <span
                   className={clsx(
-                    'w-4 text-xs',
+                    'w-6 text-xs',
                     set.side ? 'font-semibold text-teal-400' : 'text-neutral-500',
                   )}
                   title={set.side === 'left' ? 'Left side' : set.side === 'right' ? 'Right side' : undefined}
                 >
-                  {set.side ? (set.side === 'left' ? 'L' : 'R') : setIndex + 1}
+                  {set.side ? `${setNumbers[setIndex]}${set.side === 'left' ? 'L' : 'R'}` : setNumbers[setIndex]}
                 </span>
                 <input
                   type="number"
@@ -766,7 +790,8 @@ function SessionEditor({
                   <Trash2 size={13} />
                 </button>
               </div>
-            ))}
+              ))
+            })()}
           </div>
           <div className="mt-2 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -805,9 +830,8 @@ function SessionEditor({
         group.items.length > 1 ? (
           <div
             key={group.key}
-            className="relative space-y-1.5 rounded-xl bg-teal-500/[0.04] py-1.5 pl-4 pr-1.5"
+            className="space-y-1.5 rounded-xl border-l-4 border-teal-500 bg-teal-500/[0.04] py-1.5 pl-3 pr-1.5"
           >
-            <div className="absolute bottom-3 left-2 top-3 w-0.5 rounded-full bg-teal-500/70" />
             {group.items.map(({ entry, index }) => renderCard(entry, index))}
           </div>
         ) : (
@@ -815,7 +839,7 @@ function SessionEditor({
         ),
       )}
 
-      <div className="sticky bottom-0 -mx-4 flex gap-2 border-t border-neutral-900 bg-neutral-950/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
+      <div className="flex gap-2">
         <button
           onClick={() => setAddingMore(true)}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-700 py-3 text-sm text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
