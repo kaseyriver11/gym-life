@@ -1,11 +1,10 @@
 import clsx from 'clsx'
 import { format, parseISO } from 'date-fns'
 import { useState } from 'react'
-import type { IExerciseData, Muscle } from 'react-body-highlighter'
 import { Modal } from '@/components/Modal'
 import type { MuscleTarget, WorkoutSession } from '@/types'
 import { MUSCLE_PICKER_OPTIONS, slugsForExercise } from './body-map'
-import { muscleLabel } from './muscle-heat'
+import type { MuscleLoad } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
 import { estimatedOneRepMax } from './prs'
 
@@ -44,8 +43,8 @@ export function ExerciseFocusModal({
   onClose: () => void
 }) {
   const [notes, setNotes] = useState(exercise.notes ?? '')
-  const [targetMuscles, setTargetMuscles] = useState<Muscle[]>(
-    () => exercise.targetMuscles?.map((t) => t.muscle as Muscle) ?? [],
+  const [targetMuscles, setTargetMuscles] = useState<string[]>(
+    () => exercise.targetMuscles?.map((t) => t.muscle) ?? [],
   )
 
   const history = sessions
@@ -59,20 +58,11 @@ export function ExerciseFocusModal({
     .slice(0, 6)
 
   const { primary, secondary } = slugsForExercise(exercise)
-  const heatData: IExerciseData[] = [
-    ...primary.map((muscle) => ({
-      name: exercise.name,
-      muscles: [muscle],
-      frequency: PRIMARY_FREQUENCY,
-    })),
-    ...secondary.map((muscle) => ({
-      name: exercise.name,
-      muscles: [muscle],
-      frequency: SECONDARY_FREQUENCY,
-    })),
-  ]
+  const heatData = new Map<string, MuscleLoad>()
+  for (const id of primary) heatData.set(id, { score: PRIMARY_FREQUENCY, exercises: new Set([exercise.name]) })
+  for (const id of secondary) heatData.set(id, { score: SECONDARY_FREQUENCY, exercises: new Set([exercise.name]) })
 
-  function persist(nextNotes: string, nextMuscles: Muscle[]) {
+  function persist(nextNotes: string, nextMuscles: string[]) {
     onSaveNote({
       notes: nextNotes.trim() || undefined,
       targetMuscles:
@@ -107,16 +97,16 @@ export function ExerciseFocusModal({
             <span className="text-neutral-600">(just for you — doesn't change the catalog)</span>
           </label>
           <div className="flex flex-wrap gap-1.5">
-            {MUSCLE_PICKER_OPTIONS.map((muscle) => {
-              const active = targetMuscles.includes(muscle)
+            {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
+              const active = targetMuscles.includes(value)
               return (
                 <button
-                  key={muscle}
+                  key={value}
                   type="button"
                   onClick={() => {
                     const next = active
-                      ? targetMuscles.filter((m) => m !== muscle)
-                      : [...targetMuscles, muscle]
+                      ? targetMuscles.filter((m) => m !== value)
+                      : [...targetMuscles, value]
                     setTargetMuscles(next)
                     persist(notes, next)
                   }}
@@ -127,7 +117,7 @@ export function ExerciseFocusModal({
                       : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
                   )}
                 >
-                  {muscleLabel(muscle)}
+                  {label}
                 </button>
               )
             })}

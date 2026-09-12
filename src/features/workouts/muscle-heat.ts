@@ -1,18 +1,4 @@
-import type { IExerciseData, Muscle } from 'react-body-highlighter'
-import { slugsForExercise, type ExerciseLike } from './body-map'
-
-/** Green -> red, 8 steps. react-body-highlighter clamps to the last color
- * once frequency exceeds this length, so it never errors on a big day. */
-export const MUSCLE_HEAT_COLORS = [
-  '#22c55e',
-  '#84cc16',
-  '#eab308',
-  '#f59e0b',
-  '#f97316',
-  '#ef4444',
-  '#dc2626',
-  '#991b1b',
-]
+import { ID_LABELS, slugsForExercise, type ExerciseLike } from './body-map'
 
 export interface Workload {
   exerciseId: string
@@ -20,78 +6,69 @@ export interface Workload {
   setCount: number
 }
 
+/** Per-region tally: a raw score (before clamping to the library's 0-10
+ * intensity scale) plus which exercises contributed, for the tap-to-inspect
+ * detail popover. */
+export interface MuscleLoad {
+  score: number
+  exercises: Set<string>
+}
+
 /**
- * One data entry per set (the library sums `frequency` across entries
- * sharing a muscle, defaulting to 1 each) — so more sets naturally reads as
- * "more red". Secondary/stabilizer muscles only count on every other set,
- * landing at roughly half weight without ever needing a fractional
- * frequency (which the library can't use as a color-array index).
+ * Aggregates workload into a per-region-id load map. Primary muscles count
+ * every set; secondary/stabilizer muscles count every other set, landing at
+ * roughly half weight without needing a fractional score.
  */
 export function buildMuscleData(
   workload: Workload[],
   exercisesById: Map<string, ExerciseLike>,
-): IExerciseData[] {
-  const data: IExerciseData[] = []
+): Map<string, MuscleLoad> {
+  const loads = new Map<string, MuscleLoad>()
+  function bump(id: string, exerciseName: string) {
+    const existing = loads.get(id)
+    if (existing) {
+      existing.score += 1
+      existing.exercises.add(exerciseName)
+    } else {
+      loads.set(id, { score: 1, exercises: new Set([exerciseName]) })
+    }
+  }
+
   for (const w of workload) {
     const info = exercisesById.get(w.exerciseId)
     if (!info) continue
     const { primary, secondary } = slugsForExercise(info)
     for (let i = 0; i < w.setCount; i++) {
-      if (primary.length > 0) data.push({ name: w.exerciseName, muscles: primary })
-      if (secondary.length > 0 && i % 2 === 0) {
-        data.push({ name: w.exerciseName, muscles: secondary })
-      }
+      for (const id of primary) bump(id, w.exerciseName)
+      if (i % 2 === 0) for (const id of secondary) bump(id, w.exerciseName)
     }
   }
-  return data
+  return loads
 }
 
-const SLUG_LABELS: Record<Muscle, string> = {
-  chest: 'Chest',
-  triceps: 'Triceps',
-  biceps: 'Biceps',
-  'front-deltoids': 'Front Delts',
-  'back-deltoids': 'Rear Delts',
-  trapezius: 'Traps',
-  'upper-back': 'Upper Back',
-  'lower-back': 'Lower Back',
-  abs: 'Abs',
-  obliques: 'Obliques',
-  quadriceps: 'Quads',
-  hamstring: 'Hamstrings',
-  adductor: 'Adductors',
-  abductors: 'Abductors',
-  calves: 'Calves',
-  gluteal: 'Glutes',
-  forearm: 'Forearms',
-  head: 'Head',
-  neck: 'Neck',
-  knees: 'Knees',
-  'left-soleus': 'Calves',
-  'right-soleus': 'Calves',
+/** Friendly display name for a region id, e.g. "chest-upper-left" -> "Upper
+ * Chest". Falls back to the raw id for anything not in the lookup. */
+export function muscleLabel(id: string): string {
+  return ID_LABELS[id] ?? id
 }
 
-/** Friendly display name for a muscle slug, e.g. "chest" -> "Chest". */
-export function muscleLabel(muscle: Muscle): string {
-  return SLUG_LABELS[muscle] ?? muscle
-}
-
-/** The single most-worked muscle in a data set, as a friendly label —
- * e.g. "Chest" for a bench-heavy day. Null when there's nothing logged. */
-export function dominantMuscleLabel(data: IExerciseData[]): string | null {
-  const totals = new Map<Muscle, number>()
-  for (const entry of data) {
-    for (const muscle of entry.muscles) {
-      totals.set(muscle, (totals.get(muscle) ?? 0) + (entry.frequency ?? 1))
-    }
+/** The single most-worked muscle group in a load map, as a friendly label —
+ * e.g. "Upper Chest" for an incline-press-heavy day. Null when nothing's
+ * logged. Groups left/right (and, for chest/traps, upper/mid/lower) region
+ * ids under their shared label before comparing totals. */
+export function dominantMuscleLabel(loads: Map<string, MuscleLoad>): string | null {
+  const totals = new Map<string, number>()
+  for (const [id, load] of loads) {
+    const key = muscleLabel(id)
+    totals.set(key, (totals.get(key) ?? 0) + load.score)
   }
-  let best: Muscle | null = null
+  let best: string | null = null
   let bestScore = 0
-  for (const [muscle, score] of totals) {
+  for (const [key, score] of totals) {
     if (score > bestScore) {
-      best = muscle
+      best = key
       bestScore = score
     }
   }
-  return best ? muscleLabel(best) : null
+  return best
 }

@@ -11,7 +11,6 @@ import {
   X,
 } from 'lucide-react'
 import { useState } from 'react'
-import type { Muscle } from 'react-body-highlighter'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { Exercise } from '@/types'
@@ -27,7 +26,7 @@ import { SHOULDERS_EXERCISES } from './catalog-data/shoulders'
 import { TRICEPS_EXERCISES } from './catalog-data/triceps'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
 import { MuscleMapModal } from './MuscleMapModal'
-import { buildMuscleData, muscleLabel } from './muscle-heat'
+import { buildMuscleData } from './muscle-heat'
 import {
   MUSCLE_GROUPS,
   MUSCLE_SUBGROUPS,
@@ -172,7 +171,7 @@ function AddExercisePanel({
   const [equipment, setEquipment] = useState<Equipment | null>(null)
   const [repRangeLow, setRepRangeLow] = useState('')
   const [repRangeHigh, setRepRangeHigh] = useState('')
-  const [targetMuscles, setTargetMuscles] = useState<Muscle[]>([])
+  const [targetMuscles, setTargetMuscles] = useState<string[]>([])
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -510,8 +509,8 @@ function ExerciseFields({
   onRepRangeLowChange: (value: string) => void
   repRangeHigh: string
   onRepRangeHighChange: (value: string) => void
-  targetMuscles: Muscle[]
-  onTargetMusclesChange: (value: Muscle[]) => void
+  targetMuscles: string[]
+  onTargetMusclesChange: (value: string[]) => void
 }) {
   const subOptions = muscleGroup ? MUSCLE_SUBGROUPS[muscleGroup] : undefined
 
@@ -611,17 +610,17 @@ function ExerciseFields({
           <span className="text-neutral-700">(optional — powers the muscle map)</span>
         </label>
         <div className="flex flex-wrap gap-1.5">
-          {MUSCLE_PICKER_OPTIONS.map((muscle) => {
-            const active = targetMuscles.includes(muscle)
+          {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
+            const active = targetMuscles.includes(value)
             return (
               <button
-                key={muscle}
+                key={value}
                 type="button"
                 onClick={() =>
                   onTargetMusclesChange(
                     active
-                      ? targetMuscles.filter((m) => m !== muscle)
-                      : [...targetMuscles, muscle],
+                      ? targetMuscles.filter((m) => m !== value)
+                      : [...targetMuscles, value],
                   )
                 }
                 className={clsx(
@@ -631,7 +630,7 @@ function ExerciseFields({
                     : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
                 )}
               >
-                {muscleLabel(muscle)}
+                {label}
               </button>
             )
           })}
@@ -655,7 +654,7 @@ function EditExerciseModal({
     equipment?: Equipment
     repRangeLow?: number
     repRangeHigh?: number
-    targetMuscles?: { muscle: Muscle; role: 'primary' }[]
+    targetMuscles?: { muscle: string; role: 'primary' }[]
   }) => void
 }) {
   const [name, setName] = useState(exercise.name)
@@ -670,8 +669,8 @@ function EditExerciseModal({
   )
   const [repRangeLow, setRepRangeLow] = useState(exercise.repRangeLow?.toString() ?? '')
   const [repRangeHigh, setRepRangeHigh] = useState(exercise.repRangeHigh?.toString() ?? '')
-  const [targetMuscles, setTargetMuscles] = useState<Muscle[]>(
-    () => exercise.targetMuscles?.map((t) => t.muscle as Muscle) ?? [],
+  const [targetMuscles, setTargetMuscles] = useState<string[]>(
+    () => exercise.targetMuscles?.map((t) => t.muscle) ?? [],
   )
 
   function handleSubmit(e: React.FormEvent) {

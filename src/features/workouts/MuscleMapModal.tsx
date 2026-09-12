@@ -1,6 +1,6 @@
-import type { IExerciseData } from 'react-body-highlighter'
 import { Modal } from '@/components/Modal'
 import { MuscleMapView } from './MuscleMapView'
+import type { MuscleLoad } from './muscle-heat'
 
 export function MuscleMapModal({
   title,
@@ -8,7 +8,7 @@ export function MuscleMapModal({
   onClose,
 }: {
   title: string
-  data: IExerciseData[]
+  data: Map<string, MuscleLoad>
   onClose: () => void
 }) {
   return (
