@@ -48,6 +48,7 @@ type ExerciseInfo = {
   repRangeHigh?: number
   notes?: string
   targetMuscles?: MuscleTarget[]
+  source?: 'catalog' | 'custom'
 }
 
 function todayISO() {
@@ -962,6 +963,7 @@ function SessionEditor({
                 targetMuscles: info?.targetMuscles,
                 muscleGroup: info?.muscleGroup,
                 muscleSubgroup: info?.muscleSubgroup,
+                source: info?.source,
               }}
               sessions={sessions}
               excludeSessionId={session.id}

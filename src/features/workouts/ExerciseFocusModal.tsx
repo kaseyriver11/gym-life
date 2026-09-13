@@ -15,6 +15,7 @@ interface FocusExercise {
   targetMuscles?: MuscleTarget[]
   muscleGroup?: string
   muscleSubgroup?: string
+  source?: 'catalog' | 'custom'
 }
 
 // This view answers "how much does THIS exercise work each muscle", not
@@ -91,38 +92,39 @@ export function ExerciseFocusModal({
           />
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-neutral-400">
-            Which muscles does this hit for you?{' '}
-            <span className="text-neutral-600">(just for you — doesn't change the catalog)</span>
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
-              const active = targetMuscles.includes(value)
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    const next = active
-                      ? targetMuscles.filter((m) => m !== value)
-                      : [...targetMuscles, value]
-                    setTargetMuscles(next)
-                    persist(notes, next)
-                  }}
-                  className={clsx(
-                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
-                    active
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
-                  )}
-                >
-                  {label}
-                </button>
-              )
-            })}
+        {exercise.source !== 'catalog' && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-neutral-400">
+              Which muscles does this hit for you?
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
+                const active = targetMuscles.includes(value)
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      const next = active
+                        ? targetMuscles.filter((m) => m !== value)
+                        : [...targetMuscles, value]
+                      setTargetMuscles(next)
+                      persist(notes, next)
+                    }}
+                    className={clsx(
+                      'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                      active
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+                    )}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         <div>
           <p className="mb-1 text-xs font-medium text-neutral-400">Recent history</p>
