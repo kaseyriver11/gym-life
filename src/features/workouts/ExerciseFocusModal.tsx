@@ -3,8 +3,8 @@ import { format, parseISO } from 'date-fns'
 import { useState } from 'react'
 import { Modal } from '@/components/Modal'
 import type { MuscleTarget, WorkoutSession } from '@/types'
-import { MUSCLE_PICKER_OPTIONS, slugsForExercise } from './body-map'
-import type { MuscleLoad } from './muscle-heat'
+import { MUSCLE_PICKER_OPTIONS, weightsForExercise } from './body-map'
+import { SCORE_SCALE, type MuscleLoad } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
 import { MuscleRolePicker } from './MuscleRolePicker'
 import { estimatedOneRepMax } from './prs'
@@ -18,14 +18,6 @@ interface FocusExercise {
   muscleSubgroup?: string
   source?: 'catalog' | 'custom'
 }
-
-// This view answers "how much does THIS exercise work each muscle", not
-// "how much volume have I logged" — buildMuscleData's per-set session heat
-// scale would show even a heavy compound lift as barely-worked "light green"
-// at a single simulated set. Primary muscles get a high explicit frequency
-// (heavy/red end of the scale) and secondary/stabilizer a low one instead.
-const PRIMARY_FREQUENCY = 7
-const SECONDARY_FREQUENCY = 3
 
 /** "Focus this exercise" view — your own notes/angle, an optional personal
  * muscle-target override, past history, and a mini heatmap for just this
@@ -57,19 +49,27 @@ export function ExerciseFocusModal({
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 6)
 
-  const { primary, secondary } = slugsForExercise(exercise)
   const heatData = new Map<string, MuscleLoad>()
-  for (const id of primary) {
-    heatData.set(id, { score: PRIMARY_FREQUENCY, exercises: new Set([exercise.name]), role: 'primary' })
-  }
-  for (const id of secondary) {
-    heatData.set(id, { score: SECONDARY_FREQUENCY, exercises: new Set([exercise.name]), role: 'secondary' })
+  for (const { id, weight, role, measured } of weightsForExercise(exercise)) {
+    heatData.set(id, {
+      score: weight * SCORE_SCALE,
+      exercises: new Set([exercise.name]),
+      role,
+      measured,
+    })
   }
 
   function persist(nextNotes: string, nextMuscles: MuscleTarget[]) {
     onSaveNote({
       notes: nextNotes.trim() || undefined,
-      targetMuscles: nextMuscles.length > 0 ? nextMuscles : undefined,
+      // Catalog exercises have no editable picker (the muscle list up top
+      // is a read-only display), so never write targetMuscles for them —
+      // otherwise saving a note would freeze a snapshot of the catalog's
+      // targeting at that moment into this user's personal override,
+      // silently shadowing any future catalog research updates for that
+      // exercise (e.g. this activationScore pass) forever.
+      targetMuscles:
+        exercise.source === 'catalog' ? undefined : nextMuscles.length > 0 ? nextMuscles : undefined,
     })
   }
 

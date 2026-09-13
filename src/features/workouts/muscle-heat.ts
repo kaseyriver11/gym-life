@@ -1,4 +1,10 @@
-import { ID_LABELS, slugsForExercise, type ExerciseLike } from './body-map'
+import { ID_LABELS, weightsForExercise, type ExerciseLike } from './body-map'
+
+/** A 0-1 activation weight is scaled up by this factor for the 0-10 display
+ * scale the color legend/intensity math use. Shared so a single-exercise
+ * caller (which sets `measured`) and the renderer that converts a measured
+ * score back to a real percentage agree on the same convention. */
+export const SCORE_SCALE = 10
 
 export interface Workload {
   exerciseId: string
@@ -8,44 +14,48 @@ export interface Workload {
 
 /** Per-region tally: a raw score (before clamping to the library's 0-10
  * intensity scale) plus which exercises contributed, for the tap-to-inspect
- * detail popover. `role` is set only by single-exercise callers (the Focus
- * view) where "primary vs secondary" is a real, exact categorization —
- * session/plan aggregation mixes multiple exercises' roles into one running
- * count per region, where a role label wouldn't mean anything, so those
- * callers leave it unset and get the numeric score instead. */
+ * detail popover. `role`/`measured` are set only by single-exercise callers
+ * (the Focus view), where a single exercise's role and whether its weight
+ * came from a real activationScore are exact, meaningful facts — session/
+ * plan aggregation mixes multiple exercises' roles into one running count
+ * per region, where neither would mean anything, so those callers leave
+ * both unset and get the numeric score instead. */
 export interface MuscleLoad {
   score: number
   exercises: Set<string>
-  role?: 'primary' | 'secondary'
+  role?: 'primary' | 'secondary' | 'stabilizer'
+  measured?: boolean
 }
 
 /**
- * Aggregates workload into a per-region-id load map. Primary muscles count
- * every set; secondary/stabilizer muscles count every other set, landing at
- * roughly half weight without needing a fractional score.
+ * Aggregates workload into a per-region-id load map. Each contributing
+ * muscle's per-set weight comes from `weightsForExercise` — a real
+ * activationScore when the catalog has one, otherwise a flat per-role
+ * default — applied every set (a continuous weight already encodes
+ * "counts less than primary" without needing the old every-other-set
+ * trick a purely-binary primary/secondary split required).
  */
 export function buildMuscleData(
   workload: Workload[],
   exercisesById: Map<string, ExerciseLike>,
 ): Map<string, MuscleLoad> {
   const loads = new Map<string, MuscleLoad>()
-  function bump(id: string, exerciseName: string) {
+  function bump(id: string, exerciseName: string, weight: number) {
     const existing = loads.get(id)
     if (existing) {
-      existing.score += 1
+      existing.score += weight
       existing.exercises.add(exerciseName)
     } else {
-      loads.set(id, { score: 1, exercises: new Set([exerciseName]) })
+      loads.set(id, { score: weight, exercises: new Set([exerciseName]) })
     }
   }
 
   for (const w of workload) {
     const info = exercisesById.get(w.exerciseId)
     if (!info) continue
-    const { primary, secondary } = slugsForExercise(info)
+    const weights = weightsForExercise(info)
     for (let i = 0; i < w.setCount; i++) {
-      for (const id of primary) bump(id, w.exerciseName)
-      if (i % 2 === 0) for (const id of secondary) bump(id, w.exerciseName)
+      for (const { id, weight } of weights) bump(id, w.exerciseName, weight)
     }
   }
   return loads

@@ -87,11 +87,14 @@ export interface LongTermTask {
 export interface MuscleTarget {
   muscle: string
   role: 'primary' | 'secondary' | 'stabilizer'
-  /** Optional 0-10 EMG/biomechanics-backed load score for this muscle on
-   * this specific exercise, finer-grained than `role`. Unset today for the
-   * whole catalog (role alone drives the heatmap) — reserved for when
-   * real per-exercise intensity research gets added, rather than guessing. */
-  intensity?: number
+  /** 0-1 relative activation for this muscle on this specific exercise,
+   * finer-grained than `role` — e.g. a flat bench press's sternal chest
+   * fibers score ~1.0 while its clavicular fibers, still worked but less
+   * so at that angle, score ~0.5. Informed estimates (grip/angle/stability
+   * biomechanics, and published EMG comparisons for the handful of lifts
+   * that have been studied), not lab measurements for every exercise —
+   * unset falls back to a flat per-role default. */
+  activationScore?: number
 }
 
 export interface Exercise {
@@ -109,6 +112,11 @@ export interface Exercise {
    * more precise than muscleGroup/muscleSubgroup, e.g. distinguishing the
    * clavicular vs sternocostal pec head rather than just "Chest". */
   targetMuscles?: MuscleTarget[]
+  /** Broad biomechanical category, e.g. "horizontal_push", "hip_hinge" —
+   * lets future features compare exercises across the catalog (spot an
+   * unbalanced workout, flag near-duplicates) without parsing names.
+   * Research-backed catalog entries only; not required. */
+  movementPattern?: string
   createdAt: number
 }
 

@@ -1,7 +1,7 @@
 import { BodyChart, INTENSITY_COLORS, MUSCLE_MAP, ViewSide, type BodyState } from 'body-muscles'
 import clsx from 'clsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { dominantMuscleLabel, type MuscleLoad } from './muscle-heat'
+import { dominantMuscleLabel, SCORE_SCALE, type MuscleLoad } from './muscle-heat'
 
 const LEGEND_STEPS = [1, 3, 5, 7, 9]
 const ID_TO_NAME = new Map(MUSCLE_MAP.map((m) => [m.id, m.name]))
@@ -68,18 +68,24 @@ export function MuscleMapView({
         if (!id) return null
         const name = ID_TO_NAME.get(id) ?? id
         const load = dataRef.current.get(id)
-        // `role` is only set by single-exercise callers, where primary vs.
-        // secondary is an exact category — show that instead of a number
-        // that would just be one of two hardcoded constants every time.
-        // Session/plan callers leave role unset and get the real,
-        // genuinely-varying accumulated score instead.
+        // `measured` (single-exercise callers only) means this came from a
+        // real per-exercise activationScore — show the actual percentage,
+        // since it genuinely varies exercise to exercise. Unmeasured single-
+        // exercise loads fall back to a flat per-role default, so a number
+        // there would just be one of three hardcoded constants every time —
+        // show the role instead. Session/plan callers leave both unset and
+        // get the real, genuinely-varying accumulated score.
         const detail = !load
           ? null
-          : load.role === 'primary'
-            ? 'Primary mover'
-            : load.role === 'secondary'
-              ? 'Secondary'
-              : `${Math.max(1, Math.min(10, Math.round(load.score)))}/10 intensity`
+          : load.measured
+            ? `${Math.round((load.score / SCORE_SCALE) * 100)}% activation`
+            : load.role === 'primary'
+              ? 'Primary mover'
+              : load.role === 'secondary'
+                ? 'Secondary'
+                : load.role === 'stabilizer'
+                  ? 'Stabilizer'
+                  : `${Math.max(1, Math.min(10, Math.round(load.score)))}/10 intensity`
         return prev ? { ...prev, label: name, detail } : { label: name, detail, x: 0, y: 0 }
       })
     }

@@ -431,25 +431,45 @@ const SUBGROUP_FALLBACK_IDS: Partial<Record<string, string[]>> = {
   Obliques: ['obliques-left', 'obliques-right'],
 }
 
-export interface MuscleIdRoles {
-  primary: string[]
-  secondary: string[]
+/** Flat per-role weight used whenever an exercise doesn't specify a real
+ * per-muscle activationScore — the same "primary counts more than
+ * secondary" idea the app always used, just expressed on the same 0-1
+ * scale as a real score instead of a separate discrete code path. */
+const ROLE_DEFAULT_WEIGHT: Record<'primary' | 'secondary' | 'stabilizer', number> = {
+  primary: 0.9,
+  secondary: 0.5,
+  stabilizer: 0.2,
+}
+
+export interface MuscleWeight {
+  id: string
+  weight: number
+  role: 'primary' | 'secondary' | 'stabilizer'
+  /** True when `weight` came from a real per-exercise activationScore
+   * rather than the flat per-role default above. */
+  measured: boolean
 }
 
 export type ExerciseLike = Pick<Exercise, 'targetMuscles' | 'muscleGroup' | 'muscleSubgroup'>
 
-export function slugsForExercise(ex: ExerciseLike): MuscleIdRoles {
+export function weightsForExercise(ex: ExerciseLike): MuscleWeight[] {
   if (ex.targetMuscles && ex.targetMuscles.length > 0) {
-    const primary = new Set<string>()
-    const secondary = new Set<string>()
+    const byId = new Map<string, MuscleWeight>()
     for (const target of ex.targetMuscles) {
-      const bucket = target.role === 'primary' ? primary : secondary
-      for (const id of resolveIds(target.muscle)) bucket.add(id)
+      const measured = target.activationScore != null
+      const weight = target.activationScore ?? ROLE_DEFAULT_WEIGHT[target.role]
+      for (const id of resolveIds(target.muscle)) {
+        const existing = byId.get(id)
+        if (!existing || weight > existing.weight) {
+          byId.set(id, { id, weight, role: target.role, measured })
+        }
+      }
     }
-    return { primary: [...primary], secondary: [...secondary] }
+    return [...byId.values()]
   }
 
   const subgroupIds = ex.muscleSubgroup ? SUBGROUP_FALLBACK_IDS[ex.muscleSubgroup] : undefined
   const groupIds = ex.muscleGroup ? GROUP_FALLBACK_IDS[ex.muscleGroup] : undefined
-  return { primary: subgroupIds ?? groupIds ?? [], secondary: [] }
+  const ids = subgroupIds ?? groupIds ?? []
+  return ids.map((id) => ({ id, weight: ROLE_DEFAULT_WEIGHT.primary, role: 'primary' as const, measured: false }))
 }
