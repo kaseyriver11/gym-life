@@ -13,8 +13,8 @@ import {
 import { useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
-import type { Exercise } from '@/types'
-import { MUSCLE_PICKER_OPTIONS } from './body-map'
+import type { Exercise, MuscleTarget } from '@/types'
+import { subgroupForMuscle } from './body-map'
 import { BACK_EXERCISES } from './catalog-data/back'
 import { BICEPS_EXERCISES } from './catalog-data/biceps'
 import { CHEST_EXERCISES } from './catalog-data/chest'
@@ -27,12 +27,8 @@ import { TRICEPS_EXERCISES } from './catalog-data/triceps'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
 import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
-import {
-  MUSCLE_GROUPS,
-  MUSCLE_SUBGROUPS,
-  muscleGroupStyle,
-  type MuscleGroup,
-} from './muscle-groups'
+import { MUSCLE_GROUPS, muscleGroupStyle, type MuscleGroup } from './muscle-groups'
+import { MuscleRolePicker } from './MuscleRolePicker'
 import { useAllExercises, type ExerciseWithSource } from './use-all-exercises'
 
 type Mode = 'add' | 'search'
@@ -167,11 +163,10 @@ function AddExercisePanel({
 }) {
   const [name, setName] = useState('')
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>(null)
-  const [muscleSubgroup, setMuscleSubgroup] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<Equipment | null>(null)
   const [repRangeLow, setRepRangeLow] = useState('')
   const [repRangeHigh, setRepRangeHigh] = useState('')
-  const [targetMuscles, setTargetMuscles] = useState<string[]>([])
+  const [targetMuscles, setTargetMuscles] = useState<MuscleTarget[]>([])
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -179,19 +174,15 @@ function AddExercisePanel({
     add({
       name: name.trim(),
       muscleGroup,
-      muscleSubgroup: muscleSubgroup ?? undefined,
+      muscleSubgroup: subgroupForMuscle(targetMuscles.find((t) => t.role === 'primary')?.muscle),
       equipment: equipment ?? undefined,
       repRangeLow: repRangeLow ? Number(repRangeLow) : undefined,
       repRangeHigh: repRangeHigh ? Number(repRangeHigh) : undefined,
-      targetMuscles:
-        targetMuscles.length > 0
-          ? targetMuscles.map((muscle) => ({ muscle, role: 'primary' as const }))
-          : undefined,
+      targetMuscles: targetMuscles.length > 0 ? targetMuscles : undefined,
       createdAt: Date.now(),
     })
     setName('')
     setMuscleGroup(null)
-    setMuscleSubgroup(null)
     setEquipment(null)
     setRepRangeLow('')
     setRepRangeHigh('')
@@ -211,12 +202,7 @@ function AddExercisePanel({
         name={name}
         onNameChange={setName}
         muscleGroup={muscleGroup}
-        onMuscleGroupChange={(g) => {
-          setMuscleGroup(g)
-          setMuscleSubgroup(null)
-        }}
-        muscleSubgroup={muscleSubgroup}
-        onMuscleSubgroupChange={setMuscleSubgroup}
+        onMuscleGroupChange={setMuscleGroup}
         equipment={equipment}
         onEquipmentChange={setEquipment}
         repRangeLow={repRangeLow}
@@ -486,8 +472,6 @@ function ExerciseFields({
   onNameChange,
   muscleGroup,
   onMuscleGroupChange,
-  muscleSubgroup,
-  onMuscleSubgroupChange,
   equipment,
   onEquipmentChange,
   repRangeLow,
@@ -501,19 +485,15 @@ function ExerciseFields({
   onNameChange: (value: string) => void
   muscleGroup: MuscleGroup | null
   onMuscleGroupChange: (value: MuscleGroup) => void
-  muscleSubgroup: string | null
-  onMuscleSubgroupChange: (value: string | null) => void
   equipment: Equipment | null
   onEquipmentChange: (value: Equipment | null) => void
   repRangeLow: string
   onRepRangeLowChange: (value: string) => void
   repRangeHigh: string
   onRepRangeHighChange: (value: string) => void
-  targetMuscles: string[]
-  onTargetMusclesChange: (value: string[]) => void
+  targetMuscles: MuscleTarget[]
+  onTargetMusclesChange: (value: MuscleTarget[]) => void
 }) {
-  const subOptions = muscleGroup ? MUSCLE_SUBGROUPS[muscleGroup] : undefined
-
   return (
     <>
       <input
@@ -523,40 +503,22 @@ function ExerciseFields({
         onChange={(e) => onNameChange(e.target.value)}
         className={inputClass}
       />
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="mb-1 block text-xs text-neutral-500">Muscle group</label>
-          <select
-            value={muscleGroup ?? ''}
-            onChange={(e) => onMuscleGroupChange(e.target.value as MuscleGroup)}
-            className={inputClass}
-          >
-            <option value="" disabled>
-              Select…
+      <div>
+        <label className="mb-1 block text-xs text-neutral-500">Muscle group</label>
+        <select
+          value={muscleGroup ?? ''}
+          onChange={(e) => onMuscleGroupChange(e.target.value as MuscleGroup)}
+          className={inputClass}
+        >
+          <option value="" disabled>
+            Select…
+          </option>
+          {MUSCLE_GROUPS.map((group) => (
+            <option key={group} value={group}>
+              {group}
             </option>
-            {MUSCLE_GROUPS.map((group) => (
-              <option key={group} value={group}>
-                {group}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-neutral-500">Specific area</label>
-          <select
-            value={muscleSubgroup ?? ''}
-            onChange={(e) => onMuscleSubgroupChange(e.target.value || null)}
-            disabled={!subOptions}
-            className={clsx(inputClass, !subOptions && 'opacity-40')}
-          >
-            <option value="">{subOptions ? 'Any' : '—'}</option>
-            {subOptions?.map((sub) => (
-              <option key={sub} value={sub}>
-                {sub}
-              </option>
-            ))}
-          </select>
-        </div>
+          ))}
+        </select>
       </div>
       <div>
         <label className="mb-1 block text-xs text-neutral-500">Equipment</label>
@@ -609,32 +571,7 @@ function ExerciseFields({
           Which muscles does this work?{' '}
           <span className="text-neutral-700">(optional — powers the muscle map)</span>
         </label>
-        <div className="flex flex-wrap gap-1.5">
-          {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
-            const active = targetMuscles.includes(value)
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() =>
-                  onTargetMusclesChange(
-                    active
-                      ? targetMuscles.filter((m) => m !== value)
-                      : [...targetMuscles, value],
-                  )
-                }
-                className={clsx(
-                  'rounded-full px-2.5 py-1 text-xs font-medium transition',
-                  active
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
-                )}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        <MuscleRolePicker value={targetMuscles} onChange={onTargetMusclesChange} />
       </div>
     </>
   )
@@ -654,23 +591,20 @@ function EditExerciseModal({
     equipment?: Equipment
     repRangeLow?: number
     repRangeHigh?: number
-    targetMuscles?: { muscle: string; role: 'primary' }[]
+    targetMuscles?: MuscleTarget[]
   }) => void
 }) {
   const [name, setName] = useState(exercise.name)
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | null>(
     (exercise.muscleGroup as MuscleGroup) ?? null,
   )
-  const [muscleSubgroup, setMuscleSubgroup] = useState<string | null>(
-    exercise.muscleSubgroup ?? null,
-  )
   const [equipment, setEquipment] = useState<Equipment | null>(
     (exercise.equipment as Equipment) ?? null,
   )
   const [repRangeLow, setRepRangeLow] = useState(exercise.repRangeLow?.toString() ?? '')
   const [repRangeHigh, setRepRangeHigh] = useState(exercise.repRangeHigh?.toString() ?? '')
-  const [targetMuscles, setTargetMuscles] = useState<string[]>(
-    () => exercise.targetMuscles?.map((t) => t.muscle) ?? [],
+  const [targetMuscles, setTargetMuscles] = useState<MuscleTarget[]>(
+    () => exercise.targetMuscles ?? [],
   )
 
   function handleSubmit(e: React.FormEvent) {
@@ -679,14 +613,11 @@ function EditExerciseModal({
     onSave({
       name: name.trim(),
       muscleGroup,
-      muscleSubgroup: muscleSubgroup ?? undefined,
+      muscleSubgroup: subgroupForMuscle(targetMuscles.find((t) => t.role === 'primary')?.muscle),
       equipment: equipment ?? undefined,
       repRangeLow: repRangeLow ? Number(repRangeLow) : undefined,
       repRangeHigh: repRangeHigh ? Number(repRangeHigh) : undefined,
-      targetMuscles:
-        targetMuscles.length > 0
-          ? targetMuscles.map((muscle) => ({ muscle, role: 'primary' as const }))
-          : undefined,
+      targetMuscles: targetMuscles.length > 0 ? targetMuscles : undefined,
     })
   }
 
@@ -697,12 +628,7 @@ function EditExerciseModal({
           name={name}
           onNameChange={setName}
           muscleGroup={muscleGroup}
-          onMuscleGroupChange={(g) => {
-            setMuscleGroup(g)
-            setMuscleSubgroup(null)
-          }}
-          muscleSubgroup={muscleSubgroup}
-          onMuscleSubgroupChange={setMuscleSubgroup}
+          onMuscleGroupChange={setMuscleGroup}
           equipment={equipment}
           onEquipmentChange={setEquipment}
           repRangeLow={repRangeLow}

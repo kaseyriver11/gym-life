@@ -34,7 +34,9 @@ export function MuscleMapView({
   const [selected, setSelected] = useState<{ id: string; label: string; exercises: string[] } | null>(
     null,
   )
-  const [hover, setHover] = useState<{ label: string; x: number; y: number } | null>(null)
+  const [hover, setHover] = useState<{ label: string; intensity: number | null; x: number; y: number } | null>(
+    null,
+  )
   const dataRef = useRef(data)
   useEffect(() => {
     dataRef.current = data
@@ -65,7 +67,9 @@ export function MuscleMapView({
       setHover((prev) => {
         if (!id) return null
         const name = ID_TO_NAME.get(id) ?? id
-        return prev ? { ...prev, label: name } : { label: name, x: 0, y: 0 }
+        const load = dataRef.current.get(id)
+        const intensity = load ? Math.max(1, Math.min(10, Math.round(load.score))) : null
+        return prev ? { ...prev, label: name, intensity } : { label: name, intensity, x: 0, y: 0 }
       })
     }
     if (frontRef.current) {
@@ -144,10 +148,13 @@ export function MuscleMapView({
         </div>
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-neutral-800 px-2 py-1 text-xs font-medium text-neutral-100 shadow-lg"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-neutral-800 px-2 py-1 text-center text-xs font-medium text-neutral-100 shadow-lg"
             style={{ left: hover.x, top: hover.y - 8 }}
           >
-            {hover.label}
+            <div>{hover.label}</div>
+            {hover.intensity != null && (
+              <div className="text-[10px] font-normal text-neutral-400">{hover.intensity}/10 intensity</div>
+            )}
           </div>
         )}
       </div>

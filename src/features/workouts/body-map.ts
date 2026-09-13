@@ -337,6 +337,34 @@ export const MUSCLE_PICKER_OPTIONS: { value: string; label: string }[] = [
   { value: 'Neck', label: 'Neck' },
 ]
 
+/** Which of MUSCLE_SUBGROUPS' "specific area" values a given primary-muscle
+ * pick implies — e.g. picking "Upper Chest" as the primary muscle already
+ * says everything a separate "specific area" dropdown would, so the
+ * custom-exercise form derives it instead of asking twice. Muscles with no
+ * meaningful subgroup (biceps, triceps, glutes, adductors, ...) return
+ * undefined, matching "no specific area" today. */
+const PRIMARY_TO_SUBGROUP: Record<string, string> = {
+  'Pec Major (Clavicular / Upper Chest)': 'Upper Chest',
+  'Pec Major (Sternocostal / Mid-Lower Chest)': 'Lower Chest',
+  'Latissimus Dorsi': 'Lats',
+  'Trapezius (Upper)': 'Traps',
+  'Trapezius (Mid/Lower)': 'Traps',
+  'Erector Spinae': 'Lower Back',
+  'Anterior Deltoid': 'Front Delts',
+  'Lateral Deltoid': 'Side Delts',
+  'Posterior Deltoid': 'Rear Delts',
+  'Rectus Abdominis (Upper)': 'Upper Abs',
+  'Rectus Abdominis (Lower)': 'Lower Abs',
+  Obliques: 'Obliques',
+  Quadriceps: 'Quads',
+  Hamstrings: 'Hamstrings',
+  Calves: 'Calves',
+}
+
+export function subgroupForMuscle(muscle: string | undefined): string | undefined {
+  return muscle ? PRIMARY_TO_SUBGROUP[muscle] : undefined
+}
+
 function resolveIds(name: string): string[] {
   if (name in MUSCLE_NAME_TO_IDS) return MUSCLE_NAME_TO_IDS[name] ?? []
   if (name in LEGACY_SLUG_TO_IDS) return LEGACY_SLUG_TO_IDS[name]

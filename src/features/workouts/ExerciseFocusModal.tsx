@@ -6,6 +6,7 @@ import type { MuscleTarget, WorkoutSession } from '@/types'
 import { MUSCLE_PICKER_OPTIONS, slugsForExercise } from './body-map'
 import type { MuscleLoad } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
+import { MuscleRolePicker } from './MuscleRolePicker'
 import { estimatedOneRepMax } from './prs'
 
 interface FocusExercise {
@@ -44,9 +45,7 @@ export function ExerciseFocusModal({
   onClose: () => void
 }) {
   const [notes, setNotes] = useState(exercise.notes ?? '')
-  const [targetMuscles, setTargetMuscles] = useState<string[]>(
-    () => exercise.targetMuscles?.map((t) => t.muscle) ?? [],
-  )
+  const [targetMuscles, setTargetMuscles] = useState<MuscleTarget[]>(() => exercise.targetMuscles ?? [])
 
   const history = sessions
     .filter((s) => s.id !== excludeSessionId)
@@ -63,13 +62,10 @@ export function ExerciseFocusModal({
   for (const id of primary) heatData.set(id, { score: PRIMARY_FREQUENCY, exercises: new Set([exercise.name]) })
   for (const id of secondary) heatData.set(id, { score: SECONDARY_FREQUENCY, exercises: new Set([exercise.name]) })
 
-  function persist(nextNotes: string, nextMuscles: string[]) {
+  function persist(nextNotes: string, nextMuscles: MuscleTarget[]) {
     onSaveNote({
       notes: nextNotes.trim() || undefined,
-      targetMuscles:
-        nextMuscles.length > 0
-          ? nextMuscles.map((muscle) => ({ muscle, role: 'primary' as const }))
-          : undefined,
+      targetMuscles: nextMuscles.length > 0 ? nextMuscles : undefined,
     })
   }
 
@@ -96,10 +92,10 @@ export function ExerciseFocusModal({
           <label className="mb-1 block text-xs font-medium text-neutral-400">
             {exercise.source === 'catalog' ? 'Muscles this hits' : 'Which muscles does this hit for you?'}
           </label>
-          <div className="flex flex-wrap gap-1.5">
-            {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
-              const active = targetMuscles.includes(value)
-              if (exercise.source === 'catalog') {
+          {exercise.source === 'catalog' ? (
+            <div className="flex flex-wrap gap-1.5">
+              {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
+                const active = targetMuscles.some((t) => t.muscle === value)
                 return (
                   <span
                     key={value}
@@ -111,30 +107,17 @@ export function ExerciseFocusModal({
                     {label}
                   </span>
                 )
-              }
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    const next = active
-                      ? targetMuscles.filter((m) => m !== value)
-                      : [...targetMuscles, value]
-                    setTargetMuscles(next)
-                    persist(notes, next)
-                  }}
-                  className={clsx(
-                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
-                    active
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
-                  )}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
+              })}
+            </div>
+          ) : (
+            <MuscleRolePicker
+              value={targetMuscles}
+              onChange={(next) => {
+                setTargetMuscles(next)
+                persist(notes, next)
+              }}
+            />
+          )}
         </div>
 
         <div>
