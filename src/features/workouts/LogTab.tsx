@@ -391,12 +391,47 @@ function SessionEditor({
     commit(clearOrphanedGroup(entries.filter((_, i) => i !== index), groupId))
   }
 
+  /** Moves a whole superset block as a unit — clicking move-up/move-down on
+   * any exercise inside a superset relocates the entire contiguous group
+   * past its neighbor (itself a block of one, or a whole other superset),
+   * rather than splitting the group apart by reordering a single entry. */
   function moveEntry(index: number, direction: -1 | 1) {
-    const target = index + direction
-    if (target < 0 || target >= entries.length) return
-    const next = [...entries]
-    ;[next[index], next[target]] = [next[target], next[index]]
-    commit(next)
+    const groupId = entries[index].supersetGroup
+    let blockStart = index
+    let blockEnd = index
+    if (groupId != null) {
+      while (blockStart > 0 && entries[blockStart - 1].supersetGroup === groupId) blockStart--
+      while (blockEnd < entries.length - 1 && entries[blockEnd + 1].supersetGroup === groupId) blockEnd++
+    }
+    const movingBlock = entries.slice(blockStart, blockEnd + 1)
+
+    if (direction === -1) {
+      if (blockStart === 0) return
+      const neighborGroupId = entries[blockStart - 1].supersetGroup
+      let neighborStart = blockStart - 1
+      if (neighborGroupId != null) {
+        while (neighborStart > 0 && entries[neighborStart - 1].supersetGroup === neighborGroupId) neighborStart--
+      }
+      commit([
+        ...entries.slice(0, neighborStart),
+        ...movingBlock,
+        ...entries.slice(neighborStart, blockStart),
+        ...entries.slice(blockEnd + 1),
+      ])
+    } else {
+      if (blockEnd === entries.length - 1) return
+      const neighborGroupId = entries[blockEnd + 1].supersetGroup
+      let neighborEnd = blockEnd + 1
+      if (neighborGroupId != null) {
+        while (neighborEnd < entries.length - 1 && entries[neighborEnd + 1].supersetGroup === neighborGroupId) neighborEnd++
+      }
+      commit([
+        ...entries.slice(0, blockStart),
+        ...entries.slice(blockEnd + 1, neighborEnd + 1),
+        ...movingBlock,
+        ...entries.slice(neighborEnd + 1),
+      ])
+    }
   }
 
   function linkWithNext(entryIndex: number) {
@@ -484,30 +519,46 @@ function SessionEditor({
     e.currentTarget.blur()
   }
 
+  /** A manually-added set beyond what the progression engine suggested
+   * carries forward the previous set's reps/weight as a starting point
+   * (flagged as an estimate, same as a suggested set) rather than defaulting
+   * to blank zeros — otherwise only the first N sets (however many the last
+   * logged session had) ever get a recommendation. */
   function addSet(entryIndex: number) {
-    const next = entries.map((entry, i) =>
-      i === entryIndex
-        ? { ...entry, sets: [...entry.sets, { reps: 0, weight: 0, completed: false }] }
-        : entry,
-    )
+    const next = entries.map((entry, i) => {
+      if (i !== entryIndex) return entry
+      const last = entry.sets[entry.sets.length - 1]
+      return {
+        ...entry,
+        sets: [
+          ...entry.sets,
+          last
+            ? { reps: last.reps, weight: last.weight, completed: false, isEstimate: true }
+            : { reps: 0, weight: 0, completed: false },
+        ],
+      }
+    })
     commit(next)
   }
 
   /** For unilateral exercises — adds a left/right pair instead of one
    * bilateral set, so each side is logged and progressed independently. */
   function addSetPair(entryIndex: number) {
-    const next = entries.map((entry, i) =>
-      i === entryIndex
-        ? {
-            ...entry,
-            sets: [
-              ...entry.sets,
-              { reps: 0, weight: 0, completed: false, side: 'left' as const },
-              { reps: 0, weight: 0, completed: false, side: 'right' as const },
-            ],
-          }
-        : entry,
-    )
+    const next = entries.map((entry, i) => {
+      if (i !== entryIndex) return entry
+      const last = entry.sets[entry.sets.length - 1]
+      const base = last
+        ? { reps: last.reps, weight: last.weight, isEstimate: true }
+        : { reps: 0, weight: 0 }
+      return {
+        ...entry,
+        sets: [
+          ...entry.sets,
+          { ...base, completed: false, side: 'left' as const },
+          { ...base, completed: false, side: 'right' as const },
+        ],
+      }
+    })
     commit(next)
   }
 
@@ -582,21 +633,21 @@ function SessionEditor({
                   </p>
                 </button>
                 {(info?.muscleGroup || info?.equipment || entry.supersetGroup != null) && (
-                  <div className="mt-0.5 flex items-center gap-1.5">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     {info?.muscleGroup && (
-                      <span className={clsx('text-[11px] font-medium', style.text)}>
+                      <span className={clsx('shrink-0 text-[11px] font-medium', style.text)}>
                         {info.muscleGroup}
                       </span>
                     )}
                     {info?.equipment && (
-                      <span className="flex items-center gap-0.5 text-[11px] text-neutral-500">
+                      <span className="flex shrink-0 items-center gap-0.5 text-[11px] text-neutral-500">
                         <Dumbbell size={10} /> {info.equipment}
                       </span>
                     )}
                     {entry.supersetGroup != null && (
                       <button
                         onClick={() => unlinkFromGroup(entryIndex)}
-                        className="flex items-center gap-0.5 rounded-full bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-medium text-teal-300 hover:bg-teal-500/30"
+                        className="flex shrink-0 items-center gap-0.5 rounded-full bg-teal-500/20 px-1.5 py-0.5 text-[10px] font-medium text-teal-300 hover:bg-teal-500/30"
                         title="Unlink from superset"
                       >
                         <Link2 size={9} /> Superset {groupLabels.get(entry.supersetGroup)}
@@ -606,7 +657,7 @@ function SessionEditor({
                 )}
               </div>
             </div>
-            <div className="flex items-center text-neutral-600">
+            <div className="flex shrink-0 items-center text-neutral-600">
               <button
                 onClick={() => setFocusEntryIndex(entryIndex)}
                 className={clsx(
@@ -660,6 +711,11 @@ function SessionEditor({
               )}
             </div>
           </div>
+          {entry.sets.some((s) => s.isEstimate) && (
+            <p className="mb-1 text-[10px] font-medium text-indigo-400">
+              Suggested — edit any number to override
+            </p>
+          )}
           <div className="space-y-1.5">
             {(() => {
               const setNumbers = computeSetNumbers(entry.sets)
@@ -680,7 +736,7 @@ function SessionEditor({
                   min={0}
                   id={`reps-${entryIndex}-${setIndex}`}
                   placeholder="reps"
-                  value={set.reps || ''}
+                  value={set.reps}
                   onChange={(e) =>
                     updateSet(entryIndex, setIndex, {
                       reps: Number(e.target.value) || 0,
@@ -699,7 +755,7 @@ function SessionEditor({
                   min={0}
                   id={`weight-${entryIndex}-${setIndex}`}
                   placeholder="lbs"
-                  value={set.weight || ''}
+                  value={set.weight}
                   onChange={(e) =>
                     updateSet(entryIndex, setIndex, {
                       weight: Number(e.target.value) || 0,
@@ -712,13 +768,15 @@ function SessionEditor({
                     set.isEstimate && 'text-neutral-500',
                   )}
                 />
-                <button
-                  onClick={() => setCalcWeight(set.weight)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-indigo-400"
-                  aria-label="Plate calculator"
-                >
-                  <Calculator size={15} />
-                </button>
+                {info?.equipment !== 'Machine' && info?.equipment !== 'Dumbbell' && (
+                  <button
+                    onClick={() => setCalcWeight(set.weight)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-indigo-400"
+                    aria-label="Plate calculator"
+                  >
+                    <Calculator size={15} />
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     const nowCompleted = !set.completed
@@ -857,7 +915,7 @@ function SessionEditor({
                 className="text-xs text-teal-400 hover:underline"
                 title="Add a left + right pair for a unilateral exercise"
               >
-                + Add L/R
+                + Add L/R set
               </button>
             </div>
             {entryIndex < entries.length - 1 &&
@@ -867,7 +925,7 @@ function SessionEditor({
               ) && (
                 <button
                   onClick={() => linkWithNext(entryIndex)}
-                  className="flex items-center gap-1 text-xs text-neutral-500 hover:text-teal-400"
+                  className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-100"
                   title="Link with the next exercise as a superset — rest only starts after both are done"
                 >
                   <Link2 size={12} /> Link with next

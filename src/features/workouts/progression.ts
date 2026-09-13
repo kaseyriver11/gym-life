@@ -47,7 +47,9 @@ export function suggestSets(
   exercise: ExerciseInfo = {},
 ): { reps: number; weight: number }[] {
   const last = findEntry(sessions, exerciseId)
-  if (!last || last.sets.length === 0) return [{ reps: 0, weight: 0 }]
+  if (!last || last.sets.length === 0) {
+    return [{ reps: 0, weight: 0 }, { reps: 0, weight: 0 }, { reps: 0, weight: 0 }]
+  }
 
   const completed = last.sets.filter((s) => s.completed)
   if (completed.length === 0) {

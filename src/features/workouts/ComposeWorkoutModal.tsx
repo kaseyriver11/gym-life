@@ -3,8 +3,10 @@ import { Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
+import type { MuscleTarget } from '@/types'
 import { EQUIPMENT_TYPES, type Equipment } from './equipment'
 import { MUSCLE_GROUPS, muscleGroupStyle, type MuscleGroup } from './muscle-groups'
+import { MuscleRolePicker } from './MuscleRolePicker'
 
 interface ExerciseOption {
   id: string
@@ -44,6 +46,7 @@ export function ComposeWorkoutModal({
     muscleGroup: string
     equipment?: string
     createdAt: number
+    targetMuscles?: MuscleTarget[]
   }) => Promise<{ id: string }>
 }) {
   const [search, setSearch] = useState('')
@@ -53,8 +56,18 @@ export function ComposeWorkoutModal({
   const [newName, setNewName] = useState('')
   const [newGroup, setNewGroup] = useState<MuscleGroup | null>(null)
   const [newEquipment, setNewEquipment] = useState<Equipment | null>(null)
+  const [newTargetMuscles, setNewTargetMuscles] = useState<MuscleTarget[]>([])
+  // Newly created exercises land here immediately so confirm() can find them
+  // even if the parent's `exercises` list hasn't refreshed from Firestore
+  // yet — otherwise a just-created exercise can silently vanish from the
+  // selection the moment "confirm" is clicked.
+  const [createdExercises, setCreatedExercises] = useState<ExerciseOption[]>([])
 
-  const available = exercises.filter((ex) => !excludeIds.has(ex.id))
+  const allExercises = useMemo(
+    () => [...exercises, ...createdExercises.filter((c) => !exercises.some((ex) => ex.id === c.id))],
+    [exercises, createdExercises],
+  )
+  const available = allExercises.filter((ex) => !excludeIds.has(ex.id))
 
   const groupsPresent = useMemo(
     () => MUSCLE_GROUPS.filter((g) => available.some((ex) => ex.muscleGroup === g)),
@@ -75,7 +88,7 @@ export function ComposeWorkoutModal({
 
   function confirm() {
     const selected = selectedIds
-      .map((id) => exercises.find((ex) => ex.id === id))
+      .map((id) => allExercises.find((ex) => ex.id === id))
       .filter((ex): ex is ExerciseOption => ex != null)
     onConfirm(selected)
   }
@@ -83,17 +96,24 @@ export function ComposeWorkoutModal({
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!newName.trim() || !newGroup || !onCreateExercise) return
-    const ref = await onCreateExercise({
+    const data = {
       name: newName.trim(),
       muscleGroup: newGroup,
       equipment: newEquipment ?? undefined,
       createdAt: Date.now(),
-    })
+      targetMuscles: newTargetMuscles.length > 0 ? newTargetMuscles : undefined,
+    }
+    const ref = await onCreateExercise(data)
+    setCreatedExercises((prev) => [
+      ...prev,
+      { id: ref.id, ...data, source: 'custom' as const },
+    ])
     setSelectedIds((prev) => [...prev, ref.id])
     setCreating(false)
     setNewName('')
     setNewGroup(null)
     setNewEquipment(null)
+    setNewTargetMuscles([])
   }
 
   return (
@@ -145,7 +165,7 @@ export function ComposeWorkoutModal({
           </div>
         )}
 
-        {exercises.length > 0 && (
+        {allExercises.length > 0 && (
           <ul className="max-h-64 space-y-1.5 overflow-y-auto">
             {filtered.map((ex) => {
               const checked = selectedIds.includes(ex.id)
@@ -242,10 +262,14 @@ export function ComposeWorkoutModal({
                   ))}
                 </select>
               </div>
+              <MuscleRolePicker value={newTargetMuscles} onChange={setNewTargetMuscles} />
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setCreating(false)}
+                  onClick={() => {
+                    setCreating(false)
+                    setNewTargetMuscles([])
+                  }}
                   className="flex-1 rounded-lg bg-neutral-800 py-1.5 text-xs font-medium text-neutral-400 hover:bg-neutral-700"
                 >
                   Cancel
