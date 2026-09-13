@@ -34,7 +34,7 @@ export function MuscleMapView({
   const [selected, setSelected] = useState<{ id: string; label: string; exercises: string[] } | null>(
     null,
   )
-  const [hover, setHover] = useState<{ label: string; intensity: number | null; x: number; y: number } | null>(
+  const [hover, setHover] = useState<{ label: string; detail: string | null; x: number; y: number } | null>(
     null,
   )
   const dataRef = useRef(data)
@@ -68,8 +68,19 @@ export function MuscleMapView({
         if (!id) return null
         const name = ID_TO_NAME.get(id) ?? id
         const load = dataRef.current.get(id)
-        const intensity = load ? Math.max(1, Math.min(10, Math.round(load.score))) : null
-        return prev ? { ...prev, label: name, intensity } : { label: name, intensity, x: 0, y: 0 }
+        // `role` is only set by single-exercise callers, where primary vs.
+        // secondary is an exact category — show that instead of a number
+        // that would just be one of two hardcoded constants every time.
+        // Session/plan callers leave role unset and get the real,
+        // genuinely-varying accumulated score instead.
+        const detail = !load
+          ? null
+          : load.role === 'primary'
+            ? 'Primary mover'
+            : load.role === 'secondary'
+              ? 'Secondary'
+              : `${Math.max(1, Math.min(10, Math.round(load.score)))}/10 intensity`
+        return prev ? { ...prev, label: name, detail } : { label: name, detail, x: 0, y: 0 }
       })
     }
     if (frontRef.current) {
@@ -152,9 +163,7 @@ export function MuscleMapView({
             style={{ left: hover.x, top: hover.y - 8 }}
           >
             <div>{hover.label}</div>
-            {hover.intensity != null && (
-              <div className="text-[10px] font-normal text-neutral-400">{hover.intensity}/10 intensity</div>
-            )}
+            {hover.detail && <div className="text-[10px] font-normal text-neutral-400">{hover.detail}</div>}
           </div>
         )}
       </div>

@@ -59,8 +59,12 @@ export function ExerciseFocusModal({
 
   const { primary, secondary } = slugsForExercise(exercise)
   const heatData = new Map<string, MuscleLoad>()
-  for (const id of primary) heatData.set(id, { score: PRIMARY_FREQUENCY, exercises: new Set([exercise.name]) })
-  for (const id of secondary) heatData.set(id, { score: SECONDARY_FREQUENCY, exercises: new Set([exercise.name]) })
+  for (const id of primary) {
+    heatData.set(id, { score: PRIMARY_FREQUENCY, exercises: new Set([exercise.name]), role: 'primary' })
+  }
+  for (const id of secondary) {
+    heatData.set(id, { score: SECONDARY_FREQUENCY, exercises: new Set([exercise.name]), role: 'secondary' })
+  }
 
   function persist(nextNotes: string, nextMuscles: MuscleTarget[]) {
     onSaveNote({

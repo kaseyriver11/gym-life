@@ -8,10 +8,15 @@ export interface Workload {
 
 /** Per-region tally: a raw score (before clamping to the library's 0-10
  * intensity scale) plus which exercises contributed, for the tap-to-inspect
- * detail popover. */
+ * detail popover. `role` is set only by single-exercise callers (the Focus
+ * view) where "primary vs secondary" is a real, exact categorization —
+ * session/plan aggregation mixes multiple exercises' roles into one running
+ * count per region, where a role label wouldn't mean anything, so those
+ * callers leave it unset and get the numeric score instead. */
 export interface MuscleLoad {
   score: number
   exercises: Set<string>
+  role?: 'primary' | 'secondary'
 }
 
 /**
