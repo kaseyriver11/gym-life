@@ -160,7 +160,7 @@ export function LogTab({
   autoOpen?: 'compose' | 'quickLog'
 }) {
   const [date, setDate] = useState(todayISO())
-  const { items: sessions, add, update } = useWorkoutSessions()
+  const { items: sessions, loading: sessionsLoading, add, update } = useWorkoutSessions()
   const { items: exercises, add: addExercise, saveNote } = useAllExercises()
   const { items: healthSnapshots } = useHealthSnapshots()
   const session = sessions.find((s) => s.date === date)
@@ -176,13 +176,18 @@ export function LogTab({
   const [showHistory, setShowHistory] = useState(false)
   const timer = useRestTimer()
 
+  const autoOpenedRef = useRef(false)
   useEffect(() => {
-    if (!autoOpen || session) return
+    // Firestore's session data hasn't necessarily loaded yet on first
+    // render — `session` would read as undefined even on a day that
+    // actually already has one, so wait for loading to settle before
+    // deciding whether to auto-open (and only ever act once).
+    if (!autoOpen || sessionsLoading || autoOpenedRef.current) return
+    autoOpenedRef.current = true
+    if (session) return
     if (autoOpen === 'compose') setComposing(true)
     else setQuickLogging(true)
-    // Only ever auto-open once, right on arrival — not on every re-render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [autoOpen, sessionsLoading, session])
 
   function createSession(selected: ExerciseInfo[], setsCount?: number) {
     const now = Date.now()
