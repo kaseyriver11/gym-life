@@ -19,6 +19,7 @@ import type { Exercise, MuscleTarget } from '@/types'
 import { subgroupForMuscle } from './body-map'
 import { BACK_EXERCISES } from './catalog-data/back'
 import { BICEPS_EXERCISES } from './catalog-data/biceps'
+import { CARDIO_EXERCISES } from './catalog-data/cardio'
 import { CHEST_EXERCISES } from './catalog-data/chest'
 import { CORE_EXERCISES } from './catalog-data/core'
 import { FOREARMS_EXERCISES } from './catalog-data/forearms'
@@ -55,6 +56,7 @@ function CatalogSeedTool() {
     { label: 'Legs', data: LEGS_EXERCISES },
     { label: 'Glutes', data: GLUTES_EXERCISES },
     { label: 'Core', data: CORE_EXERCISES },
+    { label: 'Cardio', data: CARDIO_EXERCISES },
   ]
 
   return (

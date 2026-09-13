@@ -126,8 +126,12 @@ export interface WorkoutSet {
   /** Set when logging a unilateral exercise (single-arm row, split squat,
    * etc.) per side instead of as one bilateral set. Absent = bilateral. */
   side?: 'left' | 'right'
-  /** Seconds held/performed — for timed exercises like planks. */
+  /** Seconds held/performed — for timed exercises like planks, and for
+   * cardio (a "cardio set" is just duration ± distance; reps/weight are
+   * unused and left at 0). */
   durationSeconds?: number
+  /** Distance covered — cardio only. */
+  distanceMiles?: number
   /** true once the set has actually been performed (vs. planned) */
   completed: boolean
   /** true while reps/weight are still an unconfirmed suggestion (from a

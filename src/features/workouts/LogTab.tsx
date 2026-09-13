@@ -552,7 +552,14 @@ function SessionEditor({
         sets: [
           ...entry.sets,
           last
-            ? { reps: last.reps, weight: last.weight, completed: false, isEstimate: true }
+            ? {
+                reps: last.reps,
+                weight: last.weight,
+                durationSeconds: last.durationSeconds,
+                distanceMiles: last.distanceMiles,
+                completed: false,
+                isEstimate: true,
+              }
             : { reps: 0, weight: 0, completed: false },
         ],
       }
@@ -688,14 +695,16 @@ function SessionEditor({
               >
                 <NotebookPen size={15} />
               </button>
-              <button
-                onClick={() => setWarmupWeight(entry.sets[0]?.weight || 0)}
-                className="flex h-8 w-8 items-center justify-center hover:text-orange-400"
-                aria-label="Warm-up calculator"
-                title="Suggest a warm-up ramp for this exercise"
-              >
-                <Flame size={15} />
-              </button>
+              {info?.muscleGroup !== 'Cardio' && (
+                <button
+                  onClick={() => setWarmupWeight(entry.sets[0]?.weight || 0)}
+                  className="flex h-8 w-8 items-center justify-center hover:text-orange-400"
+                  aria-label="Warm-up calculator"
+                  title="Suggest a warm-up ramp for this exercise"
+                >
+                  <Flame size={15} />
+                </button>
+              )}
               <button
                 onClick={() => moveEntry(entryIndex, -1)}
                 disabled={entryIndex === 0}
@@ -749,52 +758,97 @@ function SessionEditor({
                 >
                   {set.side ? `${setNumbers[setIndex]}${set.side === 'left' ? 'L' : 'R'}` : setNumbers[setIndex]}
                 </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  id={`reps-${entryIndex}-${setIndex}`}
-                  placeholder="reps"
-                  value={set.reps}
-                  onChange={(e) =>
-                    updateSet(entryIndex, setIndex, {
-                      reps: Number(e.target.value) || 0,
-                      isEstimate: false,
-                    })
-                  }
-                  onKeyDown={(e) => handleRepsEnter(e, entryIndex, setIndex)}
-                  className={clsx(
-                    `${inputClass} py-1.5`,
-                    set.isEstimate && 'text-neutral-500',
-                  )}
-                />
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  id={`weight-${entryIndex}-${setIndex}`}
-                  placeholder="lbs"
-                  value={set.weight}
-                  onChange={(e) =>
-                    updateSet(entryIndex, setIndex, {
-                      weight: Number(e.target.value) || 0,
-                      isEstimate: false,
-                    })
-                  }
-                  onKeyDown={(e) => handleWeightEnter(e, entryIndex, setIndex)}
-                  className={clsx(
-                    `${inputClass} py-1.5`,
-                    set.isEstimate && 'text-neutral-500',
-                  )}
-                />
-                {info?.equipment !== 'Machine' && info?.equipment !== 'Dumbbell' && (
-                  <button
-                    onClick={() => setCalcWeight(set.weight)}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-indigo-400"
-                    aria-label="Plate calculator"
-                  >
-                    <Calculator size={15} />
-                  </button>
+                {info?.muscleGroup === 'Cardio' ? (
+                  <>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.1}
+                      id={`reps-${entryIndex}-${setIndex}`}
+                      placeholder="min"
+                      value={(set.durationSeconds ?? 0) / 60}
+                      onChange={(e) =>
+                        updateSet(entryIndex, setIndex, {
+                          durationSeconds: Math.round((Number(e.target.value) || 0) * 60),
+                          isEstimate: false,
+                        })
+                      }
+                      className={clsx(
+                        `${inputClass} py-1.5`,
+                        set.isEstimate && 'text-neutral-500',
+                      )}
+                    />
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.01}
+                      id={`weight-${entryIndex}-${setIndex}`}
+                      placeholder="miles"
+                      value={set.distanceMiles ?? 0}
+                      onChange={(e) =>
+                        updateSet(entryIndex, setIndex, {
+                          distanceMiles: Number(e.target.value) || 0,
+                          isEstimate: false,
+                        })
+                      }
+                      className={clsx(
+                        `${inputClass} py-1.5`,
+                        set.isEstimate && 'text-neutral-500',
+                      )}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      id={`reps-${entryIndex}-${setIndex}`}
+                      placeholder="reps"
+                      value={set.reps}
+                      onChange={(e) =>
+                        updateSet(entryIndex, setIndex, {
+                          reps: Number(e.target.value) || 0,
+                          isEstimate: false,
+                        })
+                      }
+                      onKeyDown={(e) => handleRepsEnter(e, entryIndex, setIndex)}
+                      className={clsx(
+                        `${inputClass} py-1.5`,
+                        set.isEstimate && 'text-neutral-500',
+                      )}
+                    />
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      id={`weight-${entryIndex}-${setIndex}`}
+                      placeholder="lbs"
+                      value={set.weight}
+                      onChange={(e) =>
+                        updateSet(entryIndex, setIndex, {
+                          weight: Number(e.target.value) || 0,
+                          isEstimate: false,
+                        })
+                      }
+                      onKeyDown={(e) => handleWeightEnter(e, entryIndex, setIndex)}
+                      className={clsx(
+                        `${inputClass} py-1.5`,
+                        set.isEstimate && 'text-neutral-500',
+                      )}
+                    />
+                    {info?.equipment !== 'Machine' && info?.equipment !== 'Dumbbell' && (
+                      <button
+                        onClick={() => setCalcWeight(set.weight)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-indigo-400"
+                        aria-label="Plate calculator"
+                      >
+                        <Calculator size={15} />
+                      </button>
+                    )}
+                  </>
                 )}
                 <button
                   onClick={() => {
@@ -803,7 +857,7 @@ function SessionEditor({
                       completed: nowCompleted,
                       isEstimate: false,
                     }
-                    if (nowCompleted && set.rpe == null) {
+                    if (nowCompleted && set.rpe == null && info?.muscleGroup !== 'Cardio') {
                       const priorReps = entry.sets
                         .slice(0, setIndex)
                         .filter((s) => s.completed)
@@ -929,13 +983,15 @@ function SessionEditor({
               <button onClick={() => addSet(entryIndex)} className="text-xs text-indigo-400 hover:underline">
                 + Add set
               </button>
-              <button
-                onClick={() => addSetPair(entryIndex)}
-                className="text-xs text-teal-400 hover:underline"
-                title="Add a left + right pair for a unilateral exercise"
-              >
-                + Add L/R set
-              </button>
+              {info?.muscleGroup !== 'Cardio' && (
+                <button
+                  onClick={() => addSetPair(entryIndex)}
+                  className="text-xs text-teal-400 hover:underline"
+                  title="Add a left + right pair for a unilateral exercise"
+                >
+                  + Add L/R set
+                </button>
+              )}
             </div>
             {entryIndex < entries.length - 1 &&
               !(

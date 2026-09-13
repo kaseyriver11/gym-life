@@ -23,7 +23,7 @@ import {
   useTaskLogs,
 } from '@/features/daily/use-daily-tasks'
 import { useHealthSnapshots } from '@/features/health/use-health'
-import { useWorkoutSessions } from '@/features/workouts/use-workout-sessions'
+import { sessionSetProgress, useWorkoutSessions } from '@/features/workouts/use-workout-sessions'
 import { GoalModal, GoalRing } from './GoalWidget'
 import { useDashboardPrefs } from './use-dashboard-prefs'
 import { useGoals } from './use-goals'
@@ -177,18 +177,7 @@ function ActiveWorkoutBanner() {
   const session = sessions.find((s) => s.date === todayISO())
   if (!session || session.entries.length === 0) return null
 
-  const totalSets = session.entries.reduce((n, e) => n + e.sets.length, 0)
-  // "Logged" here means you've actually entered a real number — not the
-  // separate completed-toggle (that's a workout-flow gesture that starts the
-  // rest timer), and not an untouched suggested/estimated value either.
-  const loggedSets = session.entries.reduce(
-    (n, e) =>
-      n +
-      e.sets.filter(
-        (s) => !s.isEstimate && (s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0),
-      ).length,
-    0,
-  )
+  const { totalSets, loggedSets } = sessionSetProgress(session)
   if (totalSets > 0 && loggedSets === totalSets) return null
 
   return (
