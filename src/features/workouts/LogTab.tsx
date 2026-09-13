@@ -22,7 +22,9 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { inputClass } from '@/components/form'
+import { useHealthSnapshots } from '@/features/health/use-health'
 import type { MuscleTarget, WorkoutExerciseEntry, WorkoutSession, WorkoutSet } from '@/types'
+import { estimateSessionCalories } from './calories'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { ExerciseFocusModal } from './ExerciseFocusModal'
 import { muscleGroupStyle } from './muscle-groups'
@@ -96,7 +98,19 @@ function formatDuration(totalSeconds: number) {
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-function WorkoutTimerBar({ session, onToggle }: { session: WorkoutSession; onToggle: () => void }) {
+function WorkoutTimerBar({
+  session,
+  onToggle,
+  exercisesById,
+  weightLbs,
+}: {
+  session: WorkoutSession
+  onToggle: () => void
+  exercisesById: Map<string, { muscleGroup?: string; name: string }>
+  /** Most recent logged body weight, if any — the calorie estimate needs a
+   * weight to work with and silently skips itself without one. */
+  weightLbs: number | undefined
+}) {
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
@@ -109,6 +123,10 @@ function WorkoutTimerBar({ session, onToggle }: { session: WorkoutSession; onTog
     0,
     Math.floor(((session.endedAt ?? now) - session.createdAt) / 1000),
   )
+  const calories =
+    weightLbs && session.entries.length > 0
+      ? estimateSessionCalories(session, exercisesById, weightLbs, now)
+      : null
 
   return (
     <div className="flex items-center justify-between rounded-lg bg-neutral-900 px-3 py-2">
@@ -116,6 +134,11 @@ function WorkoutTimerBar({ session, onToggle }: { session: WorkoutSession; onTog
         <Clock size={13} />
         {formatDuration(elapsedSeconds)}
         {session.endedAt && <span className="text-neutral-600">&nbsp;· finished</span>}
+        {calories != null && calories > 0 && (
+          <span className="text-neutral-600" title="Rough estimate from MET values, your weight, and time — not a precise measurement">
+            &nbsp;· ~{calories} cal
+          </span>
+        )}
       </span>
       <button onClick={onToggle} className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
         {session.endedAt ? 'Reopen' : 'Finish workout'}
@@ -139,7 +162,15 @@ export function LogTab({
   const [date, setDate] = useState(todayISO())
   const { items: sessions, add, update } = useWorkoutSessions()
   const { items: exercises, add: addExercise, saveNote } = useAllExercises()
+  const { items: healthSnapshots } = useHealthSnapshots()
   const session = sessions.find((s) => s.date === date)
+  const exercisesById = useMemo(() => new Map(exercises.map((ex) => [ex.id, ex])), [exercises])
+  const latestWeightLbs = useMemo(() => {
+    const withWeight = [...healthSnapshots]
+      .filter((s) => s.weightLbs != null)
+      .sort((a, b) => b.date.localeCompare(a.date))
+    return withWeight[0]?.weightLbs
+  }, [healthSnapshots])
   const [composing, setComposing] = useState(false)
   const [quickLogging, setQuickLogging] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -207,6 +238,8 @@ export function LogTab({
         <WorkoutTimerBar
           session={session}
           onToggle={() => update(session.id, { endedAt: session.endedAt ? undefined : Date.now() })}
+          exercisesById={exercisesById}
+          weightLbs={latestWeightLbs}
         />
       )}
       {session && <RestTimerBar timer={timer} />}
