@@ -76,7 +76,7 @@ export function ExerciseFocusModal({
   return (
     <Modal title={exercise.name} onClose={onClose}>
       <div className="space-y-4">
-        <MuscleMapView data={heatData} size="6.5rem" />
+        <MuscleMapView data={heatData} size="6.5rem" unusedLabel="Not worked by this exercise" />
 
         <div>
           <label className="mb-1 block text-xs font-medium text-neutral-400">
@@ -92,39 +92,50 @@ export function ExerciseFocusModal({
           />
         </div>
 
-        {exercise.source !== 'catalog' && (
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-400">
-              Which muscles does this hit for you?
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
-                const active = targetMuscles.includes(value)
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-400">
+            {exercise.source === 'catalog' ? 'Muscles this hits' : 'Which muscles does this hit for you?'}
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
+              const active = targetMuscles.includes(value)
+              if (exercise.source === 'catalog') {
                 return (
-                  <button
+                  <span
                     key={value}
-                    type="button"
-                    onClick={() => {
-                      const next = active
-                        ? targetMuscles.filter((m) => m !== value)
-                        : [...targetMuscles, value]
-                      setTargetMuscles(next)
-                      persist(notes, next)
-                    }}
                     className={clsx(
-                      'rounded-full px-2.5 py-1 text-xs font-medium transition',
-                      active
-                        ? 'bg-teal-600 text-white'
-                        : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+                      'rounded-full px-2.5 py-1 text-xs font-medium',
+                      active ? 'bg-teal-600 text-white' : 'bg-neutral-800/60 text-neutral-600',
                     )}
                   >
                     {label}
-                  </button>
+                  </span>
                 )
-              })}
-            </div>
+              }
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    const next = active
+                      ? targetMuscles.filter((m) => m !== value)
+                      : [...targetMuscles, value]
+                    setTargetMuscles(next)
+                    persist(notes, next)
+                  }}
+                  className={clsx(
+                    'rounded-full px-2.5 py-1 text-xs font-medium transition',
+                    active
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+                  )}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
-        )}
+        </div>
 
         <div>
           <p className="mb-1 text-xs font-medium text-neutral-400">Recent history</p>
