@@ -3,11 +3,23 @@ import { format, parseISO } from 'date-fns'
 import { useState } from 'react'
 import { Modal } from '@/components/Modal'
 import type { MuscleTarget, WorkoutSession } from '@/types'
-import { MUSCLE_PICKER_OPTIONS, weightsForExercise } from './body-map'
+import { weightsForExercise } from './body-map'
 import { SCORE_SCALE, type MuscleLoad } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
 import { MuscleRolePicker } from './MuscleRolePicker'
 import { estimatedOneRepMax } from './prs'
+
+const ROLE_RANK: Record<MuscleTarget['role'], number> = { primary: 0, secondary: 1, stabilizer: 2 }
+const ROLE_LABEL: Record<MuscleTarget['role'], string> = {
+  primary: 'Primary',
+  secondary: 'Secondary',
+  stabilizer: 'Stabilizer',
+}
+const ROLE_COLOR: Record<MuscleTarget['role'], string> = {
+  primary: 'text-teal-400',
+  secondary: 'text-neutral-400',
+  stabilizer: 'text-neutral-500',
+}
 
 interface FocusExercise {
   id: string
@@ -97,21 +109,26 @@ export function ExerciseFocusModal({
             {exercise.source === 'catalog' ? 'Muscles this hits' : 'Which muscles does this hit for you?'}
           </label>
           {exercise.source === 'catalog' ? (
-            <div className="flex flex-wrap gap-1.5">
-              {MUSCLE_PICKER_OPTIONS.map(({ value, label }) => {
-                const active = targetMuscles.some((t) => t.muscle === value)
-                return (
-                  <span
-                    key={value}
-                    className={clsx(
-                      'rounded-full px-2.5 py-1 text-xs font-medium',
-                      active ? 'bg-teal-600 text-white' : 'bg-neutral-800/60 text-neutral-600',
-                    )}
-                  >
-                    {label}
-                  </span>
-                )
-              })}
+            <div className="space-y-1 rounded-lg bg-neutral-800/60 px-3 py-2">
+              {targetMuscles.length === 0 ? (
+                <p className="text-xs text-neutral-500">No muscle data yet.</p>
+              ) : (
+                [...targetMuscles]
+                  .sort(
+                    (a, b) =>
+                      ROLE_RANK[a.role] - ROLE_RANK[b.role] ||
+                      (b.activationScore ?? 0) - (a.activationScore ?? 0),
+                  )
+                  .map((t) => (
+                    <div key={t.muscle} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-neutral-300">{t.muscle}</span>
+                      <span className={clsx('shrink-0 font-medium', ROLE_COLOR[t.role])}>
+                        {ROLE_LABEL[t.role]}
+                        {t.activationScore != null && ` · ${Math.round(t.activationScore * 100)}%`}
+                      </span>
+                    </div>
+                  ))
+              )}
             </div>
           ) : (
             <MuscleRolePicker

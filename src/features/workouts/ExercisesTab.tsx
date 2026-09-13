@@ -19,6 +19,7 @@ import { BACK_EXERCISES } from './catalog-data/back'
 import { BICEPS_EXERCISES } from './catalog-data/biceps'
 import { CHEST_EXERCISES } from './catalog-data/chest'
 import { CORE_EXERCISES } from './catalog-data/core'
+import { FOREARMS_EXERCISES } from './catalog-data/forearms'
 import { GLUTES_EXERCISES } from './catalog-data/glutes'
 import { LEGS_EXERCISES } from './catalog-data/legs'
 import { seedCatalog } from './catalog-data/seed'
@@ -47,6 +48,7 @@ function CatalogSeedTool() {
     { label: 'Shoulders', data: SHOULDERS_EXERCISES },
     { label: 'Biceps', data: BICEPS_EXERCISES },
     { label: 'Triceps', data: TRICEPS_EXERCISES },
+    { label: 'Forearms', data: FOREARMS_EXERCISES },
     { label: 'Legs', data: LEGS_EXERCISES },
     { label: 'Glutes', data: GLUTES_EXERCISES },
     { label: 'Core', data: CORE_EXERCISES },

@@ -4,6 +4,7 @@ export const MUSCLE_GROUPS = [
   'Shoulders',
   'Biceps',
   'Triceps',
+  'Forearms',
   'Legs',
   'Glutes',
   'Core',
@@ -63,6 +64,12 @@ const MUSCLE_GROUP_STYLES: Record<MuscleGroup, MuscleGroupStyle> = {
     badge: 'bg-fuchsia-500/20 text-fuchsia-300',
     text: 'text-fuchsia-400',
     dot: 'bg-fuchsia-500',
+  },
+  Forearms: {
+    border: 'border-l-lime-500',
+    badge: 'bg-lime-500/20 text-lime-300',
+    text: 'text-lime-400',
+    dot: 'bg-lime-500',
   },
   Legs: {
     border: 'border-l-emerald-500',
