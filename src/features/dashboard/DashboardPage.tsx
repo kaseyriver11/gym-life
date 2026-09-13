@@ -1,6 +1,15 @@
 import clsx from 'clsx'
 import { addDays, format } from 'date-fns'
-import { CalendarCheck, Droplet, Dumbbell, Footprints, Plus, SlidersHorizontal } from 'lucide-react'
+import {
+  CalendarCheck,
+  Droplet,
+  Dumbbell,
+  Footprints,
+  ListPlus,
+  NotebookText,
+  Plus,
+  SlidersHorizontal,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CircularProgress } from '@/components/CircularProgress'
@@ -61,6 +70,25 @@ export function DashboardPage() {
         >
           <SlidersHorizontal size={18} />
         </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2.5">
+        <Link
+          to="/workouts"
+          state={{ autoOpen: 'compose' }}
+          className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900 py-4 text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+        >
+          <ListPlus size={18} />
+          <span className="text-xs font-medium">Compose a workout</span>
+        </Link>
+        <Link
+          to="/workouts"
+          state={{ tab: 'plan' }}
+          className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900 py-4 text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+        >
+          <NotebookText size={18} />
+          <span className="text-xs font-medium">Start a saved workout</span>
+        </Link>
       </div>
 
       {customizing && (

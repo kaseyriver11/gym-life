@@ -8,6 +8,7 @@ import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { buildMuscleData, dominantMuscleLabel } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
 import { suggestSets } from './progression'
+import { isRestricted } from './restrictions'
 import { useAllExercises } from './use-all-exercises'
 import { useWorkoutTemplates } from './use-workout-templates'
 import { useWorkoutSessions } from './use-workout-sessions'
@@ -203,7 +204,13 @@ function TemplateBuilder({
   onSave,
   onCreateExercise,
 }: {
-  exercises: { id: string; name: string; muscleGroup?: string; equipment?: string }[]
+  exercises: {
+    id: string
+    name: string
+    muscleGroup?: string
+    equipment?: string
+    restrictedUntil?: string | null
+  }[]
   existing?: WorkoutTemplate
   onClose: () => void
   onSave: (data: Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void
@@ -217,6 +224,10 @@ function TemplateBuilder({
   const [name, setName] = useState(existing?.name ?? '')
   const [entries, setEntries] = useState<TemplateEntry[]>(existing?.entries ?? [])
   const [picking, setPicking] = useState(false)
+  const restrictedIds = useMemo(
+    () => new Set(exercises.filter((ex) => isRestricted(ex.restrictedUntil)).map((ex) => ex.id)),
+    [exercises],
+  )
 
   function updateSet(exerciseId: string, setIndex: number, patch: Partial<PlannedSet>) {
     setEntries((prev) =>
@@ -369,6 +380,7 @@ function TemplateBuilder({
           confirmLabel={(n) => `Add ${n} exercise${n === 1 ? '' : 's'}`}
           exercises={exercises}
           excludeIds={new Set(entries.map((e) => e.exerciseId))}
+          restrictedIds={restrictedIds}
           onClose={() => setPicking(false)}
           onCreateExercise={onCreateExercise}
           onConfirm={(selected) => {

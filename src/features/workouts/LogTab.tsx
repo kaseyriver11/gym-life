@@ -124,7 +124,18 @@ function WorkoutTimerBar({ session, onToggle }: { session: WorkoutSession; onTog
   )
 }
 
-export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
+export function LogTab({
+  onGoToPlan,
+  autoOpen,
+}: {
+  onGoToPlan: () => void
+  /** Set by the home page's "Compose a workout" / "Log one exercise"
+   * shortcuts so they actually do something on arrival here, instead of
+   * just switching tabs and leaving the user to find the buttons again.
+   * Only applies when today has no session yet — if one's already in
+   * progress the normal "Add another exercise" flow inside it covers this. */
+  autoOpen?: 'compose' | 'quickLog'
+}) {
   const [date, setDate] = useState(todayISO())
   const { items: sessions, add, update } = useWorkoutSessions()
   const { items: exercises, add: addExercise, saveNote } = useAllExercises()
@@ -133,6 +144,14 @@ export function LogTab({ onGoToPlan }: { onGoToPlan: () => void }) {
   const [quickLogging, setQuickLogging] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const timer = useRestTimer()
+
+  useEffect(() => {
+    if (!autoOpen || session) return
+    if (autoOpen === 'compose') setComposing(true)
+    else setQuickLogging(true)
+    // Only ever auto-open once, right on arrival — not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function createSession(selected: ExerciseInfo[]) {
     const now = Date.now()

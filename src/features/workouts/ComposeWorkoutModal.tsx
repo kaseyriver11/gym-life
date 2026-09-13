@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Plus, Search } from 'lucide-react'
+import { Ban, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
@@ -29,6 +29,7 @@ export function ComposeWorkoutModal({
   confirmLabel,
   exercises,
   excludeIds,
+  restrictedIds,
   onClose,
   onConfirm,
   onCreateExercise,
@@ -37,6 +38,10 @@ export function ComposeWorkoutModal({
   confirmLabel: (count: number) => string
   exercises: ExerciseOption[]
   excludeIds: Set<string>
+  /** When provided, these exercises are shown but greyed out and unpickable
+   * — the "off limits" marker only applies while building a plan, not
+   * while just logging, so this is only passed in from the Plan tab. */
+  restrictedIds?: Set<string>
   onClose: () => void
   onConfirm: (selected: ExerciseOption[]) => void
   /** When provided, shows a "new exercise" quick-add so the user never has
@@ -81,6 +86,7 @@ export function ComposeWorkoutModal({
   })
 
   function toggle(id: string) {
+    if (restrictedIds?.has(id)) return
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     )
@@ -169,16 +175,20 @@ export function ComposeWorkoutModal({
           <ul className="max-h-64 space-y-1.5 overflow-y-auto">
             {filtered.map((ex) => {
               const checked = selectedIds.includes(ex.id)
+              const restricted = restrictedIds?.has(ex.id) ?? false
               const style = muscleGroupStyle(ex.muscleGroup)
               return (
                 <li key={ex.id}>
                   <button
                     type="button"
+                    disabled={restricted}
                     onClick={() => toggle(ex.id)}
+                    title={restricted ? 'Off-limits — cleared in Exercises to use it in a plan' : undefined}
                     className={clsx(
                       'flex w-full items-center gap-3 rounded-lg border-y border-r border-l-4 p-2.5 text-left transition',
                       style.border,
-                      checked
+                      restricted && 'cursor-not-allowed opacity-40',
+                      !restricted && checked
                         ? 'border-y-indigo-500 border-r-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500'
                         : 'border-y-neutral-800 border-r-neutral-800 bg-neutral-800/50 hover:border-r-neutral-700',
                     )}
@@ -197,6 +207,11 @@ export function ComposeWorkoutModal({
                         {ex.source === 'catalog' && (
                           <span className="shrink-0 rounded-full bg-teal-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-teal-300">
                             Catalog
+                          </span>
+                        )}
+                        {restricted && (
+                          <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-300">
+                            <Ban size={9} /> Off-limits
                           </span>
                         )}
                       </span>

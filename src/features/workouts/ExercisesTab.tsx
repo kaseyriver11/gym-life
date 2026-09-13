@@ -1,5 +1,7 @@
 import clsx from 'clsx'
 import {
+  Ban,
+  ChevronDown,
   Database,
   Dumbbell,
   Filter,
@@ -30,6 +32,7 @@ import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
 import { MUSCLE_GROUPS, muscleGroupStyle, type MuscleGroup } from './muscle-groups'
 import { MuscleRolePicker } from './MuscleRolePicker'
+import { RESTRICTION_DURATIONS, isRestricted, restrictedUntilFromMonths, restrictionLabel } from './restrictions'
 import { useAllExercises, type ExerciseWithSource } from './use-all-exercises'
 
 type Mode = 'add' | 'search'
@@ -103,7 +106,7 @@ function CatalogSeedTool() {
 }
 
 export function ExercisesTab() {
-  const { items, add, update, remove } = useAllExercises()
+  const { items, add, update, remove, saveNote } = useAllExercises()
   const [mode, setMode] = useState<Mode>('add')
   const [editing, setEditing] = useState<Exercise | null>(null)
 
@@ -137,7 +140,12 @@ export function ExercisesTab() {
       {mode === 'add' ? (
         <AddExercisePanel items={items} add={add} onEditExisting={setEditing} />
       ) : (
-        <SearchExercisePanel items={items} onEdit={setEditing} onRemove={remove} />
+        <SearchExercisePanel
+          items={items}
+          onEdit={setEditing}
+          onRemove={remove}
+          onSaveRestriction={(id, restrictedUntil) => saveNote(id, { restrictedUntil })}
+        />
       )}
 
       {editing && (
@@ -267,14 +275,17 @@ function SearchExercisePanel({
   items,
   onEdit,
   onRemove,
+  onSaveRestriction,
 }: {
   items: ExerciseWithSource[]
   onEdit: (exercise: Exercise) => void
   onRemove: (id: string) => void
+  onSaveRestriction: (id: string, restrictedUntil: string | null) => void
 }) {
   const [search, setSearch] = useState('')
   const [groupFilter, setGroupFilter] = useState<MuscleGroup | null>(null)
   const [equipmentFilter, setEquipmentFilter] = useState<Equipment | null>(null)
+  const [restrictingExercise, setRestrictingExercise] = useState<ExerciseWithSource | null>(null)
   const [muscleMapExercise, setMuscleMapExercise] = useState<ExerciseWithSource | null>(null)
 
   const filtered = items.filter(
@@ -322,40 +333,48 @@ function SearchExercisePanel({
               </button>
             )}
           </div>
-          {groupsPresent.length > 1 && (
-            <div className="flex flex-wrap gap-1.5">
-              {groupsPresent.map((group) => (
-                <button
-                  key={group}
-                  onClick={() => setGroupFilter(groupFilter === group ? null : group)}
-                  className={clsx(
-                    'rounded-full px-3 py-1 text-xs font-medium transition',
-                    groupFilter === group
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
-                  )}
-                >
-                  {group}
-                </button>
-              ))}
-            </div>
-          )}
-          {equipmentPresent.length > 1 && (
-            <div className="flex flex-wrap gap-1.5">
-              {equipmentPresent.map((item) => (
-                <button
-                  key={item}
-                  onClick={() => setEquipmentFilter(equipmentFilter === item ? null : item)}
-                  className={clsx(
-                    'rounded-full px-3 py-1 text-xs font-medium transition',
-                    equipmentFilter === item
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
-                  )}
-                >
-                  {EQUIPMENT_ICONS[item]} {item}
-                </button>
-              ))}
+          {(groupsPresent.length > 1 || equipmentPresent.length > 1) && (
+            <div className="grid grid-cols-2 gap-2">
+              {groupsPresent.length > 1 && (
+                <div className="relative">
+                  <select
+                    value={groupFilter ?? ''}
+                    onChange={(e) => setGroupFilter((e.target.value || null) as MuscleGroup | null)}
+                    className={`${inputClass} appearance-none py-1.5 pr-8 text-sm`}
+                  >
+                    <option value="">All muscles</option>
+                    {groupsPresent.map((group) => (
+                      <option key={group} value={group}>
+                        {group}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={14}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500"
+                  />
+                </div>
+              )}
+              {equipmentPresent.length > 1 && (
+                <div className="relative">
+                  <select
+                    value={equipmentFilter ?? ''}
+                    onChange={(e) => setEquipmentFilter((e.target.value || null) as Equipment | null)}
+                    className={`${inputClass} appearance-none py-1.5 pr-8 text-sm`}
+                  >
+                    <option value="">All equipment</option>
+                    {equipmentPresent.map((item) => (
+                      <option key={item} value={item}>
+                        {EQUIPMENT_ICONS[item]} {item}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={14}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500"
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -388,6 +407,7 @@ function SearchExercisePanel({
                   className={clsx(
                     'flex items-center justify-between rounded-xl border-y border-r border-l-4 border-y-neutral-800 border-r-neutral-800 bg-neutral-900 p-3',
                     style.border,
+                    isRestricted(exercise.restrictedUntil) && 'opacity-60',
                   )}
                 >
                   <div className="min-w-0">
@@ -418,8 +438,25 @@ function SearchExercisePanel({
                           .join(', ')}
                       </p>
                     )}
+                    {restrictionLabel(exercise.restrictedUntil) && (
+                      <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-red-400">
+                        <Ban size={10} /> {restrictionLabel(exercise.restrictedUntil)}
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
+                    <button
+                      onClick={() => setRestrictingExercise(exercise)}
+                      className={clsx(
+                        isRestricted(exercise.restrictedUntil)
+                          ? 'text-red-400 hover:text-red-300'
+                          : 'text-neutral-500 hover:text-red-400',
+                      )}
+                      aria-label="Mark off-limits"
+                      title="Mark this exercise off-limits (injury, doctor's orders, etc.)"
+                    >
+                      <Ban size={14} />
+                    </button>
                     <button
                       onClick={() => setMuscleMapExercise(exercise)}
                       className="text-neutral-500 hover:text-teal-400"
@@ -465,7 +502,59 @@ function SearchExercisePanel({
           onClose={() => setMuscleMapExercise(null)}
         />
       )}
+
+      {restrictingExercise && (
+        <RestrictExerciseModal
+          exercise={restrictingExercise}
+          onSave={(restrictedUntil) => {
+            onSaveRestriction(restrictingExercise.id, restrictedUntil)
+            setRestrictingExercise(null)
+          }}
+          onClose={() => setRestrictingExercise(null)}
+        />
+      )}
     </div>
+  )
+}
+
+function RestrictExerciseModal({
+  exercise,
+  onSave,
+  onClose,
+}: {
+  exercise: ExerciseWithSource
+  onSave: (restrictedUntil: string | null) => void
+  onClose: () => void
+}) {
+  const currentlyRestricted = isRestricted(exercise.restrictedUntil)
+  return (
+    <Modal title={`Off-limits: ${exercise.name}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-sm text-neutral-400">
+          Hides this exercise from selection while building a plan — e.g. an injury or your
+          doctor's orders. It still stays in your library and in past logs.
+        </p>
+        <div className="space-y-1.5">
+          {RESTRICTION_DURATIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => onSave(restrictedUntilFromMonths(value))}
+              className="flex w-full items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 hover:border-red-500 hover:text-red-300"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {currentlyRestricted && (
+          <button
+            onClick={() => onSave(null)}
+            className="w-full rounded-lg bg-neutral-800 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-700"
+          >
+            Clear — make available again
+          </button>
+        )}
+      </div>
+    </Modal>
   )
 }
 

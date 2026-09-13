@@ -10,6 +10,11 @@ export interface ExerciseNote {
   /** Overrides the exercise's shared targetMuscles just for this user,
    * without touching the shared catalog or any other user's view of it. */
   targetMuscles?: MuscleTarget[]
+  /** 'forever', an ISO yyyy-MM-dd expiry date, or null/absent when not
+   * restricted. Firestore is initialized with ignoreUndefinedProperties, so
+   * clearing this must write `null` (not `undefined`) or the field is left
+   * untouched instead of cleared. */
+  restrictedUntil?: string | null
   updatedAt: number
 }
 

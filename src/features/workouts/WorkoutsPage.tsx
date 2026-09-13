@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { ExercisesTab } from './ExercisesTab'
 import { LogTab } from './LogTab'
 import { PlanTab } from './PlanTab'
@@ -14,8 +15,18 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key']
 
+/** Shape of the `state` a caller (e.g. the dashboard's quick-action
+ * buttons) can hand off via `<Link to="/workouts" state={...}>` to land
+ * directly on a specific tab and/or open a specific flow. */
+export interface WorkoutsPageNavState {
+  tab?: TabKey
+  autoOpen?: 'compose' | 'quickLog'
+}
+
 export function WorkoutsPage() {
-  const [tab, setTab] = useState<TabKey>('log')
+  const location = useLocation()
+  const navState = location.state as WorkoutsPageNavState | null
+  const [tab, setTab] = useState<TabKey>(navState?.tab ?? 'log')
 
   return (
     <div className="space-y-4">
@@ -36,7 +47,7 @@ export function WorkoutsPage() {
         ))}
       </div>
 
-      {tab === 'log' && <LogTab onGoToPlan={() => setTab('plan')} />}
+      {tab === 'log' && <LogTab onGoToPlan={() => setTab('plan')} autoOpen={navState?.autoOpen} />}
       {tab === 'plan' && <PlanTab onStarted={() => setTab('log')} />}
       {tab === 'exercises' && <ExercisesTab />}
       {tab === 'progress' && <ProgressTab />}
