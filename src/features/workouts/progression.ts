@@ -90,6 +90,22 @@ export function suggestSets(
 }
 
 /**
+ * Applies an explicit "sets per exercise" override from the compose-workout
+ * picker on top of suggestSets' usual result — trims extra sets, or pads
+ * with the last suggested set's numbers (so the added ones aren't blank)
+ * when the override asks for more than was suggested. No-op when unset.
+ */
+export function applySetsOverride(
+  suggested: { reps: number; weight: number }[],
+  count?: number,
+): { reps: number; weight: number }[] {
+  if (!count || count === suggested.length) return suggested
+  if (count < suggested.length) return suggested.slice(0, count)
+  const last = suggested[suggested.length - 1] ?? { reps: 0, weight: 0 }
+  return [...suggested, ...Array.from({ length: count - suggested.length }, () => ({ ...last }))]
+}
+
+/**
  * A reasonable RPE default to prefill when a set is marked complete, from
  * this session's own numbers — never forced, always editable.
  */

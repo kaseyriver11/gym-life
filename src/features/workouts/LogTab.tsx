@@ -30,7 +30,7 @@ import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
 import { PlateCalcModal } from './PlateCalcModal'
 import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
-import { suggestDefaultRpe, suggestSets } from './progression'
+import { applySetsOverride, suggestDefaultRpe, suggestSets } from './progression'
 import { RestTimerBar } from './RestTimerBar'
 import { useAllExercises } from './use-all-exercises'
 import { formatTime, useRestTimer, type RestTimer } from './use-rest-timer'
@@ -153,12 +153,12 @@ export function LogTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function createSession(selected: ExerciseInfo[]) {
+  function createSession(selected: ExerciseInfo[], setsCount?: number) {
     const now = Date.now()
     add({
       date,
       entries: selected.map((ex) => {
-        const sets = suggestSets(sessions, ex.id, ex)
+        const sets = applySetsOverride(suggestSets(sessions, ex.id, ex), setsCount)
         return {
           exerciseId: ex.id,
           exerciseName: ex.name,
@@ -259,8 +259,8 @@ export function LogTab({
           excludeIds={new Set()}
           onClose={() => setComposing(false)}
           onCreateExercise={addExercise}
-          onConfirm={(selected) => {
-            createSession(selected)
+          onConfirm={(selected, setsCount) => {
+            createSession(selected, setsCount)
             setComposing(false)
           }}
         />
@@ -274,8 +274,8 @@ export function LogTab({
           excludeIds={new Set()}
           onClose={() => setQuickLogging(false)}
           onCreateExercise={addExercise}
-          onConfirm={(selected) => {
-            createSession(selected)
+          onConfirm={(selected, setsCount) => {
+            createSession(selected, setsCount)
             setQuickLogging(false)
           }}
         />
@@ -1053,11 +1053,11 @@ function SessionEditor({
           excludeIds={new Set(entries.map((e) => e.exerciseId))}
           onClose={() => setAddingMore(false)}
           onCreateExercise={onCreateExercise}
-          onConfirm={(selected) => {
+          onConfirm={(selected, setsCount) => {
             commit([
               ...entries,
               ...selected.map((ex) => {
-                const sets = suggestSetsFor(ex.id, ex)
+                const sets = applySetsOverride(suggestSetsFor(ex.id, ex), setsCount)
                 return {
                   exerciseId: ex.id,
                   exerciseName: ex.name,

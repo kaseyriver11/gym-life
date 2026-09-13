@@ -43,7 +43,9 @@ export function ComposeWorkoutModal({
    * while just logging, so this is only passed in from the Plan tab. */
   restrictedIds?: Set<string>
   onClose: () => void
-  onConfirm: (selected: ExerciseOption[]) => void
+  /** `setsCount` is set only when the user overrode the default "Sets per
+   * exercise" field below — undefined means "use the usual suggestion". */
+  onConfirm: (selected: ExerciseOption[], setsCount?: number) => void
   /** When provided, shows a "new exercise" quick-add so the user never has
    * to leave this picker to build out their library. */
   onCreateExercise?: (data: {
@@ -62,6 +64,7 @@ export function ComposeWorkoutModal({
   const [newGroup, setNewGroup] = useState<MuscleGroup | null>(null)
   const [newEquipment, setNewEquipment] = useState<Equipment | null>(null)
   const [newTargetMuscles, setNewTargetMuscles] = useState<MuscleTarget[]>([])
+  const [setsCount, setSetsCount] = useState('')
   // Newly created exercises land here immediately so confirm() can find them
   // even if the parent's `exercises` list hasn't refreshed from Firestore
   // yet — otherwise a just-created exercise can silently vanish from the
@@ -96,7 +99,8 @@ export function ComposeWorkoutModal({
     const selected = selectedIds
       .map((id) => allExercises.find((ex) => ex.id === id))
       .filter((ex): ex is ExerciseOption => ex != null)
-    onConfirm(selected)
+    const count = Number(setsCount)
+    onConfirm(selected, count > 0 ? count : undefined)
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -310,6 +314,21 @@ export function ComposeWorkoutModal({
               <Plus size={14} /> New exercise
             </button>
           ))}
+
+        {selectedIds.length > 0 && (
+          <label className="flex items-center justify-between gap-3 text-xs text-neutral-500">
+            Sets per exercise <span className="text-neutral-700">(optional — overrides suggested)</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              placeholder="Auto"
+              value={setsCount}
+              onChange={(e) => setSetsCount(e.target.value)}
+              className={`${inputClass} w-16 py-1 text-center text-sm`}
+            />
+          </label>
+        )}
 
         <button
           type="button"

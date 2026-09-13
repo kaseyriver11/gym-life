@@ -383,13 +383,13 @@ function TemplateBuilder({
           restrictedIds={restrictedIds}
           onClose={() => setPicking(false)}
           onCreateExercise={onCreateExercise}
-          onConfirm={(selected) => {
+          onConfirm={(selected, setsCount) => {
             setEntries((prev) => [
               ...prev,
               ...selected.map((ex) => ({
                 exerciseId: ex.id,
                 exerciseName: ex.name,
-                plannedSets: [{ reps: 0, weight: 0 }],
+                plannedSets: Array.from({ length: setsCount ?? 1 }, () => ({ reps: 0, weight: 0 })),
               })),
             ])
             setPicking(false)
