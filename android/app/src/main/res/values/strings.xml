@@ -4,4 +4,5 @@
     <string name="title_activity_main">Gym-Life</string>
     <string name="package_name">com.kaseyriver.life</string>
     <string name="custom_url_scheme">com.kaseyriver.life</string>
+    <string name="background_notification_title">Measuring your health and fitness data.</string>    <string name="background_notification_description">The app is running in the background.</string>    <string name="privacy_policy_url">https://claude.ai/code/artifact/561a5145-d155-4baf-b7d7-f83b5364d7ea</string>
 </resources>

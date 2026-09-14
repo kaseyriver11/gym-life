@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "STEPS": "Read"
+  },
+  "disableBackgroundJobs": true,
+  "privacyPolicyUrl": "https://claude.ai/code/artifact/561a5145-d155-4baf-b7d7-f83b5364d7ea"
+}

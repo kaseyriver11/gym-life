@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns'
-import { Droplet, Smartphone } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Droplet, Footprints, Smartphone } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -11,6 +11,13 @@ import {
   YAxis,
 } from 'recharts'
 import { inputClass, primaryButtonClass } from '@/components/form'
+import {
+  connectHealthConnect,
+  disconnectHealthConnect,
+  fetchTodaySteps,
+  healthConnectAvailable,
+  isHealthConnectLinked,
+} from './health-connect'
 import { useHealthSnapshots } from './use-health'
 
 function todayISO() {
@@ -25,6 +32,62 @@ export function HealthPage() {
   const [weight, setWeight] = useState(todaySnapshot?.weightLbs?.toString() ?? '')
   const [steps, setSteps] = useState(todaySnapshot?.steps?.toString() ?? '')
   const [caloriesIn, setCaloriesIn] = useState(todaySnapshot?.caloriesIn?.toString() ?? '')
+  const [hcLinked, setHcLinked] = useState(false)
+  const [hcBusy, setHcBusy] = useState(false)
+  const [hcError, setHcError] = useState<string | null>(null)
+
+  useEffect(() => {
+    isHealthConnectLinked().then(setHcLinked)
+  }, [])
+
+  async function syncStepsNow(snapshot = todaySnapshot) {
+    const liveSteps = await fetchTodaySteps()
+    if (snapshot) {
+      await update(snapshot.id, { steps: liveSteps, source: 'health-connect' })
+    } else {
+      await add({ date: today, steps: liveSteps, source: 'health-connect' })
+    }
+    setSteps(liveSteps.toString())
+  }
+
+  async function handleConnect() {
+    setHcBusy(true)
+    setHcError(null)
+    try {
+      await connectHealthConnect()
+      setHcLinked(true)
+      await syncStepsNow()
+    } catch (err) {
+      setHcError(err instanceof Error ? err.message : 'Could not connect to Health Connect.')
+    } finally {
+      setHcBusy(false)
+    }
+  }
+
+  async function handleDisconnect() {
+    setHcBusy(true)
+    setHcError(null)
+    try {
+      await disconnectHealthConnect()
+      setHcLinked(false)
+    } catch (err) {
+      setHcError(err instanceof Error ? err.message : 'Could not disconnect Health Connect.')
+    } finally {
+      setHcBusy(false)
+    }
+  }
+
+  async function handleSync() {
+    setHcBusy(true)
+    setHcError(null)
+    try {
+      await syncStepsNow()
+    } catch (err) {
+      setHcError(err instanceof Error ? err.message : 'Sync failed.')
+    } finally {
+      setHcBusy(false)
+    }
+  }
 
   const weightData = useMemo(
     () =>
@@ -60,16 +123,66 @@ export function HealthPage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-dashed border-neutral-700 bg-neutral-900/50 p-3">
-        <div className="flex items-center gap-2 text-sm text-neutral-300">
-          <Smartphone size={16} />
-          <span className="font-medium">Google Health Connect</span>
+      <div
+        className={`rounded-xl border p-3 ${
+          hcLinked ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-dashed border-neutral-700 bg-neutral-900/50'
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-neutral-300">
+            <Smartphone size={16} />
+            <span className="font-medium">Google Health Connect</span>
+          </div>
+          {hcLinked && (
+            <span className="flex items-center gap-1 text-xs font-medium text-emerald-400">
+              <Footprints size={12} /> Connected
+            </span>
+          )}
         </div>
-        <p className="mt-1 text-xs text-neutral-500">
-          Not connected yet — automatic sync of steps and nutrition needs a native Android
-          plugin, tested on your phone. Log manually below for now; we'll wire this up once
-          the app is running on your device.
-        </p>
+
+        {!healthConnectAvailable() ? (
+          <p className="mt-1 text-xs text-neutral-500">
+            Only available in the installed Android app, not the web version.
+          </p>
+        ) : hcLinked ? (
+          <>
+            <p className="mt-1 text-xs text-neutral-500">
+              Reading step count from Health Connect. Make sure your Garmin Connect app is set
+              to sync to Health Connect for your watch's steps to show up here.
+            </p>
+            <div className="mt-2 flex gap-1.5">
+              <button
+                onClick={handleSync}
+                disabled={hcBusy}
+                className="flex-1 rounded-lg bg-emerald-500/20 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-40"
+              >
+                {hcBusy ? 'Syncing…' : 'Sync steps now'}
+              </button>
+              <button
+                onClick={handleDisconnect}
+                disabled={hcBusy}
+                className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs text-neutral-400 hover:bg-neutral-700 disabled:opacity-40"
+              >
+                Disconnect
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-xs text-neutral-500">
+              Connect to pull your step count from Health Connect (e.g. from a Garmin watch
+              synced through Garmin Connect). Log manually below either way.
+            </p>
+            <button
+              onClick={handleConnect}
+              disabled={hcBusy}
+              className="mt-2 w-full rounded-lg bg-sky-500/20 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/30 disabled:opacity-40"
+            >
+              {hcBusy ? 'Connecting…' : 'Connect Health Connect'}
+            </button>
+          </>
+        )}
+        {hcError && <p className="mt-1.5 text-xs text-red-400">{hcError}</p>}
       </div>
 
       <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3">
