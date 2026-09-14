@@ -15,13 +15,15 @@ import {
   NotebookPen,
   NotebookText,
   PersonStanding,
+  Save,
   Square,
   Trash2,
   Trophy,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { inputClass } from '@/components/form'
+import { Modal } from '@/components/Modal'
+import { inputClass, primaryButtonClass } from '@/components/form'
 import { useHealthSnapshots } from '@/features/health/use-health'
 import type { MuscleTarget, WorkoutExerciseEntry, WorkoutSession, WorkoutSet } from '@/types'
 import { estimateSessionCalories } from './calories'
@@ -37,6 +39,7 @@ import { RestTimerBar } from './RestTimerBar'
 import { useAllExercises } from './use-all-exercises'
 import { formatTime, useRestTimer, type RestTimer } from './use-rest-timer'
 import { useWorkoutSessions } from './use-workout-sessions'
+import { useWorkoutTemplates } from './use-workout-templates'
 import { WarmupCalcModal } from './WarmupCalcModal'
 import { WorkoutHistoryModal } from './WorkoutHistoryModal'
 
@@ -365,6 +368,8 @@ function SessionEditor({
 }) {
   const [entries, setEntries] = useState(session.entries)
   const [addingMore, setAddingMore] = useState(false)
+  const [savingAsTemplate, setSavingAsTemplate] = useState(false)
+  const { add: addTemplate } = useWorkoutTemplates()
   const [timingTarget, setTimingTarget] = useState<{ entryIndex: number; setIndex: number } | null>(
     null,
   )
@@ -1073,6 +1078,16 @@ function SessionEditor({
         </button>
         {entries.length > 0 && (
           <button
+            onClick={() => setSavingAsTemplate(true)}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-700 px-4 text-sm text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+            aria-label="Save as a reusable workout"
+            title="Save this workout so you can start it again later"
+          >
+            <Save size={16} />
+          </button>
+        )}
+        {entries.length > 0 && (
+          <button
             onClick={() => setShowMuscleMap(true)}
             className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-700 px-4 text-sm text-neutral-400 hover:border-teal-500 hover:text-teal-400"
             aria-label="Muscle map"
@@ -1164,6 +1179,67 @@ function SessionEditor({
           onClose={() => setShowMuscleMap(false)}
         />
       )}
+
+      {savingAsTemplate && (
+        <SaveAsTemplateModal
+          onClose={() => setSavingAsTemplate(false)}
+          onSave={(name) => {
+            const now = Date.now()
+            addTemplate({
+              name,
+              entries: entries.map((e) => ({
+                exerciseId: e.exerciseId,
+                exerciseName: e.exerciseName,
+                plannedSets: e.sets.map((s) => ({ reps: s.reps, weight: s.weight })),
+              })),
+              createdAt: now,
+              updatedAt: now,
+            })
+            setSavingAsTemplate(false)
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+/** Composing a workout on the fly (rather than starting a saved one) never
+ * used to leave anything reusable behind — this lets you turn today's
+ * session into a template after the fact, once you know it's a keeper. */
+function SaveAsTemplateModal({
+  onClose,
+  onSave,
+}: {
+  onClose: () => void
+  onSave: (name: string) => void
+}) {
+  const [name, setName] = useState('')
+  return (
+    <Modal title="Save as a workout" onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-sm text-neutral-400">
+          Saves today's exercises (and current sets) as a reusable workout under Plan, so you can
+          start it again later.
+        </p>
+        <input
+          autoFocus
+          placeholder='Name, e.g. "Push Day A"'
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && name.trim()) onSave(name.trim())
+          }}
+          className={inputClass}
+        />
+        <button
+          type="button"
+          disabled={!name.trim()}
+          onClick={() => onSave(name.trim())}
+          className={`${primaryButtonClass} disabled:opacity-40`}
+        >
+          Save workout
+        </button>
+      </div>
+    </Modal>
   )
 }
