@@ -83,7 +83,13 @@ export async function fetchTodaySteps(): Promise<number> {
         StartDate: isoAt(start),
         EndDate: isoAt(end),
         TimeUnit: 'DAY',
+        // Without this the native side divides the query range by it to
+        // work out bucket boundaries — omitting it (rather than defaulting
+        // to 1) crashes with "HealthConnectDataManager: divide by zero".
+        TimeUnitLength: 1,
         OperationType: 'SUM',
+        AdvancedQueryReturnType: 'ALL_DATA',
+        AdvancedQueryResultType: 'RAW_DATA',
       }),
     })
     console.log('[HealthConnect] raw steps result:', results)
