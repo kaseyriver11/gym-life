@@ -37,7 +37,16 @@ export function HealthPage() {
   const [hcError, setHcError] = useState<string | null>(null)
 
   useEffect(() => {
-    isHealthConnectLinked().then(setHcLinked)
+    isHealthConnectLinked().then((linked) => {
+      setHcLinked(linked)
+      if (!linked) return
+      setHcBusy(true)
+      syncStepsNow()
+        .catch((err) => setHcError(err instanceof Error ? err.message : 'Sync failed.'))
+        .finally(() => setHcBusy(false))
+    })
+    // Auto-sync once, right on arrival — not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function syncStepsNow(snapshot = todaySnapshot) {
