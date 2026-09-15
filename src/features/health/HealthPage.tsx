@@ -1,5 +1,6 @@
-import { format, parseISO } from 'date-fns'
-import { Droplet, Footprints, Smartphone } from 'lucide-react'
+import clsx from 'clsx'
+import { addDays, format, parseISO } from 'date-fns'
+import { Droplet, Footprints, SlidersHorizontal, Smartphone } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   CartesianGrid,
@@ -10,7 +11,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { CircularProgress } from '@/components/CircularProgress'
 import { inputClass, primaryButtonClass } from '@/components/form'
+import { useWorkoutSessions } from '@/features/workouts/use-workout-sessions'
+import { useDashboardPrefs } from '../dashboard/use-dashboard-prefs'
 import {
   connectHealthConnect,
   disconnectHealthConnect,
@@ -24,8 +28,81 @@ function todayISO() {
   return format(new Date(), 'yyyy-MM-dd')
 }
 
+function TargetRow({
+  label,
+  value,
+  onSave,
+}: {
+  label: string
+  value: number
+  onSave: (value: number) => void
+}) {
+  const [draft, setDraft] = useState(value.toString())
+
+  function commit() {
+    const n = Number(draft)
+    if (n > 0) onSave(n)
+    else setDraft(value.toString())
+  }
+
+  return (
+    <label className="flex items-center justify-between gap-3 py-1 text-sm text-neutral-300">
+      {label}
+      <input
+        type="number"
+        min={1}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+        }}
+        className={`${inputClass} w-20 py-1 text-right`}
+      />
+    </label>
+  )
+}
+
+function RingTile({
+  label,
+  progress,
+  accent,
+  children,
+}: {
+  label: string
+  progress: number
+  accent: 'cyan' | 'sky' | 'emerald'
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-neutral-800/70 bg-neutral-900 p-3 shadow-lg shadow-black/20">
+      <CircularProgress progress={progress} accent={accent}>
+        {children}
+      </CircularProgress>
+      <span className="text-xs text-neutral-400">{label}</span>
+    </div>
+  )
+}
+
+function WorkoutsRing({ target }: { target: number }) {
+  const { items } = useWorkoutSessions()
+  const trainedDates = new Set(items.filter((s) => s.entries.length > 0).map((s) => s.date))
+  const now = new Date()
+  const sunday = addDays(now, -now.getDay())
+  const weekDates = Array.from({ length: 7 }, (_, i) => format(addDays(sunday, i), 'yyyy-MM-dd'))
+  const count = weekDates.filter((d) => trainedDates.has(d)).length
+
+  return (
+    <RingTile label="Workouts" progress={(count / target) * 100} accent="emerald">
+      <span className="text-sm font-semibold text-neutral-50">{count}</span>
+      <span className="text-[9px] text-neutral-500">/{target} wk</span>
+    </RingTile>
+  )
+}
+
 export function HealthPage() {
   const { items, add, update } = useHealthSnapshots()
+  const { targets, setTargets } = useDashboardPrefs()
   const today = todayISO()
   const todaySnapshot = items.find((s) => s.date === today)
 
@@ -35,6 +112,7 @@ export function HealthPage() {
   const [hcLinked, setHcLinked] = useState(false)
   const [hcBusy, setHcBusy] = useState(false)
   const [hcError, setHcError] = useState<string | null>(null)
+  const [editingTargets, setEditingTargets] = useState(false)
 
   useEffect(() => {
     isHealthConnectLinked().then((linked) => {
@@ -130,8 +208,53 @@ export function HealthPage() {
     }
   }
 
+  const todaySteps = todaySnapshot?.steps ?? 0
+  const todayWaterOz = todaySnapshot?.waterOz ?? 0
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setEditingTargets((v) => !v)}
+          className={clsx(
+            'rounded-full p-1.5 hover:bg-neutral-900',
+            editingTargets ? 'text-indigo-400' : 'text-neutral-500',
+          )}
+          aria-label="Edit targets"
+        >
+          <SlidersHorizontal size={16} />
+        </button>
+      </div>
+
+      {editingTargets && (
+        <div className="space-y-1 rounded-xl border border-neutral-800/70 bg-neutral-900 p-3">
+          <p className="text-xs font-medium text-neutral-400">Daily / weekly targets</p>
+          <TargetRow label="Steps" value={targets.steps} onSave={(v) => setTargets({ steps: v })} />
+          <TargetRow
+            label="Water (oz)"
+            value={targets.water}
+            onSave={(v) => setTargets({ water: v })}
+          />
+          <TargetRow
+            label="Workouts / week"
+            value={targets.workoutsPerWeek}
+            onSave={(v) => setTargets({ workoutsPerWeek: v })}
+          />
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2.5">
+        <RingTile label="Steps" progress={(todaySteps / targets.steps) * 100} accent="cyan">
+          <Footprints size={14} className="mb-0.5 text-cyan-400" />
+          <span className="text-xs font-semibold text-neutral-50">{todaySteps.toLocaleString()}</span>
+        </RingTile>
+        <RingTile label="Water" progress={(todayWaterOz / targets.water) * 100} accent="sky">
+          <Droplet size={14} className="mb-0.5 text-sky-400" />
+          <span className="text-xs font-semibold text-neutral-50">{todayWaterOz}oz</span>
+        </RingTile>
+        <WorkoutsRing target={targets.workoutsPerWeek} />
+      </div>
+
       <div
         className={`rounded-xl border p-3 ${
           hcLinked ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-dashed border-neutral-700 bg-neutral-900/50'
