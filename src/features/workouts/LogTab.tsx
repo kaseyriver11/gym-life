@@ -105,17 +105,38 @@ function formatDuration(totalSeconds: number) {
 function WorkoutTimerBar({
   session,
   onToggle,
+  onDelete,
   exercisesById,
   weightLbs,
 }: {
   session: WorkoutSession
   onToggle: () => void
+  onDelete: () => void
   exercisesById: Map<string, { muscleGroup?: string; name: string }>
   /** Most recent logged body weight, if any — the calorie estimate needs a
    * weight to work with and silently skips itself without one. */
   weightLbs: number | undefined
 }) {
   const [now, setNow] = useState(() => Date.now())
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const confirmDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+    }
+  }, [])
+
+  function requestDelete() {
+    if (confirmDelete) {
+      if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+      onDelete()
+      return
+    }
+    setConfirmDelete(true)
+    if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+    confirmDeleteTimeout.current = setTimeout(() => setConfirmDelete(false), 2500)
+  }
 
   useEffect(() => {
     if (session.endedAt) return
@@ -144,9 +165,28 @@ function WorkoutTimerBar({
           </span>
         )}
       </span>
-      <button onClick={onToggle} className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
-        {session.endedAt ? 'Reopen' : 'Finish workout'}
-      </button>
+      <div className="flex items-center gap-3">
+        <button onClick={onToggle} className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
+          {session.endedAt ? 'Reopen' : 'Finish workout'}
+        </button>
+        {confirmDelete ? (
+          <button
+            onClick={requestDelete}
+            className="text-xs font-medium text-red-400 hover:text-red-300"
+          >
+            Confirm delete?
+          </button>
+        ) : (
+          <button
+            onClick={requestDelete}
+            className="text-neutral-500 hover:text-red-400"
+            aria-label="Delete workout"
+            title="Delete workout"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -162,7 +202,7 @@ export function LogTab({
   autoOpen?: 'compose' | 'quickLog'
 }) {
   const [date, setDate] = useState(todayISO())
-  const { items: sessions, loading: sessionsLoading, add, update } = useWorkoutSessions()
+  const { items: sessions, loading: sessionsLoading, add, update, remove } = useWorkoutSessions()
   const { items: exercises, add: addExercise, saveNote } = useAllExercises()
   const { items: healthSnapshots } = useHealthSnapshots()
   const session = sessions.find((s) => s.date === date)
@@ -289,6 +329,7 @@ export function LogTab({
         <WorkoutTimerBar
           session={session}
           onToggle={() => update(session.id, { endedAt: session.endedAt ? undefined : Date.now() })}
+          onDelete={() => remove(session.id)}
           exercisesById={exercisesById}
           weightLbs={latestWeightLbs}
         />
