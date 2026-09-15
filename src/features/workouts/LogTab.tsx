@@ -15,6 +15,7 @@ import {
   NotebookPen,
   NotebookText,
   PersonStanding,
+  Plus,
   Save,
   Square,
   Trash2,
@@ -25,7 +26,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import { useHealthSnapshots } from '@/features/health/use-health'
-import type { MuscleTarget, WorkoutExerciseEntry, WorkoutSession, WorkoutSet } from '@/types'
+import type { MuscleTarget, WorkoutExerciseEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '@/types'
 import { estimateSessionCalories } from './calories'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { ExerciseFocusModal } from './ExerciseFocusModal'
@@ -151,10 +152,8 @@ function WorkoutTimerBar({
 }
 
 export function LogTab({
-  onGoToPlan,
   autoOpen,
 }: {
-  onGoToPlan: () => void
   /** Set by the home page's "Compose a workout" / "Log one exercise"
    * shortcuts so they actually do something on arrival here, instead of
    * just switching tabs and leaving the user to find the buttons again.
@@ -174,8 +173,10 @@ export function LogTab({
       .sort((a, b) => b.date.localeCompare(a.date))
     return withWeight[0]?.weightLbs
   }, [healthSnapshots])
+  const { items: templates, add: addTemplate } = useWorkoutTemplates()
   const [composing, setComposing] = useState(false)
   const [quickLogging, setQuickLogging] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const timer = useRestTimer()
 
@@ -192,17 +193,58 @@ export function LogTab({
     else setQuickLogging(true)
   }, [autoOpen, sessionsLoading, session])
 
-  function createSession(selected: ExerciseInfo[], setsCount?: number) {
+  function createSession(selected: ExerciseInfo[], setsCount?: number, templateName?: string) {
+    const now = Date.now()
+    const entries = selected.map((ex) => {
+      const sets = applySetsOverride(suggestSets(sessions, ex.id, ex), setsCount)
+      return {
+        exerciseId: ex.id,
+        exerciseName: ex.name,
+        sets: sets.map((s) => ({
+          ...s,
+          completed: false,
+          isEstimate: s.reps > 0 || s.weight > 0,
+        })),
+      }
+    })
+    add({ date, entries, createdAt: now, updatedAt: now })
+    if (templateName) {
+      addTemplate({
+        name: templateName,
+        entries: selected.map((ex) => ({
+          exerciseId: ex.id,
+          exerciseName: ex.name,
+          plannedSets: applySetsOverride(suggestSets(sessions, ex.id, ex), setsCount).map((s) => ({
+            reps: s.reps,
+            weight: s.weight,
+          })),
+        })),
+        createdAt: now,
+        updatedAt: now,
+      })
+    }
+  }
+
+  /** Brings a saved workout's exercises into whatever date is currently
+   * selected here — deliberately NOT the same as Plan's "Start" (which
+   * always targets today, for "begin this right now"). This is for the
+   * clearly different case of planning ahead into a future date. */
+  function importTemplate(template: WorkoutTemplate) {
     const now = Date.now()
     add({
       date,
-      entries: selected.map((ex) => {
-        const sets = applySetsOverride(suggestSets(sessions, ex.id, ex), setsCount)
+      entries: template.entries.map((entry) => {
+        const hasRealPlan = entry.plannedSets.some((s) => s.reps > 0 || s.weight > 0)
+        const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
+        const sets = hasRealPlan
+          ? entry.plannedSets
+          : suggestSets(sessions, entry.exerciseId, exerciseInfo)
         return {
-          exerciseId: ex.id,
-          exerciseName: ex.name,
+          exerciseId: entry.exerciseId,
+          exerciseName: entry.exerciseName,
           sets: sets.map((s) => ({
-            ...s,
+            reps: s.reps,
+            weight: s.weight,
             completed: false,
             isEstimate: s.reps > 0 || s.weight > 0,
           })),
@@ -211,6 +253,7 @@ export function LogTab({
       createdAt: now,
       updatedAt: now,
     })
+    setImporting(false)
   }
 
   return (
@@ -253,31 +296,28 @@ export function LogTab({
       {session && <RestTimerBar timer={timer} />}
 
       {!session ? (
-        <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => setComposing(true)}
-            className="flex w-full flex-col items-center gap-1 rounded-xl border border-dashed border-neutral-700 py-6 text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-700 py-5 text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
           >
-            <ListPlus size={20} />
-            <span className="text-sm font-medium">Compose a workout</span>
-            <span className="text-xs text-neutral-600">
-              Pick the exercises you're doing today, then log as you go
-            </span>
+            <ListPlus size={18} />
+            <span className="text-center text-xs font-medium">Compose a workout</span>
           </button>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setQuickLogging(true)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-neutral-900 py-2 text-xs text-neutral-500 hover:text-neutral-300"
-            >
-              <Dumbbell size={13} /> Log one exercise
-            </button>
-            <button
-              onClick={onGoToPlan}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-neutral-900 py-2 text-xs text-neutral-500 hover:text-neutral-300"
-            >
-              <NotebookText size={13} /> Start a saved workout
-            </button>
-          </div>
+          <button
+            onClick={() => setImporting(true)}
+            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-700 py-5 text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+          >
+            <NotebookText size={18} />
+            <span className="text-center text-xs font-medium">Import a saved workout</span>
+          </button>
+          <button
+            onClick={() => setQuickLogging(true)}
+            className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-700 py-5 text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+          >
+            <Dumbbell size={18} />
+            <span className="text-center text-xs font-medium">Log an exercise</span>
+          </button>
         </div>
       ) : (
         <SessionEditor
@@ -298,12 +338,21 @@ export function LogTab({
           confirmLabel={(n) => `Start workout · ${plural(n, 'exercise')}`}
           exercises={exercises}
           excludeIds={new Set()}
+          offerSaveAsTemplate
           onClose={() => setComposing(false)}
           onCreateExercise={addExercise}
-          onConfirm={(selected, setsCount) => {
-            createSession(selected, setsCount)
+          onConfirm={(selected, setsCount, templateName) => {
+            createSession(selected, setsCount, templateName)
             setComposing(false)
           }}
+        />
+      )}
+
+      {importing && (
+        <ImportTemplateModal
+          templates={templates}
+          onClose={() => setImporting(false)}
+          onImport={importTemplate}
         />
       )}
 
@@ -333,6 +382,50 @@ export function LogTab({
         />
       )}
     </div>
+  )
+}
+
+/** Picks a saved workout to bring into whatever date is currently selected
+ * on the Log tab — just imports the exercises, doesn't "start" anything
+ * (no navigation, no timer), so it behaves the same whether that date is
+ * today or three weeks out. */
+function ImportTemplateModal({
+  templates,
+  onClose,
+  onImport,
+}: {
+  templates: WorkoutTemplate[]
+  onClose: () => void
+  onImport: (template: WorkoutTemplate) => void
+}) {
+  return (
+    <Modal title="Import a saved workout" onClose={onClose}>
+      {templates.length === 0 ? (
+        <p className="py-6 text-center text-sm text-neutral-500">
+          No saved workouts yet — compose one and check "Also save as a reusable workout", or
+          build one from the Plan tab.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {templates.map((t) => (
+            <li key={t.id}>
+              <button
+                onClick={() => onImport(t)}
+                className="flex w-full items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-left hover:border-indigo-500"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-neutral-100">{t.name}</p>
+                  <p className="text-xs text-neutral-500">
+                    {plural(t.entries.length, 'exercise')}
+                  </p>
+                </div>
+                <Plus size={16} className="shrink-0 text-neutral-500" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
   )
 }
 

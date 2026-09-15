@@ -47,7 +47,7 @@ export function WorkoutsPage() {
         ))}
       </div>
 
-      {tab === 'log' && <LogTab onGoToPlan={() => setTab('plan')} autoOpen={navState?.autoOpen} />}
+      {tab === 'log' && <LogTab autoOpen={navState?.autoOpen} />}
       {tab === 'plan' && <PlanTab onStarted={() => setTab('log')} />}
       {tab === 'exercises' && <ExercisesTab />}
       {tab === 'progress' && <ProgressTab />}

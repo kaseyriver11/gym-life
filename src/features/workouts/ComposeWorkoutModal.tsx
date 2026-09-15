@@ -30,6 +30,7 @@ export function ComposeWorkoutModal({
   exercises,
   excludeIds,
   restrictedIds,
+  offerSaveAsTemplate,
   onClose,
   onConfirm,
   onCreateExercise,
@@ -42,10 +43,17 @@ export function ComposeWorkoutModal({
    * — the "off limits" marker only applies while building a plan, not
    * while just logging, so this is only passed in from the Plan tab. */
   restrictedIds?: Set<string>
+  /** Shows an optional "Also save as a reusable workout" checkbox — only
+   * makes sense where confirming actually starts/logs a session (the main
+   * "Compose a workout" entry point), not for "add more to what's already
+   * running" or for Plan's own template-building picker. */
+  offerSaveAsTemplate?: boolean
   onClose: () => void
   /** `setsCount` is set only when the user overrode the default "Sets per
-   * exercise" field below — undefined means "use the usual suggestion". */
-  onConfirm: (selected: ExerciseOption[], setsCount?: number) => void
+   * exercise" field below — undefined means "use the usual suggestion".
+   * `templateName` is set only when offerSaveAsTemplate was on and the user
+   * checked it — the caller is expected to also save a WorkoutTemplate. */
+  onConfirm: (selected: ExerciseOption[], setsCount?: number, templateName?: string) => void
   /** When provided, shows a "new exercise" quick-add so the user never has
    * to leave this picker to build out their library. */
   onCreateExercise?: (data: {
@@ -65,6 +73,8 @@ export function ComposeWorkoutModal({
   const [newEquipment, setNewEquipment] = useState<Equipment | null>(null)
   const [newTargetMuscles, setNewTargetMuscles] = useState<MuscleTarget[]>([])
   const [setsCount, setSetsCount] = useState('')
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
   // Newly created exercises land here immediately so confirm() can find them
   // even if the parent's `exercises` list hasn't refreshed from Firestore
   // yet — otherwise a just-created exercise can silently vanish from the
@@ -100,7 +110,11 @@ export function ComposeWorkoutModal({
       .map((id) => allExercises.find((ex) => ex.id === id))
       .filter((ex): ex is ExerciseOption => ex != null)
     const count = Number(setsCount)
-    onConfirm(selected, count > 0 ? count : undefined)
+    onConfirm(
+      selected,
+      count > 0 ? count : undefined,
+      saveAsTemplate && templateName.trim() ? templateName.trim() : undefined,
+    )
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -330,9 +344,32 @@ export function ComposeWorkoutModal({
           </label>
         )}
 
+        {offerSaveAsTemplate && selectedIds.length > 0 && (
+          <div className="space-y-1.5 rounded-lg border border-dashed border-neutral-700 p-2.5">
+            <label className="flex items-center gap-2 text-xs text-neutral-300">
+              <input
+                type="checkbox"
+                checked={saveAsTemplate}
+                onChange={(e) => setSaveAsTemplate(e.target.checked)}
+                className="h-4 w-4 accent-indigo-600"
+              />
+              Also save as a reusable workout
+            </label>
+            {saveAsTemplate && (
+              <input
+                autoFocus
+                placeholder='Name, e.g. "Push Day A"'
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                className={`${inputClass} py-1.5 text-sm`}
+              />
+            )}
+          </div>
+        )}
+
         <button
           type="button"
-          disabled={selectedIds.length === 0}
+          disabled={selectedIds.length === 0 || (saveAsTemplate && !templateName.trim())}
           onClick={confirm}
           className={`${primaryButtonClass} disabled:opacity-40`}
         >
