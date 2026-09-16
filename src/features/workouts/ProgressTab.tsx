@@ -11,9 +11,11 @@ import {
   YAxis,
 } from 'recharts'
 import { inputClass } from '@/components/form'
+import { useHealthSnapshots } from '@/features/health/use-health'
 import type { WorkoutSession } from '@/types'
 import { muscleGroupStyle } from './muscle-groups'
-import { useExercises } from './use-exercises'
+import { strengthScoreTrend } from './strength-score'
+import { useAllExercises } from './use-all-exercises'
 import { useWorkoutSessions } from './use-workout-sessions'
 
 function WeeklyVolumeSection({
@@ -69,9 +71,82 @@ function WeeklyVolumeSection({
   )
 }
 
+function StrengthTrendSection({
+  sessions,
+  exercisesById,
+  snapshots,
+}: {
+  sessions: WorkoutSession[]
+  exercisesById: Map<string, { muscleGroup?: string } | undefined>
+  snapshots: { date: string; weightLbs?: number }[]
+}) {
+  const data = useMemo(
+    () => strengthScoreTrend(sessions, exercisesById, snapshots),
+    [sessions, exercisesById, snapshots],
+  )
+
+  const change = useMemo(() => {
+    if (data.length < 2) return null
+    const first = data[0].score
+    const last = data[data.length - 1].score
+    if (first <= 0) return null
+    return Math.round(((last - first) / first) * 100)
+  }, [data])
+
+  return (
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+      <div className="mb-1 flex items-center justify-between">
+        <p className="text-xs font-medium text-neutral-400">Strength trend</p>
+        {change != null && (
+          <span className={clsx('text-xs font-semibold', change >= 0 ? 'text-teal-400' : 'text-red-400')}>
+            {change >= 0 ? '+' : ''}
+            {change}% since your first session
+          </span>
+        )}
+      </div>
+      <p className="mb-3 text-[11px] text-neutral-600">
+        Weighs each set by effort relative to your bodyweight at the time — not just weight on the
+        bar — so getting lighter without losing strength shows up as holding steady, not declining.
+      </p>
+      {data.length < 2 ? (
+        <p className="py-4 text-center text-sm text-neutral-500">
+          Log a few more sessions (with a bodyweight logged in Health) to see a trend.
+        </p>
+      ) : (
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(d) => format(parseISO(d), 'M/d')}
+                stroke="#737373"
+                fontSize={11}
+              />
+              <YAxis stroke="#737373" fontSize={11} width={32} />
+              <Tooltip
+                labelFormatter={(d) => format(parseISO(d as string), 'MMM d, yyyy')}
+                contentStyle={{
+                  background: '#171717',
+                  border: '1px solid #404040',
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              />
+              <Line type="monotone" dataKey="score" stroke="#2dd4bf" strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ProgressTab() {
-  const { items: exercises } = useExercises()
+  const { items: exercises } = useAllExercises()
   const { items: sessions } = useWorkoutSessions()
+  const { items: healthSnapshots } = useHealthSnapshots()
+  const exercisesById = useMemo(() => new Map(exercises.map((ex) => [ex.id, ex])), [exercises])
   const [exerciseId, setExerciseId] = useState('')
 
   const data = useMemo(() => {
@@ -90,6 +165,8 @@ export function ProgressTab() {
 
   return (
     <div className="space-y-4">
+      <StrengthTrendSection sessions={sessions} exercisesById={exercisesById} snapshots={healthSnapshots} />
+
       <WeeklyVolumeSection sessions={sessions} exercises={exercises} />
 
       <select

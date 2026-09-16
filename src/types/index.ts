@@ -132,6 +132,11 @@ export interface WorkoutSet {
   durationSeconds?: number
   /** Distance covered — cardio only. */
   distanceMiles?: number
+  /** Perceived effort — cardio only. Defaults to 'moderate' when unset. */
+  intensity?: 'easy' | 'moderate' | 'hard'
+  /** Estimated calories burned for this cardio block — cardio only, computed
+   * from duration/intensity but editable in case you have a device reading. */
+  calories?: number
   /** true once the set has actually been performed (vs. planned) */
   completed: boolean
   /** true while reps/weight are still an unconfirmed suggestion (from a
@@ -150,6 +155,13 @@ export interface WorkoutExerciseEntry {
   /** Shared id linking this entry to others logged back-to-back as a
    * superset — rest only auto-starts after the last linked exercise. */
   supersetGroup?: number
+  /** Shared id + display name linking entries that came in together as one
+   * named composed/saved workout (e.g. "Back Day #2" started from Plan) —
+   * lets the Log page collapse them under one header, distinct from cardio
+   * or extra exercises added ad hoc into the same day's session. Unset for
+   * anything added one-off ("Add another exercise", quick cardio, etc). */
+  blockId?: string
+  blockTitle?: string
 }
 
 export interface WorkoutSession {
@@ -161,6 +173,16 @@ export interface WorkoutSession {
   /** Set when the workout is marked finished — freezes the duration shown
    * from createdAt. Cleared again if the workout is reopened. */
   endedAt?: number
+  /** Set when the user removes the elapsed-time tracker for this workout —
+   * hides duration/calories and stops the clock without touching any
+   * logged sets. Re-enabling resets `createdAt` so the clock restarts from
+   * that moment instead of jumping to a large stale elapsed time. */
+  noTimer?: boolean
+  /** A hand-entered duration for this workout — corrects a clock that got
+   * cleared or was never started, or stands in entirely for someone who
+   * doesn't time workouts at all. Always takes priority over the live
+   * clock wherever duration is shown or used (calorie estimate included). */
+  durationOverrideSeconds?: number
   createdAt: number
   updatedAt: number
 }
@@ -181,6 +203,15 @@ export interface WorkoutTemplate {
   }[]
   createdAt: number
   updatedAt: number
+}
+
+/** Optional personal stats used only to personalize workout calorie
+ * estimates (see workouts/calories.ts) — every field is optional and
+ * missing/incomplete data just falls back to a plain weight-based estimate. */
+export interface UserProfile {
+  ageYears?: number
+  heightIn?: number
+  sex?: 'male' | 'female'
 }
 
 export interface HealthSnapshot {

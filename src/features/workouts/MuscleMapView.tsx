@@ -23,6 +23,7 @@ export function MuscleMapView({
   data,
   size = '9rem',
   unusedLabel = 'Not worked by this workout',
+  compact = false,
 }: {
   data: Map<string, MuscleLoad>
   size?: string
@@ -30,6 +31,10 @@ export function MuscleMapView({
    * showing a single exercise (rather than a whole session) should pass
    * something like "Not worked by this exercise". */
   unusedLabel?: string
+  /** Front view only, no legend/labels/hint text or tap-to-inspect detail
+   * box — a small glanceable badge (e.g. a summary card's corner graphic)
+   * rather than the full interactive map. */
+  compact?: boolean
 }) {
   const [selected, setSelected] = useState<{ id: string; label: string; exercises: string[] } | null>(
     null,
@@ -142,6 +147,23 @@ export function MuscleMapView({
       <p className="py-8 text-center text-sm text-neutral-500">
         No sets to show yet — this fills in as sets are logged or planned.
       </p>
+    )
+  }
+
+  if (compact) {
+    return (
+      <div ref={wrapperRef} onMouseMove={handlePointerMove} className="relative" title={dominant ?? undefined}>
+        <div ref={frontRef} style={{ width: size }} />
+        {hover && (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-neutral-800 px-2 py-1 text-center text-xs font-medium text-neutral-100 shadow-lg"
+            style={{ left: hover.x, top: hover.y - 8 }}
+          >
+            <div>{hover.label}</div>
+            {hover.detail && <div className="text-[10px] font-normal text-neutral-400">{hover.detail}</div>}
+          </div>
+        )}
+      </div>
     )
   }
 

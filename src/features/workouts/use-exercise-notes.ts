@@ -7,6 +7,10 @@ import type { MuscleTarget } from '@/types'
 export interface ExerciseNote {
   /** Personal technique/angle notes — e.g. "elbows tucked, pause at chest". */
   notes?: string
+  /** Quick reminders, one per line — rendered as a bulleted list directly on
+   * the exercise card during logging, unlike `notes` which stays tucked away
+   * in the focus modal. */
+  cues?: string
   /** Overrides the exercise's shared targetMuscles just for this user,
    * without touching the shared catalog or any other user's view of it. */
   targetMuscles?: MuscleTarget[]

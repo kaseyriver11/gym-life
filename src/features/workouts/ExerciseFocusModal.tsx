@@ -25,6 +25,7 @@ interface FocusExercise {
   id: string
   name: string
   notes?: string
+  cues?: string
   targetMuscles?: MuscleTarget[]
   muscleGroup?: string
   muscleSubgroup?: string
@@ -45,10 +46,11 @@ export function ExerciseFocusModal({
   exercise: FocusExercise
   sessions: WorkoutSession[]
   excludeSessionId?: string
-  onSaveNote: (data: { notes?: string; targetMuscles?: MuscleTarget[] }) => void
+  onSaveNote: (data: { notes?: string; cues?: string; targetMuscles?: MuscleTarget[] }) => void
   onClose: () => void
 }) {
   const [notes, setNotes] = useState(exercise.notes ?? '')
+  const [cues, setCues] = useState(exercise.cues ?? '')
   const [targetMuscles, setTargetMuscles] = useState<MuscleTarget[]>(() => exercise.targetMuscles ?? [])
 
   const history = sessions
@@ -71,9 +73,10 @@ export function ExerciseFocusModal({
     })
   }
 
-  function persist(nextNotes: string, nextMuscles: MuscleTarget[]) {
+  function persist(nextNotes: string, nextCues: string, nextMuscles: MuscleTarget[]) {
     onSaveNote({
       notes: nextNotes.trim() || undefined,
+      cues: nextCues.trim() || undefined,
       // Catalog exercises have no editable picker (the muscle list up top
       // is a read-only display), so never write targetMuscles for them —
       // otherwise saving a note would freeze a snapshot of the catalog's
@@ -92,14 +95,28 @@ export function ExerciseFocusModal({
 
         <div>
           <label className="mb-1 block text-xs font-medium text-neutral-400">
-            Your notes (form cues, angle, setup)
+            Cues (one per line — shown on the card while you log)
+          </label>
+          <textarea
+            value={cues}
+            onChange={(e) => setCues(e.target.value)}
+            onBlur={() => persist(notes, cues, targetMuscles)}
+            rows={3}
+            placeholder={'e.g.\nElbows tucked\nPause at chest\nDrive through heels'}
+            className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-neutral-400">
+            Notes (setup details, history — not shown on the card)
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            onBlur={() => persist(notes, targetMuscles)}
-            rows={3}
-            placeholder="e.g. incline set to 3, elbows tucked, pause at chest"
+            onBlur={() => persist(notes, cues, targetMuscles)}
+            rows={2}
+            placeholder="e.g. incline set to 3, seat height 4"
             className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-indigo-500"
           />
         </div>
@@ -135,7 +152,7 @@ export function ExerciseFocusModal({
               value={targetMuscles}
               onChange={(next) => {
                 setTargetMuscles(next)
-                persist(notes, next)
+                persist(notes, cues, next)
               }}
             />
           )}

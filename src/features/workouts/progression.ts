@@ -45,7 +45,12 @@ export function suggestSets(
   sessions: WorkoutSession[],
   exerciseId: string,
   exercise: ExerciseInfo = {},
-): { reps: number; weight: number }[] {
+): { reps: number; weight: number; side?: 'left' | 'right' }[] {
+  // Cardio is logged as one activity block (duration/distance/intensity),
+  // never a rep/weight-style set count — always exactly one, regardless of
+  // history or the sets-per-exercise picker.
+  if (exercise.muscleGroup === 'Cardio') return [{ reps: 0, weight: 0 }]
+
   const last = findEntry(sessions, exerciseId)
   if (!last || last.sets.length === 0) {
     return [{ reps: 0, weight: 0 }, { reps: 0, weight: 0 }, { reps: 0, weight: 0 }]
@@ -53,39 +58,62 @@ export function suggestSets(
 
   const completed = last.sets.filter((s) => s.completed)
   if (completed.length === 0) {
-    return last.sets.map((s) => ({ reps: s.reps, weight: s.weight }))
+    return last.sets.map((s) => ({ reps: s.reps, weight: s.weight, side: s.side }))
   }
 
   const repLow = exercise.repRangeLow ?? DEFAULT_REP_LOW
   const repHigh = exercise.repRangeHigh ?? DEFAULT_REP_HIGH
   const increment = weightIncrement(exercise.equipment, exercise.muscleGroup)
-  const baseWeight = completed[0].weight
-  const bestReps = Math.max(...completed.map((s) => s.reps))
 
-  const anyMissed = completed.some((s) => s.reps < repLow)
-  const allHitTop = completed.every((s) => s.reps >= repHigh)
-  const rated = completed.filter((s) => s.rpe != null)
-  const avgRpe = rated.length ? rated.reduce((sum, s) => sum + (s.rpe ?? 0), 0) / rated.length : null
-  const feltBrutal = avgRpe != null && avgRpe >= 9
+  function target(completedForSide: typeof completed): { targetWeight: number; targetReps: number } {
+    const baseWeight = completedForSide[0].weight
+    const bestReps = Math.max(...completedForSide.map((s) => s.reps))
+    const anyMissed = completedForSide.some((s) => s.reps < repLow)
+    const allHitTop = completedForSide.every((s) => s.reps >= repHigh)
+    const rated = completedForSide.filter((s) => s.rpe != null)
+    const avgRpe = rated.length ? rated.reduce((sum, s) => sum + (s.rpe ?? 0), 0) / rated.length : null
+    const feltBrutal = avgRpe != null && avgRpe >= 9
 
-  let targetWeight: number
-  let targetReps: number
-
-  if (anyMissed) {
-    const prev = findEntry(sessions, exerciseId, 1)
-    const prevCompleted = prev?.sets.filter((s) => s.completed) ?? []
-    const prevAlsoMissed = prevCompleted.some((s) => s.reps < repLow)
-    targetWeight =
-      prevAlsoMissed && increment > 0 ? roundToHalf(baseWeight * 0.9) : baseWeight
-    targetReps = repLow
-  } else if (allHitTop && !feltBrutal) {
-    targetWeight = baseWeight + increment
-    targetReps = repLow
-  } else {
-    targetWeight = baseWeight
-    targetReps = Math.min(repHigh, bestReps + 1)
+    if (anyMissed) {
+      const prev = findEntry(sessions, exerciseId, 1)
+      const prevCompleted = prev?.sets.filter((s) => s.completed) ?? []
+      const prevAlsoMissed = prevCompleted.some((s) => s.reps < repLow)
+      return {
+        targetWeight: prevAlsoMissed && increment > 0 ? roundToHalf(baseWeight * 0.9) : baseWeight,
+        targetReps: repLow,
+      }
+    }
+    if (allHitTop && !feltBrutal) {
+      return { targetWeight: baseWeight + increment, targetReps: repLow }
+    }
+    return { targetWeight: baseWeight, targetReps: Math.min(repHigh, bestReps + 1) }
   }
 
+  // A unilateral exercise (left/right sets) progresses each side off its own
+  // numbers — one side lagging shouldn't hold back (or get dragged along by)
+  // the other, and losing the side tag entirely here is what made these
+  // exercises render as flat, unpaired rows instead of an L/R split.
+  const hasSides = last.sets.some((s) => s.side)
+  if (hasSides) {
+    // A side with nothing completed (skipped that day) has no numbers to
+    // progress from — just carry its last logged reps/weight forward as-is
+    // rather than crashing on an empty completed-sets array.
+    function targetForSide(side: 'left' | 'right') {
+      const completedForSide = completed.filter((s) => s.side === side)
+      if (completedForSide.length > 0) return target(completedForSide)
+      const lastForSide = last!.sets.filter((s) => s.side === side)
+      const fallback = lastForSide[lastForSide.length - 1]
+      return { targetWeight: fallback?.weight ?? 0, targetReps: fallback?.reps ?? 0 }
+    }
+    const left = targetForSide('left')
+    const right = targetForSide('right')
+    return last.sets.map((s) => {
+      const t = s.side === 'right' ? right : left
+      return { reps: t.targetReps, weight: t.targetWeight, side: s.side }
+    })
+  }
+
+  const { targetWeight, targetReps } = target(completed)
   return last.sets.map(() => ({ reps: targetReps, weight: targetWeight }))
 }
 

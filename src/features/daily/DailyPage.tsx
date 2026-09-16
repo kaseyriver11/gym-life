@@ -228,7 +228,9 @@ export function DailyPage() {
                     {!task.isOneTime && (
                       <span className="flex items-center gap-1">
                         <Repeat size={11} />
-                        {(task.repeatDays ?? []).map((d) => WEEKDAY_LABELS[d]).join(' ')}
+                        {(task.repeatDays ?? []).length === 7
+                          ? 'Daily'
+                          : (task.repeatDays ?? []).map((d) => WEEKDAY_LABELS[d]).join(' ')}
                       </span>
                     )}
                   </div>
@@ -563,6 +565,20 @@ function TaskModal({
                 {label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() =>
+                setRepeatDays(repeatDays.length === 7 ? [] : [0, 1, 2, 3, 4, 5, 6])
+              }
+              className={clsx(
+                'h-8 rounded-lg px-3 text-xs font-medium transition',
+                repeatDays.length === 7
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700',
+              )}
+            >
+              Every day
+            </button>
           </div>
         )}
 

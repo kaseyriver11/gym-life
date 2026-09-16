@@ -41,6 +41,7 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
 
   function startTemplate(template: WorkoutTemplate) {
     const now = Date.now()
+    const blockId = String(now)
     addSession({
       date: todayISO(),
       entries: template.entries.map((entry) => {
@@ -58,6 +59,8 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
             completed: false,
             isEstimate: s.reps > 0 || s.weight > 0,
           })),
+          blockId,
+          blockTitle: template.name,
         }
       }),
       createdAt: now,

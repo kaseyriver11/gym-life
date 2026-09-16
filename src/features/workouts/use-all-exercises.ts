@@ -9,6 +9,9 @@ export type ExerciseWithSource = Exercise & {
   /** Personal notes/angle, if any — from the user's own exerciseNotes,
    * never the shared catalog. */
   notes?: string
+  /** Quick reminders, one per line, shown directly on the exercise card —
+   * always personal, never part of the shared catalog. */
+  cues?: string
   /** Per-user "off limits" marker (injury, doctor's orders, etc.) — 'forever',
    * an ISO expiry date, or unset. Always personal, works for catalog exercises
    * too, since it lives in exerciseNotes rather than the shared catalog. */
@@ -35,6 +38,7 @@ export function useAllExercises() {
         ...ex,
         source,
         notes: note?.notes,
+        cues: note?.cues,
         targetMuscles: note?.targetMuscles ?? ex.targetMuscles,
         restrictedUntil: note?.restrictedUntil,
       }

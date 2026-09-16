@@ -56,6 +56,23 @@ export const SHOULDERS_EXERCISES: Omit<Exercise, 'id'>[] = [
     createdAt: Date.now(),
   },
   {
+    name: 'Dumbbell Shoulder Press (Incline 60°)',
+    muscleGroup: 'Shoulders',
+    muscleSubgroup: 'Front Delts',
+    equipment: 'Dumbbell',
+    movementPattern: 'vertical_push',
+    targetMuscles: [
+      { muscle: 'Anterior Deltoid', role: 'primary', activationScore: 1 },
+      { muscle: 'Pec Major (Clavicular / Upper Chest)', role: 'secondary', activationScore: 0.6 },
+      { muscle: 'Lateral Deltoid', role: 'secondary', activationScore: 0.55 },
+      { muscle: 'Triceps Brachii', role: 'secondary', activationScore: 0.55 },
+      { muscle: 'Rotator Cuff', role: 'stabilizer', activationScore: 0.3 },
+    ],
+    repRangeLow: 6,
+    repRangeHigh: 10,
+    createdAt: Date.now(),
+  },
+  {
     name: 'Machine Shoulder Press',
     muscleGroup: 'Shoulders',
     muscleSubgroup: 'Front Delts',

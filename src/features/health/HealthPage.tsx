@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { addDays, format, parseISO } from 'date-fns'
 import { Droplet, Footprints, SlidersHorizontal, Smartphone } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -23,6 +23,7 @@ import {
   isHealthConnectLinked,
 } from './health-connect'
 import { useHealthSnapshots } from './use-health'
+import { useProfile } from './use-profile'
 
 function todayISO() {
   return format(new Date(), 'yyyy-MM-dd')
@@ -101,18 +102,34 @@ function WorkoutsRing({ target }: { target: number }) {
 }
 
 export function HealthPage() {
-  const { items, add, update } = useHealthSnapshots()
+  const { items, loading, add, update } = useHealthSnapshots()
   const { targets, setTargets } = useDashboardPrefs()
+  const { profile, setProfile } = useProfile()
   const today = todayISO()
   const todaySnapshot = items.find((s) => s.date === today)
 
-  const [weight, setWeight] = useState(todaySnapshot?.weightLbs?.toString() ?? '')
-  const [steps, setSteps] = useState(todaySnapshot?.steps?.toString() ?? '')
-  const [caloriesIn, setCaloriesIn] = useState(todaySnapshot?.caloriesIn?.toString() ?? '')
+  const [weight, setWeight] = useState('')
+  const [steps, setSteps] = useState('')
+  const [caloriesIn, setCaloriesIn] = useState('')
   const [hcLinked, setHcLinked] = useState(false)
   const [hcBusy, setHcBusy] = useState(false)
   const [hcError, setHcError] = useState<string | null>(null)
   const [editingTargets, setEditingTargets] = useState(false)
+  const syncedTodayRef = useRef(false)
+
+  // The Firestore listener resolves asynchronously — these fields' initial
+  // values would otherwise be computed from `items` while it's still empty
+  // (`loading` true), permanently leaving the form blank even once today's
+  // real snapshot arrives a moment later, since nothing re-syncs local state
+  // after the initial render. Sync exactly once, right when loading finishes.
+  useEffect(() => {
+    if (loading || syncedTodayRef.current) return
+    syncedTodayRef.current = true
+    setWeight(todaySnapshot?.weightLbs?.toString() ?? '')
+    setSteps(todaySnapshot?.steps?.toString() ?? '')
+    setCaloriesIn(todaySnapshot?.caloriesIn?.toString() ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
 
   useEffect(() => {
     isHealthConnectLinked().then((linked) => {
@@ -240,6 +257,32 @@ export function HealthPage() {
             value={targets.workoutsPerWeek}
             onSave={(v) => setTargets({ workoutsPerWeek: v })}
           />
+
+          <p className="mb-1 mt-3 border-t border-neutral-800 pt-3 text-xs font-medium text-neutral-400">
+            Profile — personalizes workout calorie estimates
+          </p>
+          <TargetRow
+            label="Age"
+            value={profile.ageYears ?? 0}
+            onSave={(v) => setProfile({ ageYears: v })}
+          />
+          <TargetRow
+            label="Height (in)"
+            value={profile.heightIn ?? 0}
+            onSave={(v) => setProfile({ heightIn: v })}
+          />
+          <label className="flex items-center justify-between gap-3 py-1 text-sm text-neutral-300">
+            Sex
+            <select
+              value={profile.sex ?? ''}
+              onChange={(e) => setProfile({ sex: (e.target.value || undefined) as 'male' | 'female' | undefined })}
+              className={`${inputClass} w-28 py-1`}
+            >
+              <option value="">Not set</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
         </div>
       )}
 

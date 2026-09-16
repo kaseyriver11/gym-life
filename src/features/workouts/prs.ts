@@ -28,3 +28,27 @@ export function bestEstimatedOneRepMax(
   }
   return best
 }
+
+/**
+ * Same as `bestEstimatedOneRepMax` but counts any set with real reps/weight
+ * logged, regardless of whether it's marked "completed" — for summary/
+ * history views comparing effort across sessions where a user reliably
+ * enters numbers but doesn't always tap the completed toggle.
+ */
+export function bestEstimatedOneRepMaxAnySet(
+  sessions: WorkoutSession[],
+  exerciseId: string,
+  excludeSessionId?: string,
+): number {
+  let best = 0
+  for (const session of sessions) {
+    if (session.id === excludeSessionId) continue
+    for (const entry of session.entries) {
+      if (entry.exerciseId !== exerciseId) continue
+      for (const set of entry.sets) {
+        best = Math.max(best, estimatedOneRepMax(set.weight, set.reps))
+      }
+    }
+  }
+  return best
+}

@@ -1,13 +1,21 @@
-import { Minus, Pause, Play, Plus, Timer, TimerReset, X } from 'lucide-react'
+import { Minus, Pause, Play, Plus, TimerReset, X } from 'lucide-react'
 import { formatTime, REST_PRESETS, type RestTimer } from './use-rest-timer'
 
 export function RestTimerBar({ timer }: { timer: RestTimer }) {
   if (timer.idle) {
     return (
-      <div className="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
         <div className="flex items-center gap-2">
           <TimerReset size={16} className="shrink-0 text-neutral-500" />
-          <p className="shrink-0 text-xs text-neutral-500">Timer</p>
+          <p className="shrink-0 text-xs text-neutral-500">Rest Timer</p>
+          <button
+            onClick={() => timer.startStopwatch()}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+            aria-label="Start rest timer (counts up)"
+            title="Start a free timer that counts up"
+          >
+            <Play size={11} />
+          </button>
           <div className="flex flex-1 flex-wrap justify-end gap-1.5">
             {REST_PRESETS.map((seconds) => (
               <button
@@ -20,12 +28,6 @@ export function RestTimerBar({ timer }: { timer: RestTimer }) {
             ))}
           </div>
         </div>
-        <button
-          onClick={() => timer.startStopwatch()}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-neutral-800 py-1.5 text-xs font-medium text-neutral-300 hover:bg-neutral-700"
-        >
-          <Timer size={12} /> Free timer (counts up)
-        </button>
       </div>
     )
   }

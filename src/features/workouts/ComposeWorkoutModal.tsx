@@ -31,6 +31,7 @@ export function ComposeWorkoutModal({
   excludeIds,
   restrictedIds,
   offerSaveAsTemplate,
+  defaultGroupFilter,
   onClose,
   onConfirm,
   onCreateExercise,
@@ -43,6 +44,9 @@ export function ComposeWorkoutModal({
    * — the "off limits" marker only applies while building a plan, not
    * while just logging, so this is only passed in from the Plan tab. */
   restrictedIds?: Set<string>
+  /** Pre-selects a muscle-group filter pill (e.g. "Cardio" for the quick
+   * cardio-add entry points) instead of opening on the unfiltered list. */
+  defaultGroupFilter?: string
   /** Shows an optional "Also save as a reusable workout" checkbox — only
    * makes sense where confirming actually starts/logs a session (the main
    * "Compose a workout" entry point), not for "add more to what's already
@@ -65,7 +69,7 @@ export function ComposeWorkoutModal({
   }) => Promise<{ id: string }>
 }) {
   const [search, setSearch] = useState('')
-  const [groupFilter, setGroupFilter] = useState<string | null>(null)
+  const [groupFilter, setGroupFilter] = useState<string | null>(defaultGroupFilter ?? null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -207,7 +211,7 @@ export function ComposeWorkoutModal({
                       style.border,
                       restricted && 'cursor-not-allowed opacity-40',
                       !restricted && checked
-                        ? 'border-y-indigo-500 border-r-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500'
+                        ? 'animate-added-flash border-y-indigo-500 border-r-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500'
                         : 'border-y-neutral-800 border-r-neutral-800 bg-neutral-800/50 hover:border-r-neutral-700',
                     )}
                   >
@@ -217,7 +221,7 @@ export function ComposeWorkoutModal({
                         checked ? 'border-indigo-500 bg-indigo-500' : 'border-neutral-600',
                       )}
                     >
-                      {checked && '✓'}
+                      {checked && <span className="animate-check-pop inline-block">✓</span>}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
