@@ -13,7 +13,7 @@ import {
 } from './progress-stats'
 
 type WeekMetric = 'minutes' | 'miles'
-type TrendMetric = 'minutes' | 'miles' | 'pace'
+type TrendMetric = 'minutes' | 'miles' | 'pace' | 'hr'
 
 export function ProgressCardio({
   sessions,
@@ -38,11 +38,15 @@ export function ProgressCardio({
 
   const activityPoints = useMemo(() => {
     // One point per day (two runs on one day are summed).
-    const byDate = new Map<string, { date: string; minutes: number; miles: number; seconds: number }>()
+    const byDate = new Map<string, { date: string; miles: number; seconds: number; hrSum: number; hrSec: number }>()
     for (const c of list.filter((c) => c.activity === activity)) {
-      const cur = byDate.get(c.date) ?? { date: c.date, minutes: 0, miles: 0, seconds: 0 }
+      const cur = byDate.get(c.date) ?? { date: c.date, miles: 0, seconds: 0, hrSum: 0, hrSec: 0 }
       cur.seconds += c.seconds
       cur.miles += c.miles
+      if (c.avgHeartRate != null) {
+        cur.hrSum += c.avgHeartRate * c.seconds
+        cur.hrSec += c.seconds
+      }
       byDate.set(c.date, cur)
     }
     return [...byDate.values()].map((p) => ({
@@ -50,6 +54,7 @@ export function ProgressCardio({
       minutes: Math.round(p.seconds / 60),
       miles: Math.round(p.miles * 100) / 100,
       pace: p.miles > 0 && p.seconds > 0 ? p.seconds / p.miles : undefined,
+      hr: p.hrSec > 0 ? Math.round(p.hrSum / p.hrSec) : undefined,
     }))
   }, [list, activity])
 
@@ -62,9 +67,15 @@ export function ProgressCardio({
           { key: 'pace' as const, label: 'Pace' },
         ]
       : []),
+    ...(activityPoints.some((p) => p.hr != null) ? [{ key: 'hr' as const, label: 'Avg HR' }] : []),
   ]
   const trend = trendOptions.some((o) => o.key === trendChoice) ? trendChoice : 'minutes'
-  const trendData = trend === 'pace' ? activityPoints.filter((p) => p.pace != null) : activityPoints
+  const trendData =
+    trend === 'pace'
+      ? activityPoints.filter((p) => p.pace != null)
+      : trend === 'hr'
+        ? activityPoints.filter((p) => p.hr != null)
+        : activityPoints
 
   if (list.length === 0) {
     return <p className="py-10 text-center text-sm text-neutral-500">Log some cardio and it'll add up here.</p>
@@ -137,7 +148,7 @@ export function ProgressCardio({
             color="#2dd4bf"
             label={trendOptions.find((o) => o.key === trend)!.label}
             formatValue={(v) =>
-              trend === 'pace' ? formatSeconds(v) : trend === 'miles' ? `${v}` : `${Math.round(v)}`
+              trend === 'pace' ? formatSeconds(v) : trend === 'miles' ? `${v}` : trend === 'hr' ? `${Math.round(v)} bpm` : `${Math.round(v)}`
             }
           />
         )}
@@ -159,6 +170,7 @@ export function ProgressCardio({
                   {formatSeconds(c.seconds)}
                   {c.miles > 0 && ` · ${c.miles} mi`}
                   {c.pace != null && ` · ${formatSeconds(c.pace)}/mi`}
+                  {c.avgHeartRate != null && ` · ${c.avgHeartRate} bpm`}
                 </span>
               </li>
             ))}

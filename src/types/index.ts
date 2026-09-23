@@ -142,6 +142,19 @@ export interface WorkoutSet {
   /** Estimated calories burned for this cardio block — cardio only, computed
    * from duration/intensity but editable in case you have a device reading. */
   calories?: number
+  /** Average / peak heart rate during this block, bpm — cardio only. Typed
+   * in from a machine/watch, or filled in by a Health Connect import. */
+  avgHeartRate?: number
+  maxHeartRate?: number
+  /** Treadmill/incline-walk grade, percent — cardio only. */
+  incline?: number
+  /** Machine resistance level (bike, elliptical, rower) — cardio only. */
+  resistance?: number
+  /** Health Connect record id when this block was imported from a watch —
+   * how the importer knows not to offer the same workout twice. */
+  externalId?: string
+  /** App that recorded an imported block, e.g. "com.garmin.android.apps.connectmobile". */
+  externalSource?: string
   /** true once the set has actually been performed (vs. planned) */
   completed: boolean
   /** true while reps/weight are still an unconfirmed suggestion (from a

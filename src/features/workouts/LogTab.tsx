@@ -38,7 +38,9 @@ import { inputClass, primaryButtonClass } from '@/components/form'
 import { useHealthSnapshots } from '@/features/health/use-health'
 import { useProfile } from '@/features/health/use-profile'
 import type { MuscleTarget, UserProfile, WorkoutExerciseEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '@/types'
-import { estimateCardioCalories, estimateHoldCalories, estimateSessionCalories } from './calories'
+import { estimateHoldCalories, estimateSessionCalories } from './calories'
+import { HealthImportBanner } from '@/features/health/HealthImport'
+import { CardioSetRow } from './CardioSetRow'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { ExerciseFocusModal } from './ExerciseFocusModal'
 import { isDurationBased, isHoldBased, muscleGroupStyle } from './muscle-groups'
@@ -558,6 +560,8 @@ export function LogTab({
           <History size={18} />
         </button>
       </div>
+
+      <HealthImportBanner />
 
       {session && <RestTimerBar timer={timer} />}
 
@@ -1290,6 +1294,10 @@ function SessionEditor({
                 weight: last.weight,
                 durationSeconds: last.durationSeconds,
                 distanceMiles: last.distanceMiles,
+                // Cardio intervals/laps: carry the machine settings forward too.
+                intensity: last.intensity,
+                incline: last.incline,
+                resistance: last.resistance,
                 completed: false,
                 isEstimate: true,
               }
@@ -1506,146 +1514,48 @@ function SessionEditor({
                   : setNumbers[setIndex]
 
                 if (isCardio) {
+                  const cardioIsTiming =
+                    timingTarget?.entryIndex === entryIndex && timingTarget.setIndex === setIndex
                   return (
-                    <div key={setIndex} className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={clsx('w-6 text-xs', set.side ? 'font-semibold text-teal-400' : 'text-neutral-500')}
-                        title={set.side === 'left' ? 'Left side' : set.side === 'right' ? 'Right side' : undefined}
-                      >
-                        {label}
-                      </span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step={0.1}
-                        id={`reps-${entryIndex}-${setIndex}`}
-                        placeholder="min"
-                        value={set.durationSeconds ? set.durationSeconds / 60 : ''}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) =>
-                          updateSet(entryIndex, setIndex, {
-                            durationSeconds: Math.round((Number(e.target.value) || 0) * 60),
-                            isEstimate: false,
-                          })
-                        }
-                        className={clsx(
-                          `${inputClass} py-1.5`,
-                          set.isEstimate && 'text-neutral-500 animate-pulse-slow',
-                        )}
-                      />
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        step={0.01}
-                        id={`weight-${entryIndex}-${setIndex}`}
-                        placeholder="miles"
-                        value={set.distanceMiles || ''}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) =>
-                          updateSet(entryIndex, setIndex, {
-                            distanceMiles: Number(e.target.value) || 0,
-                            isEstimate: false,
-                          })
-                        }
-                        className={clsx(
-                          `${inputClass} py-1.5`,
-                          set.isEstimate && 'text-neutral-500 animate-pulse-slow',
-                        )}
-                      />
-                      <div className="flex shrink-0 items-center gap-1">
-                        {(['easy', 'moderate', 'hard'] as const).map((level) => (
-                          <button
-                            key={level}
-                            onClick={() =>
-                              updateSet(entryIndex, setIndex, { intensity: level, isEstimate: false })
-                            }
-                            className={clsx(
-                              'rounded-full px-2 py-1 text-[10px] font-medium capitalize',
-                              (set.intensity ?? 'moderate') === level
-                                ? 'bg-orange-500/20 text-orange-300'
-                                : 'text-neutral-500 hover:text-neutral-300',
-                            )}
-                          >
-                            {level}
-                          </button>
-                        ))}
-                      </div>
-                      {set.durationSeconds ? (
-                        <span className="flex shrink-0 items-center gap-1 text-[11px] text-neutral-500">
-                          ~
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            value={
-                              set.calories ??
-                              estimateCardioCalories(
-                                entry.exerciseName,
-                                set.durationSeconds,
-                                set.intensity,
-                                weightLbs ?? 180,
-                                profile,
-                              )
-                            }
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) =>
-                              updateSet(entryIndex, setIndex, { calories: Number(e.target.value) || 0 })
-                            }
-                            onKeyDown={blurOnEnter}
-                            title="Calories — edit if your machine gave you its own estimate"
-                            className="w-12 rounded-md border border-neutral-700 bg-neutral-800 px-1 py-0.5 text-center text-neutral-200 outline-none focus:border-indigo-500"
-                          />
-                          cal
-                        </span>
-                      ) : null}
-                      <button
-                        onClick={() => updateSet(entryIndex, setIndex, { completed: !set.completed })}
-                        className={`h-7 w-7 shrink-0 rounded-full border-2 ${
-                          set.completed ? 'border-indigo-500 bg-indigo-500' : 'border-neutral-600'
-                        }`}
-                        aria-label="Set completed"
-                      />
-                      {(() => {
-                        const cardioIsTiming =
-                          timingTarget?.entryIndex === entryIndex && timingTarget.setIndex === setIndex
-                        if (cardioIsTiming) {
-                          return (
-                            <span className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  updateSet(entryIndex, setIndex, { durationSeconds: timer.elapsed })
-                                  setTimingTarget(null)
-                                  timer.reset()
-                                }}
-                                className="flex items-center gap-1 rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-medium tabular-nums text-teal-300"
-                              >
-                                <Square size={10} /> {formatTime(timer.elapsed)}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setTimingTarget(null)
-                                  timer.reset()
-                                }}
-                                className="text-neutral-600 hover:text-red-400"
-                                aria-label="Cancel timing"
-                              >
-                                <X size={12} />
-                              </button>
-                            </span>
-                          )
-                        }
-                        return null
-                      })()}
-                      <button
-                        onClick={() => setSetMenuTarget({ entryIndex, setIndex })}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-neutral-200"
-                        aria-label="Set options"
-                      >
-                        <MoreVertical size={15} />
-                      </button>
-                    </div>
+                    <CardioSetRow
+                      key={setIndex}
+                      set={set}
+                      label={label}
+                      entryIndex={entryIndex}
+                      setIndex={setIndex}
+                      exerciseName={entry.exerciseName}
+                      weightLbs={weightLbs}
+                      profile={profile}
+                      onChange={(patch) => updateSet(entryIndex, setIndex, patch)}
+                      onToggleComplete={() => updateSet(entryIndex, setIndex, { completed: !set.completed })}
+                      onMenu={() => setSetMenuTarget({ entryIndex, setIndex })}
+                      timingSlot={
+                        cardioIsTiming && (
+                          <span className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                updateSet(entryIndex, setIndex, { durationSeconds: timer.elapsed, isEstimate: false })
+                                setTimingTarget(null)
+                                timer.reset()
+                              }}
+                              className="flex items-center gap-1 rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-medium tabular-nums text-teal-300"
+                            >
+                              <Square size={10} /> Stop &amp; save {formatTime(timer.elapsed)}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setTimingTarget(null)
+                                timer.reset()
+                              }}
+                              className="text-neutral-600 hover:text-red-400"
+                              aria-label="Cancel timing"
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        )
+                      }
+                    />
                   )
                 }
 
@@ -1781,11 +1691,9 @@ function SessionEditor({
           </div>
           <div className="mt-2 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {info?.muscleGroup !== 'Cardio' && (
-                <button onClick={() => addSet(entryIndex)} className="text-xs text-indigo-400 hover:underline">
-                  + Add set
-                </button>
-              )}
+              <button onClick={() => addSet(entryIndex)} className="text-xs text-indigo-400 hover:underline">
+                {info?.muscleGroup === 'Cardio' ? '+ Add interval / lap' : '+ Add set'}
+              </button>
               {info?.muscleGroup !== 'Cardio' && (
                 <button
                   onClick={() => addSetPair(entryIndex)}

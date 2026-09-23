@@ -1,8 +1,20 @@
-import { HealthFitness } from '@capacitor/health-fitness'
-import { Preferences } from '@capacitor/preferences'
 import { Capacitor } from '@capacitor/core'
+import { Preferences } from '@capacitor/preferences'
+import { Health, type HealthPermission, type Workout } from 'capacitor-health'
 
 const LINK_KEY = 'healthConnectLinked'
+
+/** Everything this app reads — steps for the Health tab, and workouts (with
+ * the distance/calories/heart rate recorded during them) for importing
+ * cardio logged on a watch. Read-only; nothing is ever written back. */
+const PERMISSIONS: HealthPermission[] = [
+  'READ_STEPS',
+  'READ_WORKOUTS',
+  'READ_DISTANCE',
+  'READ_ACTIVE_CALORIES',
+  'READ_TOTAL_CALORIES',
+  'READ_HEART_RATE',
+]
 
 export function healthConnectAvailable() {
   return Capacitor.isNativePlatform()
@@ -14,107 +26,77 @@ export async function isHealthConnectLinked(): Promise<boolean> {
   return value === 'true'
 }
 
-/** Requests read-only access to Health Connect step data — scoped to just
- * STEPS (not the broader variable groups) since that's all this app uses. */
-export async function connectHealthConnect(): Promise<void> {
-  await HealthFitness.requestHealthPermissions({
-    customPermissions: JSON.stringify([{ Variable: 'STEPS', AccessType: 'READ' }]),
-    allVariables: JSON.stringify({ IsActive: false, AccessType: 'READ' }),
-    fitnessVariables: JSON.stringify({ IsActive: false, AccessType: 'READ' }),
-    healthVariables: JSON.stringify({ IsActive: false, AccessType: 'READ' }),
-    profileVariables: JSON.stringify({ IsActive: false, AccessType: 'READ' }),
-    workoutVariables: '{}',
-  })
-  // requestHealthPermissions() resolving only means the OS permission sheet
-  // ran to completion, not that access was actually granted — there's no
-  // way to check grant status directly, so this just remembers "the user
-  // went through the connect flow" for UI purposes. A denied permission
-  // shows up as fetchTodaySteps() quietly returning 0, not an error.
-  await Preferences.set({ key: LINK_KEY, value: 'true' })
-}
-
-export async function disconnectHealthConnect(): Promise<void> {
-  await HealthFitness.disconnectFromHealthConnect()
-  await Preferences.remove({ key: LINK_KEY })
-}
-
-function isoAt(d: Date): string {
-  return d.toISOString().split('.')[0] + 'Z'
-}
-
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms),
     ),
   ])
 }
 
-/** Sums whatever numeric field each raw record/result block exposes. The
- * plugin's `results` shape isn't documented anywhere — not the README, not
- * the example app, which just logs it — so this checks every plausible
- * field name rather than assuming one. If this comes back 0 with real data
- * behind it, log the raw JSON (see fetchTodaySteps) and adjust the field
- * name here. */
-function extractStepsTotal(raw: string | undefined): number {
-  if (!raw) return 0
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return 0
+/** Asks for read access. Throws with a readable message if Health Connect
+ * itself is missing/outdated or nothing was granted. Android only lets an
+ * app show the permission sheet a couple of times — after that the user has
+ * to grant access inside the Health Connect app (openHealthConnectSettings). */
+export async function connectHealthConnect(): Promise<void> {
+  const { available } = await Health.isHealthAvailable()
+  if (!available) {
+    throw new Error('Health Connect isn\'t installed or needs an update — check the Play Store.')
   }
-  const blocks = Array.isArray(parsed) ? parsed : [parsed]
-  let total = 0
-  for (const block of blocks) {
-    if (block && typeof block === 'object') {
-      const b = block as Record<string, unknown>
-      const candidate = b.value ?? b.total ?? b.sum ?? b.count
-      if (typeof candidate === 'number') total += candidate
-    }
+  const { permissions } = await Health.requestHealthPermissions({ permissions: PERMISSIONS })
+  const granted = Object.assign({}, ...permissions) as Record<string, boolean>
+  if (!granted.READ_STEPS && !granted.READ_WORKOUTS) {
+    throw new Error('No access was granted. You can allow it in the Health Connect app → App permissions → Gym-Life.')
   }
-  return Math.round(total)
+  await Preferences.set({ key: LINK_KEY, value: 'true' })
 }
 
-/** Today's step total from Health Connect (local calendar day). Returns 0
- * on any failure (not connected, permission denied, plugin error) rather
- * than throwing, since a failed background-ish sync shouldn't interrupt
- * the Health page.
- *
- * As of @capacitor/health-fitness 1.0.1, this reliably fails on-device
- * (confirmed via getLastRecord()'s error: "Health Connect isn't installed
- * on the device, or needs to be updated") on Android 17 / Health Connect
- * 17 — almost certainly the plugin's bundled Health Connect client
- * library predating this OS version, not anything fixable from here.
- * getData() itself hangs rather than erroring in the same situation
- * (caught only by the timeout below); parked until the plugin catches up. */
+/** Health Connect has no "revoke" API for apps — this just stops syncing
+ * here; permissions themselves are managed in the Health Connect app. */
+export async function disconnectHealthConnect(): Promise<void> {
+  await Preferences.remove({ key: LINK_KEY })
+}
+
+export function openHealthConnectSettings() {
+  return Health.openHealthConnectSettings()
+}
+
+/** Today's step total (local calendar day). Throws on failure so the Health
+ * tab can show why, rather than silently writing 0 over a real count. */
 export async function fetchTodaySteps(): Promise<number> {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-  try {
-    const { results } = await withTimeout(
-      HealthFitness.getData({
-        parameters: JSON.stringify({
-          Variable: 'STEPS',
-          StartDate: isoAt(start),
-          EndDate: isoAt(end),
-          AdvancedQueryReturnType: 'ALL_DATA',
-          AdvancedQueryResultType: 'RAW_DATA',
-        }),
-      }),
-      15000,
-      'Health Connect getData()',
-    )
-    console.log('[HealthConnect] raw steps result:', results)
-    return extractStepsTotal(results)
-  } catch (err) {
-    // A native-side hang (the plugin's promise never resolving or
-    // rejecting) is a real observed failure mode here, not hypothetical —
-    // the timeout above is what keeps the UI from getting stuck on
-    // "Syncing…" forever when it happens.
-    console.warn('[HealthConnect] steps sync failed:', err)
-    return 0
-  }
+  const { aggregatedData } = await withTimeout(
+    Health.queryAggregated({
+      startDate: start.toISOString(),
+      endDate: now.toISOString(),
+      dataType: 'steps',
+      bucket: 'day',
+    }),
+    15000,
+    'Steps sync',
+  )
+  return Math.round(aggregatedData.reduce((sum, d) => sum + d.value, 0))
+}
+
+export type HealthWorkout = Workout & { title?: string }
+
+/** Workouts (exercise sessions) recorded in the last `days` days, with
+ * per-workout heart-rate samples when that permission was granted. */
+export async function fetchRecentWorkouts(days = 14): Promise<HealthWorkout[]> {
+  const end = new Date()
+  const start = new Date(end.getTime() - days * 24 * 3600 * 1000)
+  const { workouts } = await withTimeout(
+    Health.queryWorkouts({
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      includeHeartRate: true,
+      includeRoute: false,
+      includeSteps: false,
+    }),
+    30000,
+    'Workout import',
+  )
+  return workouts as HealthWorkout[]
 }

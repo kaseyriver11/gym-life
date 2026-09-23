@@ -305,6 +305,8 @@ export interface CardioSession {
   miles: number
   /** Seconds per mile, when there's a distance. */
   pace?: number
+  /** Time-weighted average heart rate across the blocks that have one. */
+  avgHeartRate?: number
 }
 
 export function cardioSessions(
@@ -320,6 +322,8 @@ export function cardioSessions(
       const seconds = sets.reduce((n, s) => n + (s.durationSeconds ?? 0), 0)
       const miles = sets.reduce((n, s) => n + (s.distanceMiles ?? 0), 0)
       if (seconds <= 0 && miles <= 0) continue
+      const withHr = sets.filter((s) => s.avgHeartRate != null && (s.durationSeconds ?? 0) > 0)
+      const hrSeconds = withHr.reduce((n, s) => n + (s.durationSeconds ?? 0), 0)
       out.push({
         date: session.date,
         exerciseId: entry.exerciseId,
@@ -327,6 +331,10 @@ export function cardioSessions(
         seconds,
         miles,
         pace: miles > 0 && seconds > 0 ? seconds / miles : undefined,
+        avgHeartRate:
+          hrSeconds > 0
+            ? Math.round(withHr.reduce((n, s) => n + s.avgHeartRate! * (s.durationSeconds ?? 0), 0) / hrSeconds)
+            : undefined,
       })
     }
   }

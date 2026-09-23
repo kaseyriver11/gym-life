@@ -21,7 +21,10 @@ import {
   fetchTodaySteps,
   healthConnectAvailable,
   isHealthConnectLinked,
+  openHealthConnectSettings,
 } from './health-connect'
+import { ImportWorkoutsModal } from './HealthImport'
+import { useImportCandidates } from './use-import-candidates'
 import { useHealthSnapshots } from './use-health'
 import { useProfile } from './use-profile'
 
@@ -101,6 +104,16 @@ function WorkoutsRing({ target }: { target: number }) {
   )
 }
 
+/** Opened from "Import workouts": always re-reads Health Connect. */
+function HealthImportLauncher({ onClose }: { onClose: () => void }) {
+  const importer = useImportCandidates()
+  const { refresh } = importer
+  useEffect(() => {
+    refresh(true)
+  }, [refresh])
+  return <ImportWorkoutsModal importer={importer} onClose={onClose} />
+}
+
 export function HealthPage() {
   const { items, loading, add, update } = useHealthSnapshots()
   const { targets, setTargets } = useDashboardPrefs()
@@ -114,6 +127,7 @@ export function HealthPage() {
   const [hcBusy, setHcBusy] = useState(false)
   const [hcError, setHcError] = useState<string | null>(null)
   const [editingTargets, setEditingTargets] = useState(false)
+  const [importing, setImporting] = useState(false)
   const syncedTodayRef = useRef(false)
 
   // The Firestore listener resolves asynchronously — these fields' initial
@@ -319,8 +333,8 @@ export function HealthPage() {
         ) : hcLinked ? (
           <>
             <p className="mt-1 text-xs text-neutral-500">
-              Reading step count from Health Connect. Make sure your Garmin Connect app is set
-              to sync to Health Connect for your watch's steps to show up here.
+              Reading steps and workouts from Health Connect. Make sure Garmin Connect is set to
+              sync to Health Connect. New cardio from your watch shows up on the Log tab to review.
             </p>
             <div className="mt-2 flex gap-1.5">
               <button
@@ -329,6 +343,12 @@ export function HealthPage() {
                 className="flex-1 rounded-lg bg-emerald-500/20 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-40"
               >
                 {hcBusy ? 'Syncing…' : 'Sync steps now'}
+              </button>
+              <button
+                onClick={() => setImporting(true)}
+                className="flex-1 rounded-lg bg-sky-500/20 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/30"
+              >
+                Import workouts
               </button>
               <button
                 onClick={handleDisconnect}
@@ -342,8 +362,8 @@ export function HealthPage() {
         ) : (
           <>
             <p className="mt-1 text-xs text-neutral-500">
-              Connect to pull your step count from Health Connect (e.g. from a Garmin watch
-              synced through Garmin Connect). Log manually below either way.
+              Connect to pull steps and import cardio workouts from Health Connect (e.g. a Garmin
+              watch synced through Garmin Connect). Read-only — nothing is written back.
             </p>
             <button
               onClick={handleConnect}
@@ -354,7 +374,15 @@ export function HealthPage() {
             </button>
           </>
         )}
-        {hcError && <p className="mt-1.5 text-xs text-red-400">{hcError}</p>}
+        {hcError && (
+          <p className="mt-1.5 text-xs text-red-400">
+            {hcError}{' '}
+            <button onClick={() => openHealthConnectSettings()} className="underline">
+              Open Health Connect
+            </button>
+          </p>
+        )}
+        {importing && <HealthImportLauncher onClose={() => setImporting(false)} />}
       </div>
 
       <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3">
