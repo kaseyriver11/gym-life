@@ -152,6 +152,7 @@ export const CORE_EXERCISES: Omit<Exercise, 'id'>[] = [
   {
     name: 'Side Plank',
     muscleGroup: 'Core',
+    perSide: true,
     muscleSubgroup: 'Obliques',
     equipment: 'Bodyweight',
     movementPattern: 'isolation',

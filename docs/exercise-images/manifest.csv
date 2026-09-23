@@ -1,0 +1,337 @@
+filename,exercise,group,equipment,panels,position_hint
+barbell-bench-press-flat.png,Barbell Bench Press (Flat),Chest,Barbell,2 (start | end),"Shoulder blades pinched and down, slight arch, feet planted / Lower to mid-chest with elbows ~45°, not flared to 90°"
+barbell-bench-press-incline-30.png,Barbell Bench Press (Incline 30°),Chest,Barbell,2 (start | end),"Blades back and down; bar touches just below the collarbone / Elbows tucked ~45°, forearms vertical at the bottom"
+barbell-bench-press-incline-45.png,Barbell Bench Press (Incline 45°),Chest,Barbell,2 (start | end),"Bar lands high on the chest, near the collarbone / Keep shoulder blades set — don't let shoulders roll forward"
+barbell-bench-press-incline-60.png,Barbell Bench Press (Incline 60°),Chest,Barbell,2 (start | end),"Mostly a shoulder press — expect lighter loads / Bar to upper chest/chin line, elbows slightly in front"
+barbell-bench-press-decline.png,Barbell Bench Press (Decline),Chest,Barbell,2 (start | end),Hook your legs in securely before unracking / Lower to the bottom of the chest
+dumbbell-bench-press-flat.png,Dumbbell Bench Press (Flat),Chest,Dumbbell,2 (start | end),"Kick the dumbbells up off your knees to get set / Lower until elbows are just below the bench, wrists stacked"
+dumbbell-bench-press-incline-30.png,Dumbbell Bench Press (Incline 30°),Chest,Dumbbell,2 (start | end),"Blades pinched, dumbbells at upper-chest level / Elbows ~45°, forearms vertical"
+dumbbell-bench-press-incline-60.png,Dumbbell Bench Press (Incline 60°),Chest,Dumbbell,2 (start | end),Shoulder-dominant — keep the load moderate / Lower to shoulder level with elbows slightly forward
+dumbbell-bench-press-decline.png,Dumbbell Bench Press (Decline),Chest,Dumbbell,2 (start | end),"Secure your legs before bringing the weights into position / Lower to the bottom of the chest, elbows ~45°"
+machine-chest-press-flat.png,Machine Chest Press (Flat),Chest,Machine,2 (start | end),Set the seat so handles line up with mid-chest / Blades back against the pad the whole set
+machine-chest-press-incline.png,Machine Chest Press (Incline),Chest,Machine,2 (start | end),"Handles at upper-chest height when seated / Keep shoulders down and back, not shrugged"
+smith-machine-bench-press-flat.png,Smith Machine Bench Press (Flat),Chest,Machine,2 (start | end),"Position the bench so the bar lands on mid-chest / Same setup as barbell: blades pinched, feet planted"
+smith-machine-bench-press-incline.png,Smith Machine Bench Press (Incline),Chest,Machine,2 (start | end),"Bench placed so the bar meets the upper chest / Elbows ~45°, forearms vertical at the bottom"
+cable-chest-press-standing-flat.png,"Cable Chest Press (Standing, Flat)",Chest,Cable,2 (start | end),"Staggered stance, brace your core / Handles at chest height; press straight out"
+cable-fly-high-to-low.png,Cable Fly (High-to-Low),Chest,Cable,2 (start | end),"Slight lean forward, soft fixed bend in the elbows / Sweep down and in toward your hips"
+cable-fly-low-to-high.png,Cable Fly (Low-to-High),Chest,Cable,2 (start | end),"Pulleys low, palms up, slight elbow bend / Sweep up and in to chin height"
+cable-fly-mid-flat.png,Cable Fly (Mid / Flat),Chest,Cable,2 (start | end),"Pulleys at chest height, one step forward / Arc the handles together in front of your chest"
+dumbbell-fly-flat.png,Dumbbell Fly (Flat),Chest,Dumbbell,2 (start | end),"Slight bend in the elbows, fixed through the rep / Lower in a wide arc until you feel a chest stretch"
+dumbbell-fly-incline.png,Dumbbell Fly (Incline),Chest,Dumbbell,2 (start | end),"Bench ~30°, palms facing each other / Wide arc down to a comfortable stretch"
+pec-deck-machine-fly.png,Pec Deck / Machine Fly,Chest,Machine,2 (start | end),"Seat set so handles are at chest height / Chest up, blades back against the pad"
+push-up-standard.png,Push-Up (Standard),Chest,Bodyweight,2 (start | end),"Hands just outside shoulders, body one straight line / Chest to an inch off the floor, elbows ~45°"
+push-up-incline-hands-elevated.png,"Push-Up (Incline, hands elevated)",Chest,Bodyweight,2 (start | end),Hands on a bench/box; higher = easier / Straight line head to heels
+push-up-decline-feet-elevated.png,"Push-Up (Decline, feet elevated)",Chest,Bodyweight,2 (start | end),"Feet on a bench, hands under shoulders / Keep hips level — no piking"
+push-up-wide-grip.png,Push-Up (Wide Grip),Chest,Bodyweight,2 (start | end),"Hands 1.5x shoulder width, fingers slightly out / Lower with control; chest leads"
+push-up-close-grip-diamond.png,Push-Up (Close-Grip / Diamond),Chest,Bodyweight,2 (start | end),Hands together under the chest / Elbows track back close to your ribs
+dip-chest-focused-forward-lean.png,"Dip (Chest-Focused, forward lean)",Chest,Bodyweight,2 (start | end),"Lean the torso forward ~30°, elbows slightly flared / Lower until shoulders are just below elbows"
+landmine-press.png,Landmine Press,Chest,Barbell,2 (start | end),"Staggered stance, bar end at the shoulder / Press up and forward along the bar path"
+floor-press-barbell.png,Floor Press (Barbell),Chest,Barbell,2 (start | end),"Lie under the bar, knees bent or legs straight / Lower until triceps touch the floor, pause"
+svend-press-plate-squeeze-press.png,Svend Press / Plate Squeeze Press,Chest,Other,2 (start | end),Squeeze plates together hard between flat palms / Press straight out from the chest
+dumbbell-pullover.png,Dumbbell Pullover,Chest,Dumbbell,2 (start | end),"Hold one dumbbell over the chest, slight elbow bend / Lower behind the head until you feel lats and chest stretch"
+hex-press-dumbbell-squeeze-press-flat.png,"Hex Press (Dumbbell Squeeze Press, Flat)",Chest,Dumbbell,2 (start | end),Press the dumbbells together hard / Lower to the chest keeping them touching
+decline-dumbbell-fly.png,Decline Dumbbell Fly,Chest,Dumbbell,2 (start | end),Secure legs; slight elbow bend / Arc down to a stretch at chest level
+resistance-band-chest-press-standing.png,Resistance Band Chest Press (Standing),Chest,Bands,2 (start | end),"Band anchored behind you at chest height / Staggered stance, brace"
+single-arm-dumbbell-bench-press-flat.png,Single-Arm Dumbbell Bench Press (Flat),Chest,Dumbbell,2 (start | end),Free hand braces on the bench or your side / Don't let the torso rotate toward the weight
+single-arm-cable-crossover-standing.png,Single-Arm Cable Crossover (Standing),Chest,Cable,2 (start | end),"Stand side-on to the pulley, slight lean / Sweep the handle across the body past midline"
+spoto-press.png,Spoto Press,Chest,Barbell,2 (start | end),"Bench press that stops an inch above the chest / Pause 1 second without touching, stay tight"
+larsen-press.png,Larsen Press,Chest,Barbell,2 (start | end),Legs straight/raised — no leg drive / Keep the upper-back set; lower to chest
+archer-push-up.png,Archer Push-Up,Chest,Bodyweight,2 (start | end),Wide hands; shift weight to one side as you lower / Other arm stays straight like a bow string
+dumbbell-floor-press.png,Dumbbell Floor Press,Chest,Dumbbell,2 (start | end),"Lower until upper arms touch the floor / Pause, stay tight, then press"
+deficit-push-up.png,Deficit Push-Up,Chest,Bodyweight,2 (start | end),Hands on plates/handles so chest drops below hands / Go into the extra stretch slowly
+pull-up-wide-grip-pronated.png,"Pull-Up (Wide Grip, Pronated)",Back,Bodyweight,2 (start | end),"Start from a dead hang, shoulders pulled down first / Drive elbows down toward your back pockets"
+chin-up-supinated-grip.png,Chin-Up (Supinated Grip),Back,Bodyweight,2 (start | end),"Palms facing you, shoulder-width grip / Pull the chest to the bar, elbows close"
+lat-pulldown-wide-grip.png,Lat Pulldown (Wide Grip),Back,Cable,2 (start | end),"Thighs locked under the pads, slight lean back / Pull the bar to the upper chest, elbows down and back"
+lat-pulldown-close-grip-neutral.png,"Lat Pulldown (Close Grip, Neutral)",Back,Cable,2 (start | end),"Neutral handle, sit tall with a slight lean / Pull to the upper chest, elbows tight to your sides"
+barbell-bent-over-row-overhand.png,Barbell Bent-Over Row (Overhand),Back,Barbell,2 (start | end),"Hinge to ~45°, flat back, knees soft / Pull the bar to your lower chest/upper belly"
+barbell-bent-over-row-underhand.png,Barbell Bent-Over Row (Underhand),Back,Barbell,2 (start | end),"Palms up, hinge with a flat back / Row to the belly button, elbows close"
+dumbbell-one-arm-row.png,Dumbbell One-Arm Row,Back,Dumbbell,2 (start | end),"Hand and knee on a bench, flat back / Pull the dumbbell toward your hip, not your armpit"
+seated-cable-row-close-grip.png,Seated Cable Row (Close Grip),Back,Cable,2 (start | end),"Sit tall, slight knee bend, chest up / Row to the belly, squeeze the shoulder blades together"
+t-bar-row.png,T-Bar Row,Back,Barbell,2 (start | end),"Hinge with a flat back over the bar / Row to the chest/belly, elbows at ~45°"
+chest-supported-row-machine.png,Chest-Supported Row (Machine),Back,Machine,2 (start | end),"Chest on the pad, feet planted / Pull elbows back past your torso"
+chest-supported-row-dumbbell.png,Chest-Supported Row (Dumbbell),Back,Dumbbell,2 (start | end),"Chest on an incline bench, arms hanging / Row elbows back, squeezing the blades"
+straight-arm-cable-pulldown.png,Straight-Arm Cable Pulldown,Back,Cable,2 (start | end),"Slight hinge, arms nearly straight / Sweep the bar down to your thighs using the lats"
+barbell-deadlift-conventional.png,Barbell Deadlift (Conventional),Back,Barbell,2 (start | end),"Bar over mid-foot, shins close, hips between knees and shoulders / Brace, pull the slack out, push the floor away"
+barbell-deadlift-sumo.png,Barbell Deadlift (Sumo),Back,Barbell,2 (start | end),"Wide stance, toes out, grip inside the knees / Push the knees out and chest up before pulling"
+back-extension-hyperextension.png,Back Extension (Hyperextension),Back,Bodyweight,2 (start | end),"Pad at the hip crease, not the belly / Hinge down with a neutral spine"
+barbell-shrug.png,Barbell Shrug,Back,Barbell,2 (start | end),"Stand tall, arms straight / Shrug straight up toward the ears"
+dumbbell-shrug.png,Dumbbell Shrug,Back,Dumbbell,2 (start | end),"Dumbbells at your sides, arms straight / Shrug straight up and hold briefly"
+face-pull.png,Face Pull,Back,Cable,2 (start | end),"Rope at face height, thumbs toward you / Pull to the face, elbows high and wide"
+meadows-row-landmine.png,Meadows Row (Landmine),Back,Barbell,2 (start | end),"Staggered stance, side-on to the bar end / Row with an overhand grip, elbow flared a bit"
+inverted-row-bodyweight.png,Inverted Row (Bodyweight),Back,Bodyweight,2 (start | end),"Body straight under a bar, heels down / Pull the chest to the bar"
+renegade-row-dumbbell.png,Renegade Row (Dumbbell),Back,Dumbbell,2 (start | end),"Push-up position on dumbbells, feet wide / Row one side without twisting the hips"
+pendlay-row-barbell.png,Pendlay Row (Barbell),Back,Barbell,2 (start | end),Torso nearly parallel to the floor / Explode the bar to the lower chest
+trap-bar-deadlift.png,Trap Bar Deadlift,Back,Barbell,2 (start | end),"Stand centered in the bar, handles in line with feet / Hips lower than a conventional pull, chest up"
+rack-pull.png,Rack Pull,Back,Barbell,2 (start | end),Bar set at or just below the knees / Same setup as a deadlift: brace and push the floor
+superman-prone-back-extension.png,Superman (Prone Back Extension),Back,Bodyweight,2 (start | end),"Lie face down, arms overhead / Lift arms, chest and legs a few inches"
+reverse-hyperextension-machine.png,Reverse Hyperextension (Machine),Back,Machine,2 (start | end),"Hips on the edge of the pad, hold the handles / Swing the legs up with the glutes, not momentum"
+farmer-s-carry.png,Farmer's Carry,Back,Dumbbell,2 (start | end),"Heavy weights at your sides, stand tall / Short quick steps, shoulders down and back"
+scapular-pull-up.png,Scapular Pull-Up,Back,Bodyweight,2 (start | end),Dead hang with straight arms / Pull the shoulder blades down without bending elbows
+single-arm-lat-pulldown-cable.png,Single-Arm Lat Pulldown (Cable),Back,Cable,2 (start | end),"Kneel or sit side-on, arm fully stretched overhead / Pull the elbow down to your side"
+wide-grip-seated-cable-row.png,Wide-Grip Seated Cable Row,Back,Cable,2 (start | end),"Wide bar, sit tall / Row to the lower chest, elbows out ~60°"
+deficit-deadlift.png,Deficit Deadlift,Back,Barbell,2 (start | end),"Stand on a 1–3"" platform / Same brace as a deadlift, hips a bit lower"
+snatch-grip-deadlift.png,Snatch-Grip Deadlift,Back,Barbell,2 (start | end),"Very wide grip, hips lower than normal / Keep the chest up and back flat"
+seal-row.png,Seal Row,Back,Barbell,2 (start | end),Lie face down on a high bench / Row the bar/dumbbells to the bench
+neutral-grip-pull-up.png,Neutral-Grip Pull-Up,Back,Bodyweight,2 (start | end),"Palms facing each other on parallel handles / Pull the chest up, elbows close to your sides"
+kroc-row.png,Kroc Row,Back,Dumbbell,2 (start | end),Heavy one-arm dumbbell row with a bit of body English / High reps; keep the back flat
+banded-pull-apart.png,Banded Pull-Apart,Back,Bands,2 (start | end),Arms straight at shoulder height / Pull the band apart until it touches the chest
+barbell-overhead-press-standing.png,Barbell Overhead Press (Standing),Shoulders,Barbell,2 (start | end),"Grip just outside shoulders, squeeze glutes and abs / Move the head back, press the bar straight up"
+dumbbell-shoulder-press-seated.png,Dumbbell Shoulder Press (Seated),Shoulders,Dumbbell,2 (start | end),"Back against the pad, dumbbells at ear level / Press up and slightly in"
+dumbbell-shoulder-press-incline-60.png,Dumbbell Shoulder Press (Incline 60°),Shoulders,Dumbbell,2 (start | end),"Back on a 60° bench, weights at shoulder level / Press up in line with the torso"
+machine-shoulder-press.png,Machine Shoulder Press,Shoulders,Machine,2 (start | end),Handles start at shoulder height / Press up without locking out hard
+arnold-press.png,Arnold Press,Shoulders,Dumbbell,2 (start | end),Start palms facing you in front of the face / Rotate palms out as you press up
+barbell-push-press.png,Barbell Push Press,Shoulders,Barbell,2 (start | end),"Short knee dip, torso upright / Drive with the legs, finish with the arms"
+pike-push-up.png,Pike Push-Up,Shoulders,Bodyweight,2 (start | end),"Hips high, body in an upside-down V / Lower the head toward the floor in front of hands"
+landmine-shoulder-press.png,Landmine Shoulder Press,Shoulders,Barbell,2 (start | end),"Half-kneeling or standing, bar at the shoulder / Press up and forward, reaching at the top"
+front-raise-dumbbell.png,Front Raise (Dumbbell),Shoulders,Dumbbell,2 (start | end),"Slight elbow bend, palms down / Raise to eye level, no higher"
+dumbbell-lateral-raise.png,Dumbbell Lateral Raise,Shoulders,Dumbbell,2 (start | end),"Slight forward lean, soft elbows / Lead with the elbows out to the sides"
+cable-lateral-raise.png,Cable Lateral Raise,Shoulders,Cable,2 (start | end),Cable crosses in front of the body from a low pulley / Raise out to shoulder height
+machine-lateral-raise.png,Machine Lateral Raise,Shoulders,Machine,2 (start | end),Pads on the outside of the upper arms / Raise to shoulder height leading with elbows
+barbell-upright-row.png,Barbell Upright Row,Shoulders,Barbell,2 (start | end),Grip at least shoulder width / Pull elbows up and out to chest height
+cable-upright-row.png,Cable Upright Row,Shoulders,Cable,2 (start | end),"Rope or bar on a low pulley, wide grip / Lead with the elbows to chest height"
+cuban-press.png,Cuban Press,Shoulders,Dumbbell,2 (start | end),Upright row to elbows at 90° / Rotate the forearms up (external rotation)
+bent-over-rear-delt-raise-dumbbell.png,Bent-Over Rear Delt Raise (Dumbbell),Shoulders,Dumbbell,2 (start | end),"Hinge with a flat back, arms hanging / Raise out to the sides, pinkies slightly up"
+reverse-pec-deck-machine.png,Reverse Pec Deck (Machine),Shoulders,Machine,2 (start | end),"Chest against the pad, handles at shoulder height / Sweep the arms back in an arc"
+cable-rear-delt-fly.png,Cable Rear Delt Fly,Shoulders,Cable,2 (start | end),"Cross the cables, arms at shoulder height / Pull out and back in a wide arc"
+incline-y-raise-dumbbell.png,Incline Y-Raise (Dumbbell),Shoulders,Dumbbell,2 (start | end),"Chest on an incline bench, thumbs up / Raise the arms into a Y overhead"
+z-press.png,Z Press,Shoulders,Barbell,2 (start | end),"Sit on the floor, legs straight / Press overhead with no back support"
+handstand-push-up.png,Handstand Push-Up,Shoulders,Bodyweight,2 (start | end),"Against a wall, hands just wider than shoulders / Lower the head to the floor in a tripod"
+behind-the-neck-press.png,Behind-the-Neck Press,Shoulders,Barbell,2 (start | end),"Only if you have good shoulder mobility / Lower the bar to the base of the skull, no further"
+lean-away-cable-lateral-raise.png,Lean-Away Cable Lateral Raise,Shoulders,Cable,2 (start | end),"Hold a post, lean away from the cable / Raise to shoulder height"
+chest-supported-dumbbell-reverse-fly.png,Chest-Supported Dumbbell Reverse Fly,Shoulders,Dumbbell,2 (start | end),Chest on an incline bench / Raise the arms out to the sides
+scarecrow-dumbbell.png,Scarecrow (Dumbbell),Shoulders,Dumbbell,2 (start | end),"Elbows at shoulder height, forearms hanging / Rotate forearms up to vertical"
+w-raise-dumbbell.png,W-Raise (Dumbbell),Shoulders,Dumbbell,2 (start | end),"Chest on an incline bench, elbows bent / Pull back into a W shape, squeezing the blades"
+wide-grip-rear-delt-row-cable.png,Wide-Grip Rear Delt Row (Cable),Shoulders,Cable,2 (start | end),"Wide grip, elbows flared to shoulder height / Row to the upper chest"
+single-arm-cable-front-raise.png,Single-Arm Cable Front Raise,Shoulders,Cable,2 (start | end),Cable from a low pulley behind you / Raise to eye level with a slight elbow bend
+kettlebell-shoulder-press.png,Kettlebell Shoulder Press,Shoulders,Kettlebell,2 (start | end),"Bell resting in the rack position / Press up, rotating the palm forward"
+plate-front-raise.png,Plate Front Raise,Shoulders,Other,2 (start | end),Hold a plate at 3 and 9 o’clock / Raise to eye level
+resistance-band-lateral-raise.png,Resistance Band Lateral Raise,Shoulders,Bands,2 (start | end),"Stand on the band, handles at sides / Raise to shoulder height"
+kettlebell-halo.png,Kettlebell Halo,Shoulders,Kettlebell,2 (start | end),Hold the bell upside down by the horns / Circle it slowly around the head
+barbell-curl-straight-bar.png,Barbell Curl (Straight Bar),Biceps,Barbell,2 (start | end),Elbows pinned at your sides / Curl without swinging the hips
+ez-bar-curl.png,EZ-Bar Curl,Biceps,Barbell,2 (start | end),Grip the angled parts of the bar / Elbows stay still at your sides
+dumbbell-curl-standing-supinating.png,"Dumbbell Curl (Standing, Supinating)",Biceps,Dumbbell,2 (start | end),"Start palms in, rotate palms up as you curl / Keep elbows by your sides"
+incline-dumbbell-curl.png,Incline Dumbbell Curl,Biceps,Dumbbell,2 (start | end),"Lie back on a 45–60° bench, arms hanging / Curl without bringing elbows forward"
+preacher-curl-barbell-ez-bar.png,Preacher Curl (Barbell/EZ-Bar),Biceps,Barbell,2 (start | end),Armpits snug to the top of the pad / Lower to almost straight — don't hyperextend
+preacher-curl-dumbbell.png,Preacher Curl (Dumbbell),Biceps,Dumbbell,2 (start | end),One arm at a time over the pad / Control the bottom of the rep
+hammer-curl-dumbbell.png,Hammer Curl (Dumbbell),Biceps,Dumbbell,2 (start | end),Palms facing each other the whole rep / Elbows at your sides
+cross-body-hammer-curl.png,Cross-Body Hammer Curl,Biceps,Dumbbell,2 (start | end),"Neutral grip, curl across toward the opposite shoulder / Keep the elbow close to the body"
+cable-curl-straight-bar.png,Cable Curl (Straight Bar),Biceps,Cable,2 (start | end),"Stand close to the pulley, elbows at sides / Curl up, squeeze"
+cable-curl-rope-hammer-grip.png,"Cable Curl (Rope, Hammer Grip)",Biceps,Cable,2 (start | end),Neutral grip on the rope / Curl up and split the rope slightly at the top
+concentration-curl.png,Concentration Curl,Biceps,Dumbbell,2 (start | end),"Seated, elbow braced against the inner thigh / Curl up and squeeze"
+reverse-curl-barbell-pronated-grip.png,"Reverse Curl (Barbell, Pronated Grip)",Biceps,Barbell,2 (start | end),"Palms down, shoulder-width grip / Curl up keeping wrists straight"
+spider-curl.png,Spider Curl,Biceps,Barbell,2 (start | end),"Chest on an incline bench, arms hanging straight down / Curl up with no shoulder movement"
+zottman-curl.png,Zottman Curl,Biceps,Dumbbell,2 (start | end),Curl up palms up / Rotate to palms down at the top
+machine-bicep-curl.png,Machine Bicep Curl,Biceps,Machine,2 (start | end),"Elbows lined up with the machine pivot / Full range, squeeze at the top"
+drag-curl-barbell.png,Drag Curl (Barbell),Biceps,Barbell,2 (start | end),"Drag the bar up your torso / Elbows travel back, not forward"
+overhead-cable-curl-bayesian-curl.png,Overhead Cable Curl (Bayesian Curl),Biceps,Cable,2 (start | end),"Face away from a low pulley, arm behind you / Curl forward keeping the elbow back"
+wide-grip-barbell-curl.png,Wide-Grip Barbell Curl,Biceps,Barbell,2 (start | end),"Hands wider than shoulders / Elbows at sides, no swing"
+band-curl.png,Band Curl,Biceps,Bands,2 (start | end),"Stand on the band, palms up / Curl up; tension peaks at the top"
+single-arm-cable-curl-low-pulley.png,Single-Arm Cable Curl (Low Pulley),Biceps,Cable,2 (start | end),"Stand side-on or facing the pulley / Curl up, elbow fixed"
+close-grip-ez-bar-curl.png,Close-Grip EZ-Bar Curl,Biceps,Barbell,2 (start | end),Grip the inner angles of the bar / Elbows at sides
+seated-incline-hammer-curl.png,Seated Incline Hammer Curl,Biceps,Dumbbell,2 (start | end),"Lie back on an incline bench, neutral grip / Curl without moving the elbows forward"
+high-cable-curl-peak-contraction.png,High Cable Curl (Peak Contraction),Biceps,Cable,2 (start | end),Arms out to the sides at shoulder height / Curl the handles toward your head
+waiter-s-curl-dumbbell.png,Waiter's Curl (Dumbbell),Biceps,Dumbbell,2 (start | end),Hold one dumbbell flat by the plate end with both palms / Curl up keeping it level
+barbell-21s.png,Barbell 21s,Biceps,Barbell,2 (start | end),"7 reps bottom half, 7 top half, 7 full range / Elbows at your sides throughout"
+cable-pushdown-straight-bar.png,Cable Pushdown (Straight Bar),Triceps,Cable,2 (start | end),Elbows pinned to your sides / Push down to full lockout
+cable-pushdown-rope.png,Cable Pushdown (Rope),Triceps,Cable,2 (start | end),"Elbows at sides, rope at chest height / Push down and spread the rope apart at the bottom"
+overhead-cable-triceps-extension.png,Overhead Cable Triceps Extension,Triceps,Cable,2 (start | end),"Face away from the pulley, rope behind the head / Extend the arms forward and up"
+overhead-dumbbell-triceps-extension-two-hand.png,Overhead Dumbbell Triceps Extension (Two-Hand),Triceps,Dumbbell,2 (start | end),"Hold one dumbbell overhead with both hands / Lower behind the head, elbows pointing up"
+single-arm-overhead-dumbbell-extension.png,Single-Arm Overhead Dumbbell Extension,Triceps,Dumbbell,2 (start | end),Elbow points up next to the head / Lower the dumbbell behind the head
+skull-crusher-ez-bar-to-forehead.png,"Skull Crusher (EZ-Bar, to Forehead)",Triceps,Barbell,2 (start | end),"Upper arms vertical, only the elbows bend / Lower the bar to just above the forehead"
+skull-crusher-incline-behind-head.png,"Skull Crusher (Incline, Behind Head)",Triceps,Barbell,2 (start | end),Upper arms angled slightly back / Lower the bar behind the head
+close-grip-bench-press.png,Close-Grip Bench Press,Triceps,Barbell,2 (start | end),Grip about shoulder width / Elbows tucked close to the body
+dip-triceps-focused-upright-torso.png,"Dip (Triceps-Focused, upright torso)",Triceps,Bodyweight,2 (start | end),"Torso upright, elbows back / Lower until elbows reach ~90°"
+triceps-kickback-dumbbell.png,Triceps Kickback (Dumbbell),Triceps,Dumbbell,2 (start | end),"Hinge forward, upper arm parallel to the floor / Extend the forearm straight back"
+cable-triceps-kickback.png,Cable Triceps Kickback,Triceps,Cable,2 (start | end),"Hinge forward, cable from a low pulley / Upper arm fixed, extend back"
+jm-press.png,JM Press,Triceps,Barbell,2 (start | end),"Close grip, lower the bar toward the chin/throat / Elbows point forward, halfway between press and skull crusher"
+machine-triceps-extension.png,Machine Triceps Extension,Triceps,Machine,2 (start | end),Elbows lined up with the machine pivot / Extend fully
+bench-dip.png,Bench Dip,Triceps,Bodyweight,2 (start | end),"Hands on a bench behind you, legs out / Lower until elbows are ~90°"
+tate-press.png,Tate Press,Triceps,Dumbbell,2 (start | end),"Dumbbells over the chest, elbows flared / Lower the dumbbells toward the chest by bending elbows"
+v-bar-cable-pushdown.png,V-Bar Cable Pushdown,Triceps,Cable,2 (start | end),Elbows pinned to sides / Push down to lockout
+reverse-grip-underhand-cable-pushdown.png,Reverse-Grip (Underhand) Cable Pushdown,Triceps,Cable,2 (start | end),Palms up on the bar / Elbows at sides; push down
+single-arm-cable-pushdown.png,Single-Arm Cable Pushdown,Triceps,Cable,2 (start | end),"One handle, elbow at side / Extend fully and squeeze"
+ez-bar-overhead-triceps-extension-french-press.png,EZ-Bar Overhead Triceps Extension (French Press),Triceps,Barbell,2 (start | end),"Seated, bar overhead / Lower behind the head, elbows pointing up"
+close-grip-push-up-diamond.png,Close-Grip Push-Up (Diamond),Triceps,Bodyweight,2 (start | end),Hands together under the chest / Elbows back close to the ribs
+machine-assisted-triceps-dip.png,Machine-Assisted Triceps Dip,Triceps,Machine,2 (start | end),"Knees on the pad; more weight = more help / Upright torso, elbows back"
+machine-overhead-triceps-extension.png,Machine Overhead Triceps Extension,Triceps,Machine,2 (start | end),Seat set so elbows line up with the pivot / Extend overhead fully
+skull-crusher-dumbbell-flat.png,"Skull Crusher (Dumbbell, Flat)",Triceps,Dumbbell,2 (start | end),"Neutral grip, upper arms vertical / Lower the dumbbells beside the head"
+skull-crusher-decline-to-forehead.png,"Skull Crusher (Decline, to Forehead)",Triceps,Barbell,2 (start | end),"Decline bench, upper arms vertical / Lower to the forehead"
+close-grip-smith-machine-bench-press.png,Close-Grip Smith Machine Bench Press,Triceps,Machine,2 (start | end),"Grip about shoulder width, elbows tucked / Bench placed so the bar lands on the lower chest"
+cross-body-cable-triceps-extension.png,Cross-Body Cable Triceps Extension,Triceps,Cable,2 (start | end),Cable from the opposite side at shoulder height / Extend the arm across the body
+resistance-band-triceps-pushdown.png,Resistance Band Triceps Pushdown,Triceps,Bands,2 (start | end),"Band anchored high / Elbows at sides, push down to lockout"
+barbell-wrist-curl-palms-up.png,Barbell Wrist Curl (Palms Up),Forearms,Barbell,2 (start | end),"Forearms on thighs or a bench, wrists hanging off / Let the bar roll to the fingers, then curl up"
+barbell-wrist-extension-palms-down.png,Barbell Wrist Extension (Palms Down),Forearms,Barbell,2 (start | end),"Forearms supported, palms down / Lift the back of the hands up"
+dumbbell-wrist-curl.png,Dumbbell Wrist Curl,Forearms,Dumbbell,2 (start | end),"Forearm on the bench, palm up / Curl the wrist up"
+dumbbell-wrist-extension.png,Dumbbell Wrist Extension,Forearms,Dumbbell,2 (start | end),"Forearm on the bench, palm down / Raise the back of the hand"
+dead-hang.png,Dead Hang,Forearms,Bodyweight,2 (start | end),"Grip the bar, arms straight / Shoulders slightly engaged, not fully relaxed"
+behind-the-back-barbell-wrist-curl.png,Behind-the-Back Barbell Wrist Curl,Forearms,Barbell,2 (start | end),"Stand with the bar behind you, palms back / Curl the wrists up"
+plate-pinch-hold.png,Plate Pinch Hold,Forearms,Other,2 (start | end),Pinch two plates smooth-side out / Hold at your side
+barbell-back-squat.png,Barbell Back Squat,Legs,Barbell,2 (start | end),"Bar on the upper back, brace before you descend / Knees track over toes; sit between your heels"
+barbell-front-squat.png,Barbell Front Squat,Legs,Barbell,2 (start | end),"Bar on the front delts, elbows high / Stay upright; sit straight down"
+goblet-squat.png,Goblet Squat,Legs,Dumbbell,2 (start | end),"Hold the weight at your chest, elbows down / Sit down between your knees, chest tall"
+leg-press.png,Leg Press,Legs,Machine,2 (start | end),"Feet shoulder-width, mid-platform / Lower until knees are ~90° without the lower back rounding"
+hack-squat-machine.png,Hack Squat (Machine),Legs,Machine,2 (start | end),"Back flat on the pad, feet shoulder-width / Descend deep with control"
+leg-extension.png,Leg Extension,Legs,Machine,2 (start | end),Knee lined up with the machine pivot / Extend fully and squeeze the quads
+walking-lunge-dumbbell.png,Walking Lunge (Dumbbell),Legs,Dumbbell,2 (start | end),"Long step, torso upright / Back knee drops toward the floor"
+bulgarian-split-squat.png,Bulgarian Split Squat,Legs,Dumbbell,2 (start | end),"Rear foot on a bench, front foot far enough forward / Drop straight down, front knee over the foot"
+sumo-squat-dumbbell.png,Sumo Squat (Dumbbell),Legs,Dumbbell,2 (start | end),"Wide stance, toes turned out / Hold the dumbbell hanging between the legs"
+barbell-romanian-deadlift.png,Barbell Romanian Deadlift,Legs,Barbell,2 (start | end),"Soft knees, push the hips back / Bar slides down the thighs, back flat"
+dumbbell-romanian-deadlift.png,Dumbbell Romanian Deadlift,Legs,Dumbbell,2 (start | end),Dumbbells in front of the thighs / Hinge at the hips with a flat back
+lying-leg-curl-machine.png,Lying Leg Curl (Machine),Legs,Machine,2 (start | end),"Knees just off the pad edge, hips pressed down / Curl the heels toward the glutes"
+seated-leg-curl-machine.png,Seated Leg Curl (Machine),Legs,Machine,2 (start | end),"Knee lined up with the pivot, thigh pad snug / Curl down fully"
+good-morning-barbell.png,Good Morning (Barbell),Legs,Barbell,2 (start | end),"Bar on the upper back, soft knees / Hinge forward with a flat back"
+nordic-hamstring-curl.png,Nordic Hamstring Curl,Legs,Bodyweight,2 (start | end),"Heels anchored, kneel upright / Lower forward as slowly as possible"
+standing-calf-raise-machine.png,Standing Calf Raise (Machine),Legs,Machine,2 (start | end),"Balls of the feet on the edge / Full stretch at the bottom, pause"
+seated-calf-raise-machine.png,Seated Calf Raise (Machine),Legs,Machine,2 (start | end),Pad on the lower thighs / Deep stretch at the bottom
+donkey-calf-raise.png,Donkey Calf Raise,Legs,Bodyweight,2 (start | end),"Hinged forward, balls of feet on a step / Full stretch, full rise"
+cable-hip-adduction.png,Cable Hip Adduction,Legs,Cable,2 (start | end),Ankle strap on the inside leg / Sweep the leg across the body
+cable-hip-abduction.png,Cable Hip Abduction,Legs,Cable,2 (start | end),Ankle strap on the outside leg / Sweep the leg out to the side
+sissy-squat.png,Sissy Squat,Legs,Bodyweight,2 (start | end),"Hold a support, rise onto the toes / Lean back as the knees travel forward"
+pistol-squat.png,Pistol Squat,Legs,Bodyweight,2 (start | end),One leg extended in front / Sit down on the standing leg
+belt-squat.png,Belt Squat,Legs,Machine,2 (start | end),"Belt around the hips, feet on the platform / Squat down with an upright torso"
+smith-machine-squat.png,Smith Machine Squat,Legs,Machine,2 (start | end),Feet slightly forward of the bar / Sit down with control
+single-leg-press-machine.png,Single-Leg Press (Machine),Legs,Machine,2 (start | end),One foot centered on the platform / Lower with control
+lateral-lunge-dumbbell.png,Lateral Lunge (Dumbbell),Legs,Dumbbell,2 (start | end),"Big step to the side / Sit back into the stepping hip, other leg straight"
+stiff-leg-deadlift-barbell.png,Stiff-Leg Deadlift (Barbell),Legs,Barbell,2 (start | end),Knees nearly straight / Hinge with a flat back
+glute-ham-raise.png,Glute-Ham Raise,Legs,Machine,2 (start | end),"Knees just behind the pad, feet locked in / Lower the torso forward"
+standing-leg-curl-machine.png,Standing Leg Curl (Machine),Legs,Machine,2 (start | end),"One leg at a time, hips against the pad / Curl the heel up"
+calf-press-leg-press-machine.png,Calf Press (Leg Press Machine),Legs,Machine,2 (start | end),Balls of the feet on the bottom edge / Knees straight but not locked
+single-leg-calf-raise-dumbbell.png,Single-Leg Calf Raise (Dumbbell),Legs,Dumbbell,2 (start | end),Stand on a step on one foot / Full stretch at the bottom
+hip-adduction-machine-seated.png,Hip Adduction Machine (Seated),Legs,Machine,2 (start | end),Pads on the inner knees / Squeeze the legs together
+hip-abduction-machine-seated.png,Hip Abduction Machine (Seated),Legs,Machine,2 (start | end),Pads on the outer knees / Push the legs apart
+copenhagen-plank.png,Copenhagen Plank,Legs,Bodyweight,2 (start | end),"Top leg on a bench, side plank position / Lift the hips off the floor"
+single-leg-romanian-deadlift-dumbbell.png,Single-Leg Romanian Deadlift (Dumbbell),Legs,Dumbbell,2 (start | end),"Soft knee on the standing leg / Hinge forward, back leg rising behind you"
+reverse-nordic-curl.png,Reverse Nordic Curl,Legs,Bodyweight,2 (start | end),"Kneel upright, hips straight / Lean back as one line from knees to head"
+box-squat-barbell.png,Box Squat (Barbell),Legs,Barbell,2 (start | end),Sit back to a box at depth / Pause briefly without relaxing
+dumbbell-step-down.png,Dumbbell Step-Down,Legs,Dumbbell,2 (start | end),"Stand on a box, lower the other foot slowly / Knee tracks over the toes"
+wall-sit.png,Wall Sit,Legs,Bodyweight,2 (start | end),Back flat against the wall / Thighs parallel to the floor
+tibialis-raise.png,Tibialis Raise,Legs,Bodyweight,2 (start | end),"Lean back against a wall, heels forward / Lift the toes up toward the shins"
+barbell-hip-thrust.png,Barbell Hip Thrust,Glutes,Barbell,2 (start | end),"Upper back on the bench edge, bar in the hip crease / Chin tucked, ribs down"
+barbell-glute-bridge.png,Barbell Glute Bridge,Glutes,Barbell,2 (start | end),"Lie on the floor, bar across the hips / Drive the hips up through the heels"
+smith-machine-hip-thrust.png,Smith Machine Hip Thrust,Glutes,Machine,2 (start | end),Same setup as a barbell hip thrust / Bar path is fixed — focus on the squeeze
+single-leg-glute-bridge.png,Single-Leg Glute Bridge,Glutes,Bodyweight,2 (start | end),"One foot planted, other leg extended / Drive the hips up evenly"
+cable-glute-kickback.png,Cable Glute Kickback,Glutes,Cable,2 (start | end),"Ankle strap, slight hinge forward / Kick the leg straight back"
+banded-lateral-walk.png,Banded Lateral Walk,Glutes,Bands,2 (start | end),"Band above knees or at ankles, quarter squat / Step sideways, keep tension"
+fire-hydrant-bodyweight.png,Fire Hydrant (Bodyweight),Glutes,Bodyweight,2 (start | end),Hands and knees / Lift one knee out to the side
+curtsy-lunge.png,Curtsy Lunge,Glutes,Dumbbell,2 (start | end),Step one leg behind and across / Lower with control
+step-up-dumbbell.png,Step-Up (Dumbbell),Glutes,Dumbbell,2 (start | end),Whole foot on the box / Drive up through the top leg — minimal push from the back foot
+frog-pump.png,Frog Pump,Glutes,Bodyweight,2 (start | end),"Soles of the feet together, knees out / Pump the hips up"
+reverse-hyperextension.png,Reverse Hyperextension,Glutes,Machine,2 (start | end),Hips on the pad edge / Raise the legs with the glutes
+cable-pull-through.png,Cable Pull-Through,Glutes,Cable,2 (start | end),"Face away from a low pulley, rope between the legs / Hinge back, then thrust the hips forward"
+seated-hip-abduction-machine.png,Seated Hip Abduction Machine,Glutes,Machine,2 (start | end),Pads on the outer knees / Push out and hold briefly
+cable-standing-hip-abduction.png,Cable Standing Hip Abduction,Glutes,Cable,2 (start | end),Ankle strap on the far leg / Sweep out to the side
+banded-clamshell.png,Banded Clamshell,Glutes,Bands,2 (start | end),"Lie on your side, knees bent, band above knees / Open the top knee, feet together"
+donkey-kick-bodyweight.png,Donkey Kick (Bodyweight),Glutes,Bodyweight,2 (start | end),Hands and knees / Kick one heel up toward the ceiling
+45-degree-hyperextension-glute-focused.png,45-Degree Hyperextension (Glute-Focused),Glutes,Bodyweight,2 (start | end),"Pad below the hip crease, feet turned out / Round the upper back slightly"
+kettlebell-swing.png,Kettlebell Swing,Glutes,Kettlebell,2 (start | end),Hike the bell back between the legs / Snap the hips forward to float it to chest height
+single-leg-hip-thrust-bodyweight.png,Single-Leg Hip Thrust (Bodyweight),Glutes,Bodyweight,2 (start | end),"Upper back on a bench, one foot planted / Drive up through the heel"
+b-stance-hip-thrust.png,B-Stance Hip Thrust,Glutes,Barbell,2 (start | end),"One foot slightly ahead, most weight on the back leg / Drive up through the working heel"
+hip-thrust-machine-plate-loaded.png,Hip Thrust Machine (Plate-Loaded),Glutes,Machine,2 (start | end),"Pad across the hips, upper back supported / Drive up to full hip extension"
+standing-glute-kickback-machine.png,Standing Glute Kickback Machine,Glutes,Machine,2 (start | end),"Chest on the pad, foot on the platform / Push back and up"
+banded-hip-thrust.png,Banded Hip Thrust,Glutes,Bands,2 (start | end),"Band across the hips, anchored at the floor / Drive up through the heels"
+crunch-floor.png,Crunch (Floor),Core,Bodyweight,2 (start | end),"Knees bent, hands lightly by the head / Curl the ribs toward the pelvis"
+cable-crunch-kneeling.png,Cable Crunch (Kneeling),Core,Cable,2 (start | end),"Kneel with the rope by your head / Curl the torso down, ribs to hips"
+machine-crunch.png,Machine Crunch,Core,Machine,2 (start | end),Adjust so the pads sit on the chest / Curl forward
+weighted-sit-up.png,Weighted Sit-Up,Core,Dumbbell,2 (start | end),Hold a plate at the chest / Sit all the way up
+hanging-leg-raise.png,Hanging Leg Raise,Core,Bodyweight,2 (start | end),"Dead hang, shoulders engaged / Raise the legs, curling the pelvis up at the top"
+hanging-knee-raise.png,Hanging Knee Raise,Core,Bodyweight,2 (start | end),Dead hang / Bring the knees up toward the chest
+reverse-crunch.png,Reverse Crunch,Core,Bodyweight,2 (start | end),"Lie on your back, knees bent up / Curl the hips off the floor"
+captain-s-chair-leg-raise.png,Captain's Chair Leg Raise,Core,Machine,2 (start | end),"Back against the pad, forearms supported / Raise the knees or legs"
+plank-forearm.png,Plank (Forearm),Core,Bodyweight,2 (start | end),"Elbows under the shoulders, body straight / Squeeze glutes and brace"
+side-plank.png,Side Plank,Core,Bodyweight,2 (start | end),"Elbow under the shoulder, feet stacked / Hips high in a straight line"
+cable-woodchopper-high-to-low.png,Cable Woodchopper (High-to-Low),Core,Cable,2 (start | end),"Cable high, rotate through the torso / Pull down and across to the opposite hip"
+cable-woodchopper-low-to-high.png,Cable Woodchopper (Low-to-High),Core,Cable,2 (start | end),"Cable low, start by the hip / Rotate and lift across the body"
+russian-twist.png,Russian Twist,Core,Bodyweight,2 (start | end),"Lean back slightly, feet up or down / Rotate the shoulders side to side"
+hanging-windshield-wipers.png,Hanging Windshield Wipers,Core,Bodyweight,2 (start | end),Hang with legs raised to vertical / Rotate the legs side to side
+pallof-press.png,Pallof Press,Core,Cable,2 (start | end),"Stand side-on to the cable, handle at the chest / Press straight out and resist the rotation"
+ab-wheel-rollout.png,Ab Wheel Rollout,Core,Other,2 (start | end),"Kneel, hands on the wheel / Roll out keeping the ribs down"
+dead-bug.png,Dead Bug,Core,Bodyweight,2 (start | end),"On your back, arms up, knees at 90° / Lower opposite arm and leg slowly"
+v-up.png,V-Up,Core,Bodyweight,2 (start | end),"Lie flat, arms overhead / Lift the legs and torso to meet in a V"
+sit-up.png,Sit-Up,Core,Bodyweight,2 (start | end),"Knees bent, feet flat / Curl up to sitting"
+bicycle-crunch.png,Bicycle Crunch,Core,Bodyweight,2 (start | end),"Hands by the head, legs raised / Bring elbow toward the opposite knee"
+flutter-kicks.png,Flutter Kicks,Core,Bodyweight,2 (start | end),"Lie flat, legs raised slightly / Small alternating kicks"
+toes-to-bar.png,Toes-to-Bar,Core,Bodyweight,2 (start | end),Dead hang / Swing the toes up to touch the bar
+mountain-climber.png,Mountain Climber,Core,Bodyweight,2 (start | end),High plank position / Drive the knees toward the chest alternately
+bird-dog.png,Bird Dog,Core,Bodyweight,2 (start | end),"Hands and knees, flat back / Extend opposite arm and leg"
+hollow-body-hold.png,Hollow Body Hold,Core,Bodyweight,2 (start | end),Lower back pressed into the floor / Arms and legs extended just off the floor
+suitcase-carry.png,Suitcase Carry,Core,Dumbbell,2 (start | end),Heavy weight in one hand / Walk tall without leaning
+landmine-180-rotation.png,Landmine 180 (Rotation),Core,Barbell,2 (start | end),Hold the bar end at arm length overhead / Rotate it side to side in an arc
+decline-sit-up.png,Decline Sit-Up,Core,Bodyweight,2 (start | end),Feet locked in on a decline bench / Sit up with control
+stir-the-pot-stability-ball-plank.png,Stir-the-Pot (Stability Ball Plank),Core,Other,2 (start | end),"Forearms on a stability ball, plank position / Draw small circles with the forearms"
+dragon-flag.png,Dragon Flag,Core,Bodyweight,2 (start | end),"Lie on a bench, grab behind the head / Lift the body straight from the shoulders"
+l-sit.png,L-Sit,Core,Bodyweight,2 (start | end),Hands on parallettes or a bench / Lift the legs straight out in front
+plank-with-shoulder-tap.png,Plank with Shoulder Tap,Core,Bodyweight,2 (start | end),"High plank, feet wide / Tap each shoulder with the opposite hand"
+standing-hamstring-stretch.png,Standing Hamstring Stretch,Mobility,Bodyweight,1 (the held position),"Heel on a low step, leg straight, toes up / Hinge forward from the hips with a flat back"
+supine-hamstring-stretch-strap.png,Supine Hamstring Stretch (Strap),Mobility,Band,1 (the held position),"Lie on your back, strap around one foot / Raise the straight leg until you feel a stretch"
+half-kneeling-hip-flexor-stretch.png,Half-Kneeling Hip Flexor Stretch,Mobility,Bodyweight,1 (the held position),"Back knee down, front foot flat / Tuck the pelvis under and squeeze the back glute"
+couch-stretch.png,Couch Stretch,Mobility,Bodyweight,1 (the held position),"Back knee against a wall/couch, shin up it / Front foot planted, torso tall"
+standing-quad-stretch.png,Standing Quad Stretch,Mobility,Bodyweight,1 (the held position),"Hold the ankle behind you, knees together / Tuck the pelvis slightly"
+figure-4-stretch.png,Figure-4 Stretch,Mobility,Bodyweight,1 (the held position),"On your back, ankle crossed over the opposite knee / Pull the bottom thigh toward the chest"
+butterfly-stretch.png,Butterfly Stretch,Mobility,Bodyweight,1 (the held position),"Sit tall, soles of the feet together / Let the knees drop toward the floor"
+frog-stretch.png,Frog Stretch,Mobility,Bodyweight,1 (the held position),"On hands/forearms, knees wide, ankles in line with knees / Rock the hips back slowly"
+seated-straddle-stretch.png,Seated Straddle Stretch,Mobility,Bodyweight,1 (the held position),"Legs wide, toes pointing up / Sit tall, then walk the hands forward"
+deep-squat-hold.png,Deep Squat Hold,Mobility,Bodyweight,1 (the held position),"Feet shoulder-width or a bit wider, heels down / Sink as deep as comfortable, chest up"
+wall-calf-stretch.png,Wall Calf Stretch,Mobility,Bodyweight,1 (the held position),"Hands on a wall, back leg straight, heel down / Lean into the wall"
+kneeling-shin-stretch.png,Kneeling Shin Stretch,Mobility,Bodyweight,1 (the held position),Kneel with tops of the feet flat on the floor / Sit back toward the heels
+doorway-pec-stretch.png,Doorway Pec Stretch,Mobility,Bodyweight,1 (the held position),"Forearms on the door frame, elbows at shoulder height / Step through until you feel the chest open"
+cross-body-shoulder-stretch.png,Cross-Body Shoulder Stretch,Mobility,Bodyweight,1 (the held position),"Pull one arm across the chest / Keep the shoulder down, not shrugged"
+overhead-triceps-stretch.png,Overhead Triceps Stretch,Mobility,Bodyweight,1 (the held position),"Reach one arm up, bend the elbow behind the head / Gently press the elbow with the other hand"
+bench-lat-stretch.png,Bench Lat Stretch,Mobility,Bodyweight,1 (the held position),"Kneel, elbows on a bench, hands together / Sink the chest toward the floor"
+sleeper-stretch.png,Sleeper Stretch,Mobility,Bodyweight,1 (the held position),"Lie on your side, bottom arm out at 90° / Gently press the forearm toward the floor"
+neck-side-stretch.png,Neck Side Stretch,Mobility,Bodyweight,1 (the held position),Tilt the ear toward the shoulder / Let the opposite shoulder drop
+wrist-flexor-stretch.png,Wrist Flexor Stretch,Mobility,Bodyweight,1 (the held position),"Arm straight, palm up / Pull the fingers back gently"
+wrist-extensor-stretch.png,Wrist Extensor Stretch,Mobility,Bodyweight,1 (the held position),"Arm straight, palm down / Press the back of the hand down"
+supine-spinal-twist.png,Supine Spinal Twist,Mobility,Bodyweight,1 (the held position),"On your back, drop both knees to one side / Arms out wide, look the other way"
+standing-side-bend.png,Standing Side Bend,Mobility,Bodyweight,1 (the held position),Reach one arm overhead / Bend sideways without leaning forward
+90-90-hip-switches.png,90/90 Hip Switches,Mobility,Bodyweight,1 (the held position),Sit with both knees bent at 90° / Rotate both knees to the other side
+world-s-greatest-stretch.png,World's Greatest Stretch,Mobility,Bodyweight,1 (the held position),"Lunge, same-side hand down inside the front foot / Rotate the other arm up to the ceiling"
+hip-cars.png,Hip CARs,Mobility,Bodyweight,1 (the held position),"Stand tall, lift one knee / Draw the biggest slow circle the hip allows"
+shoulder-cars.png,Shoulder CARs,Mobility,Bodyweight,1 (the held position),"Arm straight, make a slow full circle / Rotate the palm as it goes behind you"
+thoracic-open-book.png,Thoracic Open Book,Mobility,Bodyweight,1 (the held position),"Lie on your side, knees bent, arms together / Open the top arm across to the other side"
+quadruped-thoracic-rotation.png,Quadruped Thoracic Rotation,Mobility,Bodyweight,1 (the held position),"On hands and knees, hand behind the head / Rotate the elbow down, then up to the ceiling"
+thread-the-needle.png,Thread the Needle,Mobility,Bodyweight,1 (the held position),"On hands and knees / Slide one arm under the body, shoulder to floor"
+wall-slides.png,Wall Slides,Mobility,Bodyweight,1 (the held position),"Back, head and arms against a wall / Slide the arms up keeping contact"
+band-pass-throughs.png,Band Pass-Throughs,Mobility,Band,1 (the held position),"Wide grip on a band or stick / Arms straight, pass it over and behind the head"
+knee-to-wall-ankle-rocks.png,Knee-to-Wall Ankle Rocks,Mobility,Bodyweight,1 (the held position),"Face a wall in a half-kneel, front foot flat / Push the knee toward the wall, heel down"
+leg-swings-front-to-back.png,Leg Swings (Front-to-Back),Mobility,Bodyweight,1 (the held position),"Hold a support, swing one leg front to back / Start small, gradually bigger"
+leg-swings-side-to-side.png,Leg Swings (Side-to-Side),Mobility,Bodyweight,1 (the held position),"Face a support, swing one leg across and out / Relaxed, rhythmic"
+arm-circles.png,Arm Circles,Mobility,Bodyweight,1 (the held position),"Arms out at shoulder height / Small circles, gradually bigger"
+inchworm-walkout.png,Inchworm Walkout,Mobility,Bodyweight,1 (the held position),"Fold forward, hands to the floor / Walk hands out to a plank"
+foam-roll-quads.png,Foam Roll: Quads,Mobility,Foam roller,1 (the held position),"Face down, roller under the thighs / Roll slowly from hip to just above the knee"
+foam-roll-outer-thigh-it-band.png,Foam Roll: Outer Thigh / IT Band,Mobility,Foam roller,1 (the held position),"Side-lying, roller under the outer thigh / Top leg crossed over to control pressure"
+foam-roll-hamstrings.png,Foam Roll: Hamstrings,Mobility,Foam roller,1 (the held position),Sit with the roller under the thighs / Roll from glutes to above the knee
+foam-roll-calves.png,Foam Roll: Calves,Mobility,Foam roller,1 (the held position),"Roller under the calves, hands behind you / Roll ankle to below the knee"
+foam-roll-glutes.png,Foam Roll: Glutes,Mobility,Foam roller,1 (the held position),"Sit on the roller, cross one ankle over the knee / Lean toward the crossed side"
+foam-roll-adductors.png,Foam Roll: Adductors,Mobility,Foam roller,1 (the held position),"Face down, one leg out to the side over the roller / Roll along the inner thigh"
+foam-roll-upper-back.png,Foam Roll: Upper Back,Mobility,Foam roller,1 (the held position),"Roller under the shoulder blades, hands behind head / Roll the upper/mid back only"
+foam-roll-lats.png,Foam Roll: Lats,Mobility,Foam roller,1 (the held position),"Side-lying, roller under the armpit area / Arm overhead, roll down the side of the back"
+lacrosse-ball-pecs.png,Lacrosse Ball: Pecs,Mobility,Foam roller,1 (the held position),Ball between the chest and a wall / Lean in and roll small circles
+downward-dog.png,Downward Dog,Yoga,Bodyweight,1 (the held position),"Hands shoulder-width, hips high / Press the chest toward the thighs"
+child-s-pose.png,Child's Pose,Yoga,Bodyweight,1 (the held position),"Knees wide, big toes together / Sit the hips back toward the heels"
+mountain-pose.png,Mountain Pose,Yoga,Bodyweight,1 (the held position),"Feet together or hip-width, weight even / Tall spine, shoulders relaxed down"
+warrior-i.png,Warrior I,Yoga,Bodyweight,1 (the held position),"Back foot angled ~45°, front knee over the ankle / Hips face forward, arms overhead"
+warrior-ii.png,Warrior II,Yoga,Bodyweight,1 (the held position),"Wide stance, front knee over the ankle / Arms out at shoulder height, gaze over front hand"
+triangle-pose.png,Triangle Pose,Yoga,Bodyweight,1 (the held position),"Wide stance, both legs straight / Reach forward, then tip down to the shin"
+tree-pose.png,Tree Pose,Yoga,Bodyweight,1 (the held position),Foot on the inner calf or thigh — never the knee / Press foot and leg into each other
+cobra-pose.png,Cobra Pose,Yoga,Bodyweight,1 (the held position),"Hands under the shoulders, elbows close / Lift the chest using the back, not just the arms"
+cat-cow.png,Cat-Cow,Yoga,Bodyweight,1 (the held position),"On hands and knees / Inhale: drop the belly, lift the head"
+seated-forward-bend.png,Seated Forward Bend,Yoga,Bodyweight,1 (the held position),"Legs straight in front, sit tall / Hinge forward from the hips"
+bridge-pose.png,Bridge Pose,Yoga,Bodyweight,1 (the held position),"On your back, feet hip-width near the glutes / Lift the hips, press through the feet"
+pigeon-pose.png,Pigeon Pose,Yoga,Bodyweight,1 (the held position),"Front shin angled across, back leg long / Square the hips toward the floor"
+chair-pose.png,Chair Pose,Yoga,Bodyweight,1 (the held position),"Feet together, sit back as if into a chair / Arms up, weight in the heels"
+plank-pose.png,Plank Pose,Yoga,Bodyweight,1 (the held position),"Hands under shoulders, body in one line / Press the floor away"
+corpse-pose-savasana.png,Corpse Pose (Savasana),Yoga,Bodyweight,1 (the held position),"Lie flat, arms and legs relaxed / Let the breath slow"
+camel-pose.png,Camel Pose,Yoga,Bodyweight,1 (the held position),"Kneel tall, hands on the lower back / Lift the chest and lean back"
+eagle-pose.png,Eagle Pose,Yoga,Bodyweight,1 (the held position),"Sit into a slight squat, wrap one leg over the other / Wrap the arms, elbows lifted"
+the-hundred.png,The Hundred,Pilates,Bodyweight,1 (the held position),"Head and shoulders up, legs at tabletop or extended / Pump the arms, breathe in 5 and out 5"
+roll-up.png,Roll-Up,Pilates,Bodyweight,1 (the held position),"Lie flat, arms overhead / Peel up one vertebra at a time"
+single-leg-circle.png,Single-Leg Circle,Pilates,Bodyweight,1 (the held position),"One leg to the ceiling, other flat / Draw circles from the hip"
+rolling-like-a-ball.png,Rolling Like a Ball,Pilates,Bodyweight,1 (the held position),"Balance just behind the sit bones, knees hugged / Roll back to the shoulder blades"
+single-leg-stretch.png,Single-Leg Stretch,Pilates,Bodyweight,1 (the held position),"Head and shoulders up / Pull one knee in, extend the other"
+double-leg-stretch.png,Double-Leg Stretch,Pilates,Bodyweight,1 (the held position),"Curl up, knees in / Extend arms and legs out together"
+spine-stretch-forward.png,Spine Stretch Forward,Pilates,Bodyweight,1 (the held position),"Sit tall, legs apart, feet flexed / Round forward from the top of the head"
+saw.png,Saw,Pilates,Bodyweight,1 (the held position),"Sit tall, legs wide, arms out / Twist and reach toward the opposite foot"
+swan.png,Swan,Pilates,Bodyweight,1 (the held position),"Face down, hands under shoulders / Lift the chest using the back"
+side-kick-series.png,Side Kick Series,Pilates,Bodyweight,1 (the held position),"Lie on your side, legs slightly forward / Kick the top leg forward and back"
+plank-pilates.png,Plank (Pilates),Pilates,Bodyweight,1 (the held position),"Hands under shoulders, one long line / Pull the belly button in"
+teaser.png,Teaser,Pilates,Bodyweight,1 (the held position),Roll up into a V balance / Arms reach toward the toes

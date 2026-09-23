@@ -27,6 +27,7 @@ interface FocusExercise {
   name: string
   notes?: string
   cues?: string
+  formCues?: string[]
   targetMuscles?: MuscleTarget[]
   muscleGroup?: string
   muscleSubgroup?: string
@@ -53,6 +54,9 @@ export function ExerciseFocusModal({
   const [notes, setNotes] = useState(exercise.notes ?? '')
   const [cues, setCues] = useState(exercise.cues ?? '')
   const [targetMuscles, setTargetMuscles] = useState<MuscleTarget[]>(() => exercise.targetMuscles ?? [])
+  // Catalog exercises can have a demo image bundled at
+  // public/exercise-images/<catalog id>.webp — hidden if there isn't one.
+  const [imageMissing, setImageMissing] = useState(exercise.source !== 'catalog')
 
   const history = sessions
     .filter((s) => s.id !== excludeSessionId)
@@ -92,7 +96,49 @@ export function ExerciseFocusModal({
   return (
     <Modal title={exercise.name} onClose={onClose}>
       <div className="space-y-4">
+        {!imageMissing && (
+          <img
+            src={`${import.meta.env.BASE_URL}exercise-images/${exercise.id}.webp`}
+            alt={`${exercise.name} demonstration`}
+            onError={() => setImageMissing(true)}
+            className="w-full rounded-lg bg-neutral-950"
+          />
+        )}
+
         <MuscleMapView data={heatData} size="6.5rem" unusedLabel="Not worked by this exercise" />
+
+        {exercise.formCues && exercise.formCues.length > 0 && (
+          <div className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-3">
+            <p className="mb-1.5 text-xs font-medium text-neutral-400">Form</p>
+            <ul className="space-y-1.5">
+              {exercise.formCues.map((cue) => {
+                const pinned = cues.split('\n').some((line) => line.trim() === cue)
+                return (
+                  <li key={cue} className="flex items-start gap-2 text-sm text-neutral-200">
+                    <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-teal-400" />
+                    <span className="min-w-0 flex-1">{cue}</span>
+                    <button
+                      onClick={() => {
+                        if (pinned) return
+                        const next = cues.trim() ? `${cues.trim()}\n${cue}` : cue
+                        setCues(next)
+                        persist(notes, next, targetMuscles)
+                      }}
+                      disabled={pinned}
+                      className={clsx(
+                        'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium',
+                        pinned ? 'text-neutral-600' : 'bg-teal-500/15 text-teal-300 hover:bg-teal-500/25',
+                      )}
+                      title="Show this cue on the exercise card while you log"
+                    >
+                      {pinned ? 'On card' : 'Pin'}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-medium text-neutral-400">

@@ -120,6 +120,9 @@ export interface Exercise {
   /** Held/performed one side at a time (pigeon, couch stretch, side
    * plank...) — sets are logged as left/right pairs, like single-arm lifts. */
   perSide?: boolean
+  /** 2-3 short form cues (catalog entries) — shown in the exercise's Focus
+   * view, where any of them can be pinned to your own card cues. */
+  formCues?: string[]
   createdAt: number
 }
 

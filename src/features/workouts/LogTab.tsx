@@ -81,6 +81,7 @@ type ExerciseInfo = {
   /** Quick reminders (one per line) shown directly on the exercise card —
    * distinct from the longer free-form notes, which stay in the focus modal. */
   cues?: string
+  formCues?: string[]
   targetMuscles?: MuscleTarget[]
   source?: 'catalog' | 'custom'
 }
@@ -2274,6 +2275,7 @@ function SessionEditor({
                 name: entry.exerciseName,
                 notes: info?.notes,
                 cues: info?.cues,
+                formCues: info?.formCues,
                 targetMuscles: info?.targetMuscles,
                 muscleGroup: info?.muscleGroup,
                 muscleSubgroup: info?.muscleSubgroup,

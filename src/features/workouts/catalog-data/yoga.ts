@@ -104,14 +104,7 @@ export const YOGA_EXERCISES: Omit<Exercise, 'id'>[] = [
     targetMuscles: [{ muscle: 'Rectus Abdominis (Upper)', role: 'primary' }, { muscle: 'Rectus Abdominis (Lower)', role: 'primary' }, { muscle: 'Anterior Deltoid', role: 'secondary' }],
     createdAt: Date.now(),
   },
-  {
-    name: 'Side Plank',
-    muscleGroup: 'Yoga',
-    equipment: 'Bodyweight',
-    targetMuscles: [{ muscle: 'Obliques', role: 'primary' }, { muscle: 'Gluteus Medius', role: 'secondary' }],
-    perSide: true,
-    createdAt: Date.now(),
-  },
+  // Side Plank lives in core.ts (same catalog id) — see there.
   { name: 'Corpse Pose (Savasana)', muscleGroup: 'Yoga', equipment: 'Bodyweight', createdAt: Date.now() },
   {
     name: 'Camel Pose',
