@@ -28,6 +28,7 @@ export function useStartTemplate() {
       const sets = applyUnilateralSplit(
         hasRealPlan ? entry.plannedSets : suggestSets(sessions, entry.exerciseId, exerciseInfo),
         entry.exerciseName,
+        exerciseInfo?.perSide,
       )
       return {
         exerciseId: entry.exerciseId,

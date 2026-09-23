@@ -1,5 +1,5 @@
 import type { WorkoutSession } from '@/types'
-import { isDurationBased } from './muscle-groups'
+import { isDurationBased, isHoldBased } from './muscle-groups'
 import { isSetLogged } from './use-workout-sessions'
 
 const DEFAULT_REP_LOW = 8
@@ -11,6 +11,7 @@ type ExerciseInfo = {
   equipment?: string
   repRangeLow?: number
   repRangeHigh?: number
+  perSide?: boolean
 }
 
 // "Single-Arm ..." / "Single Leg ..." / "1-Arm ..." is, by definition, one
@@ -41,8 +42,9 @@ function isUnilateralByName(name?: string): boolean {
 export function applyUnilateralSplit<T extends { reps: number; weight: number; side?: 'left' | 'right' }>(
   sets: T[],
   exerciseName?: string,
+  perSide?: boolean,
 ): (Omit<T, 'side'> & { side?: 'left' | 'right' })[] {
-  if (!isUnilateralByName(exerciseName) || sets.some((s) => s.side)) return sets
+  if ((!isUnilateralByName(exerciseName) && !perSide) || sets.some((s) => s.side)) return sets
   return sets.flatMap((s) => [
     { ...s, side: 'left' as const },
     { ...s, side: 'right' as const },
@@ -68,6 +70,9 @@ function roundToHalf(value: number) {
   return Math.round(value * 2) / 2
 }
 
+/** A suggested set: reps/weight for lifts, or a hold time for poses. */
+export type SuggestedSet = { reps: number; weight: number; side?: 'left' | 'right'; durationSeconds?: number }
+
 function findEntry(sessions: WorkoutSession[], exerciseId: string, skip = 0) {
   const matches = sessions
     .filter((s) => s.entries.some((e) => e.exerciseId === exerciseId))
@@ -87,11 +92,11 @@ export function suggestSets(
   sessions: WorkoutSession[],
   exerciseId: string,
   exercise: ExerciseInfo = {},
-): { reps: number; weight: number; side?: 'left' | 'right' }[] {
-  // Cardio/Yoga/Pilates are logged by duration, never a rep/weight-style
-  // set count — always exactly one activity/pose block, regardless of
-  // history or the sets-per-exercise picker. No weight-based progression
-  // for these either; hold-time progression isn't modeled yet.
+): SuggestedSet[] {
+  // Holds (yoga, mobility, pilates) progress by time instead — see below.
+  if (isHoldBased(exercise.muscleGroup)) return suggestHolds(sessions, exerciseId, exercise)
+  // Cardio is logged by duration/distance, never a rep/weight-style set
+  // count — always exactly one activity block, regardless of history.
   if (isDurationBased(exercise.muscleGroup)) return [{ reps: 0, weight: 0 }]
 
   const forceUnilateral = isUnilateralByName(exercise.name)
@@ -210,6 +215,56 @@ export function suggestSets(
   return last.sets.map(() => ({ reps: targetReps, weight: targetWeight }))
 }
 
+/** Starting hold for a pose/stretch you've never logged. */
+const DEFAULT_HOLD_SECONDS = 30
+/** Each session nudges the hold a little longer... */
+const HOLD_STEP_SECONDS = 5
+/** ...up to a point where longer static holds stop adding much. */
+const HOLD_CAP_SECONDS = 90
+
+/**
+ * Hold-time progression for stretches and poses: repeat last session's
+ * holds (same count, same sides) with each one nudged 5s longer, capped at
+ * 90s. Pilates moves are timed but not "held" in the same sense, so they
+ * just repeat. One-sided holds (perSide) come as left/right pairs, each
+ * side progressing off its own last time — a tight left hip shouldn't be
+ * dragged along by the right.
+ */
+function suggestHolds(
+  sessions: WorkoutSession[],
+  exerciseId: string,
+  exercise: ExerciseInfo,
+): SuggestedSet[] {
+  const perSide = !!exercise.perSide
+  const progresses = exercise.muscleGroup !== 'Pilates'
+  const last = findEntry(sessions, exerciseId)
+  const logged = last?.sets.filter((s) => isSetLogged(s) && (s.durationSeconds ?? 0) > 0) ?? []
+  const next = (sec: number) => (progresses ? Math.min(HOLD_CAP_SECONDS, Math.max(sec, sec + HOLD_STEP_SECONDS)) : sec)
+
+  if (logged.length === 0) {
+    const d = progresses ? DEFAULT_HOLD_SECONDS : 0
+    return perSide
+      ? [
+          { reps: 0, weight: 0, side: 'left', durationSeconds: d || undefined },
+          { reps: 0, weight: 0, side: 'right', durationSeconds: d || undefined },
+        ]
+      : [{ reps: 0, weight: 0, durationSeconds: d || undefined }]
+  }
+  if (perSide && !logged.some((s) => s.side)) {
+    // Logged both-sides-at-once before it was marked one-sided: split it.
+    return logged.flatMap((s) => [
+      { reps: 0, weight: 0, side: 'left' as const, durationSeconds: next(s.durationSeconds!) },
+      { reps: 0, weight: 0, side: 'right' as const, durationSeconds: next(s.durationSeconds!) },
+    ])
+  }
+  return logged.map((s) => ({
+    reps: 0,
+    weight: 0,
+    ...(s.side ? { side: s.side } : {}),
+    durationSeconds: next(s.durationSeconds!),
+  }))
+}
+
 /**
  * Applies an explicit "sets per exercise" override from the compose-workout
  * picker on top of suggestSets' usual result — trims extra sets, or pads
@@ -222,9 +277,9 @@ export function suggestSets(
  * of ever leaving a lone side.
  */
 export function applySetsOverride(
-  suggested: { reps: number; weight: number; side?: 'left' | 'right' }[],
+  suggested: SuggestedSet[],
   count?: number,
-): { reps: number; weight: number; side?: 'left' | 'right' }[] {
+): SuggestedSet[] {
   if (!count) return suggested
   const isSided = suggested.some((s) => s.side)
   const unit = isSided ? 2 : 1

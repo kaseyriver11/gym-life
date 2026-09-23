@@ -117,6 +117,9 @@ export interface Exercise {
    * unbalanced workout, flag near-duplicates) without parsing names.
    * Research-backed catalog entries only; not required. */
   movementPattern?: string
+  /** Held/performed one side at a time (pigeon, couch stretch, side
+   * plank...) — sets are logged as left/right pairs, like single-arm lifts. */
+  perSide?: boolean
   createdAt: number
 }
 
@@ -295,4 +298,14 @@ export interface Program {
   anchorAt: number
   createdAt: number
   updatedAt: number
+}
+
+/** One flexibility check-in: whichever benchmark tests were done that day,
+ * keyed by test id (see workouts/flex-tests.ts). Tests left blank are just
+ * absent — a check-in never needs every test. */
+export interface FlexCheck {
+  id: ID
+  date: string
+  results: Record<string, number>
+  createdAt: number
 }

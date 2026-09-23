@@ -2,7 +2,9 @@ import { doc, writeBatch } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Exercise } from '@/types'
 
-function slugify(name: string) {
+/** Catalog doc id for an exercise name — also how built-in routines refer
+ * to catalog exercises without a lookup. */
+export function slugify(name: string) {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

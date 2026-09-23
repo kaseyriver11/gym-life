@@ -5,6 +5,7 @@ import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { WorkoutTemplate } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
+import { MobilityRoutines } from './MobilityRoutines'
 import { ProgramsSection } from './Programs'
 import { useStartTemplate } from './use-start-template'
 import { formatTime } from './use-rest-timer'
@@ -84,6 +85,8 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
   return (
     <div className="space-y-3">
       <ProgramsSection onStarted={onStarted} />
+
+      <MobilityRoutines onStarted={onStarted} />
 
       <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Saved workouts</p>
       {templates.length === 0 && (

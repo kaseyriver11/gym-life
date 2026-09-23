@@ -1,5 +1,5 @@
 import type { UserProfile, WorkoutExerciseEntry } from '@/types'
-import { isHoldBased } from './muscle-groups'
+import { isHoldBased, type HoldGroup } from './muscle-groups'
 import { isSetLogged } from './use-workout-sessions'
 
 /**
@@ -43,10 +43,10 @@ const CARDIO_MET: Record<string, number> = {
 const DEFAULT_CARDIO_MET = 7.0
 /** Resistance training, vigorous effort (Compendium code 02054). */
 const STRENGTH_MET = 6.0
-/** Hatha yoga (Compendium code 02150) / Pilates, general (02160) — held
+/** Hatha yoga (Compendium code 02150) / Pilates, general (02160) / stretching (02101) — held
  * poses, not per-pose-calibrated like CARDIO_MET since intensity barely
  * varies pose to pose the way it does across cardio machines. */
-const HOLD_MET: Record<'Yoga' | 'Pilates', number> = { Yoga: 2.5, Pilates: 3.0 }
+const HOLD_MET: Record<HoldGroup, number> = { Yoga: 2.5, Pilates: 3.0, Mobility: 2.3 }
 
 /** Typical time a straight set takes including its rest, for sessions with
  * no reliable elapsed time to work from at all (timer removed and nothing
@@ -103,7 +103,7 @@ export function estimateCardioCalories(
  * cardio, just off a flat per-modality MET instead of a per-exercise-name
  * table (a plank and a forward fold burn about the same). */
 export function estimateHoldCalories(
-  muscleGroup: 'Yoga' | 'Pilates',
+  muscleGroup: HoldGroup,
   durationSeconds: number,
   weightLbs: number,
   profile?: UserProfile,
@@ -141,7 +141,7 @@ export function estimateSessionCalories(
       }
     } else if (isHoldBased(info?.muscleGroup)) {
       for (const s of entry.sets.filter(isSetLogged)) {
-        cardioCalories += s.calories ?? estimateHoldCalories(info!.muscleGroup as 'Yoga' | 'Pilates', s.durationSeconds ?? 0, weightLbs, profile)
+        cardioCalories += s.calories ?? estimateHoldCalories(info!.muscleGroup as HoldGroup, s.durationSeconds ?? 0, weightLbs, profile)
       }
     } else {
       // Counted by really-logged sets (isSetLogged), not the completed

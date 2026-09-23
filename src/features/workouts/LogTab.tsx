@@ -43,12 +43,19 @@ import { HealthImportBanner } from '@/features/health/HealthImport'
 import { CardioSetRow } from './CardioSetRow'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { ExerciseFocusModal } from './ExerciseFocusModal'
-import { isDurationBased, isHoldBased, muscleGroupStyle } from './muscle-groups'
+import { isDurationBased, isHoldBased, muscleGroupStyle, type HoldGroup } from './muscle-groups'
 import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
 import { PlateCalcModal } from './PlateCalcModal'
 import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
-import { applySetsOverride, applyUnilateralSplit, suggestDefaultRpe, suggestSets, weightIncrement } from './progression'
+import {
+  applySetsOverride,
+  applyUnilateralSplit,
+  suggestDefaultRpe,
+  suggestSets,
+  weightIncrement,
+  type SuggestedSet,
+} from './progression'
 import { RestTimerBar } from './RestTimerBar'
 import { effectiveDurationSeconds } from './session-time'
 import { SequencePlayerBar } from './SequencePlayerBar'
@@ -443,7 +450,7 @@ export function LogTab({
         sets: sets.map((s) => ({
           ...s,
           completed: false,
-          isEstimate: s.reps > 0 || s.weight > 0,
+          isEstimate: s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
         })),
         ...(blockId ? { blockId, blockTitle: templateName } : {}),
       }
@@ -461,6 +468,7 @@ export function LogTab({
           ).map((s) => ({
             reps: s.reps,
             weight: s.weight,
+            ...(s.durationSeconds ? { durationSeconds: s.durationSeconds } : {}),
           })),
         })),
         createdAt: now,
@@ -484,6 +492,7 @@ export function LogTab({
       const sets = applyUnilateralSplit(
         hasRealPlan ? entry.plannedSets : suggestSets(sessions, entry.exerciseId, exerciseInfo),
         entry.exerciseName,
+        exerciseInfo?.perSide,
       )
       return {
         exerciseId: entry.exerciseId,
@@ -777,7 +786,7 @@ function SessionEditor({
   suggestSetsFor: (
     exerciseId: string,
     exercise?: ExerciseInfo,
-  ) => { reps: number; weight: number }[]
+  ) => SuggestedSet[]
   /** The workout-duration/finish/summary bar — rendered once, always at the
    * very top of the page so it reads unambiguously as the whole day's
    * total rather than looking like it belongs to whichever block it's
@@ -1132,7 +1141,7 @@ function SessionEditor({
     const newSets = suggestSetsFor(next.id, next).map((s) => ({
       ...s,
       completed: false,
-      isEstimate: s.reps > 0 || s.weight > 0,
+      isEstimate: s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
     }))
     commit(
       entries.map((e, i) =>
@@ -1381,7 +1390,11 @@ function SessionEditor({
     items.forEach(({ entry, index }) => {
       entry.sets.forEach((set, setIndex) => {
         steps.push({
-          label: entry.sets.length > 1 ? `${entry.exerciseName} (${setIndex + 1})` : entry.exerciseName,
+          label: set.side
+            ? `${entry.exerciseName} — ${set.side === 'left' ? 'Left' : 'Right'}`
+            : entry.sets.length > 1
+              ? `${entry.exerciseName} (${setIndex + 1})`
+              : entry.exerciseName,
           holdSeconds: set.durationSeconds || 30,
           restSeconds: set.restAfterSeconds ?? 15,
         })
@@ -1641,7 +1654,7 @@ function SessionEditor({
                       )}
                       {set.durationSeconds ? (
                         <span className="flex shrink-0 items-center gap-1 text-[11px] text-neutral-500">
-                          ~{estimateHoldCalories(info!.muscleGroup as 'Yoga' | 'Pilates', set.durationSeconds, weightLbs ?? 180, profile)} cal
+                          ~{estimateHoldCalories(info!.muscleGroup as HoldGroup, set.durationSeconds, weightLbs ?? 180, profile)} cal
                         </span>
                       ) : null}
                       <button
@@ -1921,7 +1934,7 @@ function SessionEditor({
                   sets: sets.map((s) => ({
                     ...s,
                     completed: false,
-                    isEstimate: s.reps > 0 || s.weight > 0,
+                    isEstimate: s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
                   })),
                 }
               }),
@@ -1948,7 +1961,7 @@ function SessionEditor({
                 sets: suggestSetsFor(ex.id, ex).map((s) => ({
                   ...s,
                   completed: false,
-                  isEstimate: s.reps > 0 || s.weight > 0,
+                  isEstimate: s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
                 })),
               })),
             ])
@@ -1968,7 +1981,10 @@ function SessionEditor({
           onConfirm={(selected) => {
             const next = selected[0]
             if (!next) return
-            if (entries[switchEntryIndex].templateId) {
+            // Only offer "change it in the saved workout too" when there's a
+            // saved workout of yours to change — not for built-in routines.
+            const sourceId = entries[switchEntryIndex].templateId
+            if (sourceId && templates.some((t) => t.id === sourceId)) {
               setSwitchTarget(next)
             } else {
               switchExercise(switchEntryIndex, next, false)

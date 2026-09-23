@@ -11,6 +11,7 @@ export const MUSCLE_GROUPS = [
   'Cardio',
   'Yoga',
   'Pilates',
+  'Mobility',
   'Full Body',
 ] as const
 
@@ -109,6 +110,12 @@ const MUSCLE_GROUP_STYLES: Record<MuscleGroup, MuscleGroupStyle> = {
     text: 'text-sky-400',
     dot: 'bg-sky-500',
   },
+  Mobility: {
+    border: 'border-l-amber-600',
+    badge: 'bg-amber-600/20 text-amber-300',
+    text: 'text-amber-400',
+    dot: 'bg-amber-600',
+  },
   'Full Body': {
     border: 'border-l-indigo-500',
     badge: 'bg-indigo-500/20 text-indigo-300',
@@ -136,12 +143,16 @@ export function muscleGroupStyle(group?: string): MuscleGroupStyle {
  * branches on Cardio's special layout/math so Yoga and Pilates automatically
  * follow the same path instead of needing their own copy of each check. */
 export function isDurationBased(muscleGroup?: string): boolean {
-  return muscleGroup === 'Cardio' || muscleGroup === 'Yoga' || muscleGroup === 'Pilates'
+  return muscleGroup === 'Cardio' || isHoldBased(muscleGroup)
 }
 
 /** Poses/holds specifically — Cardio excluded. Used where the distinction
  * matters (e.g. Cardio keeps distance/intensity fields that a pose hold
  * doesn't have). */
-export function isHoldBased(muscleGroup?: string): boolean {
-  return muscleGroup === 'Yoga' || muscleGroup === 'Pilates'
+export function isHoldBased(muscleGroup?: string): muscleGroup is HoldGroup {
+  return muscleGroup === 'Yoga' || muscleGroup === 'Pilates' || muscleGroup === 'Mobility'
 }
+
+/** Groups logged as timed holds/poses: stretches, mobility drills, foam
+ * rolling, yoga, pilates. */
+export type HoldGroup = 'Yoga' | 'Pilates' | 'Mobility'

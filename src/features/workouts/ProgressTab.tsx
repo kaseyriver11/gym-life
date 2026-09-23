@@ -4,18 +4,20 @@ import { useHealthSnapshots } from '@/features/health/use-health'
 import { Chips } from './ProgressCharts'
 import { ProgressCardio } from './ProgressCardio'
 import { ProgressExercise } from './ProgressExercise'
+import { ProgressMobility } from './ProgressMobility'
 import { ProgressOverview } from './ProgressOverview'
 import { ProgressRecords } from './ProgressRecords'
 import { useAllExercises } from './use-all-exercises'
 import { useWorkoutSessions } from './use-workout-sessions'
 
-type View = 'overview' | 'exercise' | 'records' | 'cardio'
+type View = 'overview' | 'exercise' | 'records' | 'cardio' | 'mobility'
 
 const VIEWS: { key: View; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'exercise', label: 'By exercise' },
   { key: 'records', label: 'Records' },
   { key: 'cardio', label: 'Cardio' },
+  { key: 'mobility', label: 'Mobility' },
 ]
 
 export function ProgressTab() {
@@ -60,6 +62,7 @@ export function ProgressTab() {
         />
       )}
       {view === 'cardio' && <ProgressCardio sessions={sessions} exercisesById={exercisesById} />}
+      {view === 'mobility' && <ProgressMobility sessions={sessions} exercisesById={exercisesById} />}
     </div>
   )
 }
