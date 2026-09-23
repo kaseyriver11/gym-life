@@ -4,6 +4,7 @@ import { ListPlus, NotebookText, Plus, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { NextUpCard } from '@/features/workouts/Programs'
 import { GoalModal, GoalRing } from './GoalWidget'
 import { TodayChecklist } from './TodayChecklist'
 import { useDashboardPrefs } from './use-dashboard-prefs'
@@ -40,6 +41,8 @@ export function DashboardPage() {
           <SlidersHorizontal size={18} />
         </button>
       </div>
+
+      <NextUpCard />
 
       <div className="grid grid-cols-2 gap-2.5">
         <Link

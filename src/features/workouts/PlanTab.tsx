@@ -1,20 +1,19 @@
 import clsx from 'clsx'
-import { format } from 'date-fns'
 import { ChevronDown, ChevronUp, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { WorkoutTemplate } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
+import { ProgramsSection } from './Programs'
+import { useStartTemplate } from './use-start-template'
 import { formatTime } from './use-rest-timer'
 import { buildMuscleData } from './muscle-heat'
 import { isHoldBased, muscleGroupStyle } from './muscle-groups'
 import { MuscleMapView } from './MuscleMapView'
-import { applyUnilateralSplit, suggestSets } from './progression'
 import { isRestricted } from './restrictions'
 import { useAllExercises } from './use-all-exercises'
 import { useWorkoutTemplates } from './use-workout-templates'
-import { useWorkoutSessions } from './use-workout-sessions'
 
 type TemplateEntry = WorkoutTemplate['entries'][number]
 type PlannedSet = TemplateEntry['plannedSets'][number]
@@ -47,10 +46,6 @@ function dominantBroadMuscleGroup(
   return best
 }
 
-function todayISO() {
-  return format(new Date(), 'yyyy-MM-dd')
-}
-
 function formatPlannedSets(sets: PlannedSet[], isHold?: boolean) {
   if (isHold) {
     const hasReal = sets.some((s) => (s.durationSeconds ?? 0) > 0)
@@ -74,56 +69,23 @@ function formatPlannedSets(sets: PlannedSet[], isHold?: boolean) {
 export function PlanTab({ onStarted }: { onStarted: () => void }) {
   const { items: templates, add, update, remove } = useWorkoutTemplates()
   const { items: exercises, add: addExercise } = useAllExercises()
-  const { items: sessions, add: addSession, update: updateSession } = useWorkoutSessions()
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<WorkoutTemplate | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const exercisesById = useMemo(() => new Map(exercises.map((ex) => [ex.id, ex])), [exercises])
 
+  const startTemplateIntoToday = useStartTemplate()
+
   function startTemplate(template: WorkoutTemplate) {
-    const now = Date.now()
-    const blockId = String(now)
-    const newEntries = template.entries.map((entry) => {
-      const hasRealPlan = entry.plannedSets.some(
-        (s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
-      )
-      const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
-      const sets = applyUnilateralSplit(
-        hasRealPlan ? entry.plannedSets : suggestSets(sessions, entry.exerciseId, exerciseInfo),
-        entry.exerciseName,
-      )
-      return {
-        exerciseId: entry.exerciseId,
-        exerciseName: entry.exerciseName,
-        sets: sets.map((s) => ({
-          reps: s.reps,
-          weight: s.weight,
-          ...('side' in s ? { side: s.side } : {}),
-          ...('durationSeconds' in s ? { durationSeconds: s.durationSeconds } : {}),
-          ...('restAfterSeconds' in s ? { restAfterSeconds: s.restAfterSeconds } : {}),
-          completed: false,
-          isEstimate: s.reps > 0 || s.weight > 0 || (('durationSeconds' in s ? s.durationSeconds : 0) ?? 0) > 0,
-        })),
-        blockId,
-        blockTitle: template.name,
-        templateId: template.id,
-      }
-    })
-    // Today may already have a session going (e.g. lifting logged from the
-    // Log tab) — starting a template here must land in that same session
-    // rather than forking a second, same-day session doc that the Log tab's
-    // single-session-per-day view can never show alongside the first.
-    const existing = sessions.find((s) => s.date === todayISO())
-    if (existing) {
-      updateSession(existing.id, { entries: [...existing.entries, ...newEntries], updatedAt: now })
-    } else {
-      addSession({ date: todayISO(), entries: newEntries, createdAt: now, updatedAt: now })
-    }
+    startTemplateIntoToday(template)
     onStarted()
   }
 
   return (
     <div className="space-y-3">
+      <ProgramsSection onStarted={onStarted} />
+
+      <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Saved workouts</p>
       {templates.length === 0 && (
         <p className="py-8 text-center text-sm text-neutral-500">
           No saved workouts yet. Build one — like "Push Day A" — to reuse anytime, with sets

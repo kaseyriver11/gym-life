@@ -255,3 +255,31 @@ export interface GoalDef {
   createdAt: number
   updatedAt: number
 }
+
+/**
+ * A training program: an ordered rotation of saved workouts (e.g. Push A ->
+ * Pull A -> Legs A -> Push B...), deliberately not pinned to weekdays — a
+ * missed Tuesday doesn't break anything, the rotation just waits for you.
+ * Position in the rotation is derived from what you've actually logged
+ * (see programProgress), never stored as a counter that can drift.
+ */
+export interface Program {
+  id: ID
+  name: string
+  /** Saved workouts in rotation order. The same workout may appear more
+   * than once (e.g. A/B/A). `templateName` is denormalized for display
+   * in case the template is later deleted. */
+  slots: { templateId: ID; templateName: string }[]
+  /** Only one program is active at a time. */
+  active: boolean
+  /** Optional block length, e.g. an 8-week hypertrophy block. */
+  lengthWeeks?: number
+  /** ISO date the program was last activated — week counting starts here. */
+  startDate: string
+  /** Rotation position as of `anchorAt` (ms). Reset on activate, skip, or
+   * "do this one next"; workouts started after anchorAt advance from it. */
+  anchorIndex: number
+  anchorAt: number
+  createdAt: number
+  updatedAt: number
+}
