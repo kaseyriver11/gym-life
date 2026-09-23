@@ -1,5 +1,7 @@
 import type { WorkoutExerciseEntry, WorkoutSession } from '@/types'
+import { isDurationBased } from './muscle-groups'
 import { estimatedOneRepMax } from './prs'
+import { isSetLogged } from './use-workout-sessions'
 
 /**
  * Strength relative to bodyweight — the standard way lifters compare
@@ -29,7 +31,7 @@ export function relativeStrength(oneRepMax: number, bodyweightLbs: number): numb
  */
 export function sessionStrengthScore(
   entries: WorkoutExerciseEntry[],
-  exercisesById: Map<string, { muscleGroup?: string } | undefined>,
+  exercisesById: Map<string, { muscleGroup?: string; equipment?: string } | undefined>,
   bodyweightLbs: number,
 ): number {
   if (bodyweightLbs <= 0 || entries.length === 0) return 0
@@ -37,16 +39,23 @@ export function sessionStrengthScore(
 
   entries.forEach((entry, entryIndex) => {
     const info = exercisesById.get(entry.exerciseId)
-    if (info?.muscleGroup === 'Cardio') return
+    if (isDurationBased(info?.muscleGroup)) return
+    // A bodyweight exercise's `weight` field only ever holds what's added
+    // (a vest, a dip belt) — without folding in actual bodyweight, every
+    // set of push-ups/pull-ups/dips would be skipped below (weight <= 0)
+    // and contribute nothing to the score, same underlying gap as the
+    // post-workout summary's volume number.
+    const isBodyweight = info?.equipment === 'Bodyweight'
 
     entry.sets.forEach((set, setIndex) => {
-      if (!set.completed || set.weight <= 0 || set.reps <= 0) return
-      const oneRm = estimatedOneRepMax(set.weight, set.reps)
+      const weight = isBodyweight ? bodyweightLbs + set.weight : set.weight
+      if (!isSetLogged(set) || weight <= 0 || set.reps <= 0) return
+      const oneRm = estimatedOneRepMax(weight, set.reps)
       const positionIntoWorkout =
         (entryIndex + (setIndex + 1) / (entry.sets.length + 1)) / entries.length
       const lateWorkoutBonus = 1 + 0.25 * positionIntoWorkout
 
-      const volumePoints = (set.reps * set.weight) / bodyweightLbs
+      const volumePoints = (set.reps * weight) / bodyweightLbs
       const intensityPoints = relativeStrength(oneRm, bodyweightLbs) * 10
       score += (volumePoints * 0.3 + intensityPoints * 0.7) * lateWorkoutBonus
     })
@@ -75,7 +84,7 @@ export function bodyweightNear(
  * bodyweight closest to that session's date rather than today's weight. */
 export function strengthScoreTrend(
   sessions: WorkoutSession[],
-  exercisesById: Map<string, { muscleGroup?: string } | undefined>,
+  exercisesById: Map<string, { muscleGroup?: string; equipment?: string } | undefined>,
   snapshots: { date: string; weightLbs?: number }[],
 ): { date: string; score: number }[] {
   return sessions

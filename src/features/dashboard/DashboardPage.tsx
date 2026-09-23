@@ -1,18 +1,13 @@
 import clsx from 'clsx'
 import { format } from 'date-fns'
-import { Dumbbell, ListPlus, NotebookText, Plus, SlidersHorizontal } from 'lucide-react'
+import { ListPlus, NotebookText, Plus, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { sessionSetProgress, useWorkoutSessions } from '@/features/workouts/use-workout-sessions'
 import { GoalModal, GoalRing } from './GoalWidget'
 import { TodayChecklist } from './TodayChecklist'
 import { useDashboardPrefs } from './use-dashboard-prefs'
 import { useGoals } from './use-goals'
-
-function todayISO() {
-  return format(new Date(), 'yyyy-MM-dd')
-}
 
 function greeting() {
   const hour = new Date().getHours()
@@ -32,8 +27,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <ActiveWorkoutBanner />
-
       <div className="flex items-start justify-between">
         <GreetingHeader />
         <button
@@ -123,33 +116,6 @@ export function DashboardPage() {
   )
 }
 
-/** The app always cold-starts on the Dashboard (no deep-link back into
- * wherever you were), so a workout left mid-session on the Log tab is easy
- * to mistake for lost data on relaunch. Surface it here as the first thing
- * you see, with one tap back in. */
-function ActiveWorkoutBanner() {
-  const { items: sessions } = useWorkoutSessions()
-  const session = sessions.find((s) => s.date === todayISO())
-  if (!session || session.entries.length === 0) return null
-
-  const { totalSets, loggedSets } = sessionSetProgress(session)
-  if (totalSets > 0 && loggedSets === totalSets) return null
-
-  return (
-    <Link
-      to="/workouts"
-      className="flex items-center justify-between rounded-2xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-3"
-    >
-      <div>
-        <p className="text-sm font-semibold text-indigo-300">Workout in progress</p>
-        <p className="text-xs text-indigo-400/80">
-          {loggedSets}/{totalSets} sets logged today · tap to continue
-        </p>
-      </div>
-      <Dumbbell size={20} className="shrink-0 text-indigo-400" />
-    </Link>
-  )
-}
 
 function GreetingHeader() {
   const { user } = useAuth()

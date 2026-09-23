@@ -110,7 +110,6 @@ export function HealthPage() {
 
   const [weight, setWeight] = useState('')
   const [steps, setSteps] = useState('')
-  const [caloriesIn, setCaloriesIn] = useState('')
   const [hcLinked, setHcLinked] = useState(false)
   const [hcBusy, setHcBusy] = useState(false)
   const [hcError, setHcError] = useState<string | null>(null)
@@ -127,7 +126,6 @@ export function HealthPage() {
     syncedTodayRef.current = true
     setWeight(todaySnapshot?.weightLbs?.toString() ?? '')
     setSteps(todaySnapshot?.steps?.toString() ?? '')
-    setCaloriesIn(todaySnapshot?.caloriesIn?.toString() ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading])
 
@@ -206,7 +204,6 @@ export function HealthPage() {
     const patch = {
       weightLbs: weight ? Number(weight) : undefined,
       steps: steps ? Number(steps) : undefined,
-      caloriesIn: caloriesIn ? Number(caloriesIn) : undefined,
       source: 'manual' as const,
     }
     if (todaySnapshot) {
@@ -382,7 +379,7 @@ export function HealthPage() {
 
       <form onSubmit={saveToday} className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
         <p className="text-sm font-medium text-neutral-300">Today</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="mb-1 block text-xs text-neutral-500">Weight (lbs)</label>
             <input
@@ -400,16 +397,6 @@ export function HealthPage() {
               inputMode="numeric"
               value={steps}
               onChange={(e) => setSteps(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-neutral-500">Calories in</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={caloriesIn}
-              onChange={(e) => setCaloriesIn(e.target.value)}
               className={inputClass}
             />
           </div>

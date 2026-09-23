@@ -20,6 +20,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Rest-timer alerts must fire on the second, not "sometime in the next few minutes"; Android 14+ denies SCHEDULE_EXACT_ALARM by default, USE_EXACT_ALARM is auto-granted for timer apps. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
 </manifest>

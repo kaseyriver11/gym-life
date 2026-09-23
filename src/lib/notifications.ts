@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
 
 /**
@@ -89,4 +90,76 @@ export async function cancelRecurringReminder(taskId: string) {
       id: recurringId(taskId, weekday),
     })),
   })
+}
+
+/** Fixed id for the one rest-timer alert that can ever be pending — a new
+ * rest period simply replaces the previous one. Chosen well outside the
+ * range idFromString/recurringId can land on for task reminders. */
+const REST_TIMER_NOTIFICATION_ID = 2147480001
+const REST_TIMER_CHANNEL_ID = 'rest-timer'
+
+let restChannelReady: Promise<boolean> | null = null
+
+/** Rest alerts need their own high-importance channel — Capacitor's default
+ * channel is importance 3, which plays no heads-up banner and is easy to
+ * miss with the phone in a pocket. Also asks for notification permission
+ * the first time a rest timer runs, rather than up front on app launch. */
+function ensureRestChannel(): Promise<boolean> {
+  restChannelReady ??= (async () => {
+    const { display } = await LocalNotifications.requestPermissions()
+    if (display !== 'granted') return false
+    await LocalNotifications.createChannel({
+      id: REST_TIMER_CHANNEL_ID,
+      name: 'Rest timer',
+      description: 'Alerts when a rest period between sets is over',
+      importance: 5,
+      vibration: true,
+      visibility: 1,
+    })
+    return true
+  })().catch(() => {
+    restChannelReady = null
+    return false
+  })
+  return restChannelReady
+}
+
+/**
+ * Schedules the system alert for when a rest countdown ends, so it still
+ * fires with the screen locked or the app backgrounded — Android suspends
+ * the WebView's JS timers then, which is exactly when you're resting.
+ * Resolves true only when the alert is actually scheduled, so callers can
+ * fall back to an in-app beep otherwise (web, or permission denied).
+ */
+export async function scheduleRestTimerAlert(endsAt: number, body?: string): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false
+  if (!(await ensureRestChannel())) return false
+  try {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: REST_TIMER_NOTIFICATION_ID,
+          title: 'Rest over',
+          body: body ?? 'Time for your next set',
+          channelId: REST_TIMER_CHANNEL_ID,
+          schedule: { at: new Date(endsAt), allowWhileIdle: true },
+          autoCancel: true,
+        },
+      ],
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function cancelRestTimerAlert() {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: REST_TIMER_NOTIFICATION_ID }] })
+    // Also clear it if it already fired and is still sitting in the shade.
+    await LocalNotifications.removeDeliveredNotificationsById({ ids: [REST_TIMER_NOTIFICATION_ID] })
+  } catch {
+    // Nothing pending/delivered — fine.
+  }
 }

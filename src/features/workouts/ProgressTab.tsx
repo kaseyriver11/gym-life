@@ -16,7 +16,7 @@ import type { WorkoutSession } from '@/types'
 import { muscleGroupStyle } from './muscle-groups'
 import { strengthScoreTrend } from './strength-score'
 import { useAllExercises } from './use-all-exercises'
-import { useWorkoutSessions } from './use-workout-sessions'
+import { countSets, isSetLogged, useWorkoutSessions } from './use-workout-sessions'
 
 function WeeklyVolumeSection({
   sessions,
@@ -33,7 +33,7 @@ function WeeklyVolumeSection({
       if (session.date < cutoff) continue
       for (const entry of session.entries) {
         const group = groupByExercise.get(entry.exerciseId) ?? 'Other'
-        const completedSets = entry.sets.filter((s) => s.completed).length
+        const completedSets = countSets(entry.sets.filter(isSetLogged))
         if (completedSets === 0) continue
         counts.set(group, (counts.get(group) ?? 0) + completedSets)
       }
@@ -154,9 +154,12 @@ export function ProgressTab() {
     return sessions
       .map((session) => {
         const entry = session.entries.find((e) => e.exerciseId === exerciseId)
-        if (!entry || entry.sets.length === 0) return null
-        const topWeight = Math.max(...entry.sets.map((s) => s.weight))
-        const volume = entry.sets.reduce((sum, s) => sum + s.reps * s.weight, 0)
+        // Only really-logged sets — a skipped exercise still carries its
+        // greyed-out suggested weight, which isn't a lift you did.
+        const logged = entry?.sets.filter(isSetLogged) ?? []
+        if (logged.length === 0) return null
+        const topWeight = Math.max(...logged.map((s) => s.weight))
+        const volume = logged.reduce((sum, s) => sum + s.reps * s.weight, 0)
         return { date: session.date, topWeight, volume }
       })
       .filter((d): d is NonNullable<typeof d> => d !== null)

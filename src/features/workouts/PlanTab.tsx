@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { format } from 'date-fns'
 import { ChevronDown, ChevronUp, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -5,9 +6,11 @@ import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { WorkoutTemplate } from '@/types'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
-import { buildMuscleData, dominantMuscleLabel } from './muscle-heat'
+import { formatTime } from './use-rest-timer'
+import { buildMuscleData } from './muscle-heat'
+import { isHoldBased, muscleGroupStyle } from './muscle-groups'
 import { MuscleMapView } from './MuscleMapView'
-import { suggestSets } from './progression'
+import { applyUnilateralSplit, suggestSets } from './progression'
 import { isRestricted } from './restrictions'
 import { useAllExercises } from './use-all-exercises'
 import { useWorkoutTemplates } from './use-workout-templates'
@@ -16,11 +19,49 @@ import { useWorkoutSessions } from './use-workout-sessions'
 type TemplateEntry = WorkoutTemplate['entries'][number]
 type PlannedSet = TemplateEntry['plannedSets'][number]
 
+/** The most set-heavy broad muscle group in a template — e.g. "Back" for a
+ * pull-focused day. Deliberately NOT `dominantMuscleLabel` from
+ * muscle-heat.ts: that returns fine anatomical labels ("Lats", "Upper
+ * Chest") for the detailed muscle map, which don't match any key in
+ * muscleGroupStyle's color table and would just render as the grey
+ * fallback here. This works off each exercise's own broad `muscleGroup`
+ * instead, so the badge/border color always lands on a real color. */
+function dominantBroadMuscleGroup(
+  entries: { exerciseId: string; plannedSets: unknown[] }[],
+  exercisesById: Map<string, { muscleGroup?: string }>,
+): string | null {
+  const totals = new Map<string, number>()
+  for (const entry of entries) {
+    const group = exercisesById.get(entry.exerciseId)?.muscleGroup
+    if (!group) continue
+    totals.set(group, (totals.get(group) ?? 0) + (entry.plannedSets.length || 1))
+  }
+  let best: string | null = null
+  let bestCount = 0
+  for (const [group, count] of totals) {
+    if (count > bestCount) {
+      best = group
+      bestCount = count
+    }
+  }
+  return best
+}
+
 function todayISO() {
   return format(new Date(), 'yyyy-MM-dd')
 }
 
-function formatPlannedSets(sets: PlannedSet[]) {
+function formatPlannedSets(sets: PlannedSet[], isHold?: boolean) {
+  if (isHold) {
+    const hasReal = sets.some((s) => (s.durationSeconds ?? 0) > 0)
+    if (!hasReal) return `${sets.length} hold${sets.length === 1 ? '' : 's'} · time not set`
+    return sets
+      .map((s) => {
+        const hold = formatTime(s.durationSeconds ?? 0)
+        return s.restAfterSeconds ? `${hold} hold + ${s.restAfterSeconds}s rest` : `${hold} hold`
+      })
+      .join(', ')
+  }
   const hasReal = sets.some((s) => s.reps > 0 || s.weight > 0)
   if (!hasReal) return `${sets.length} set${sets.length === 1 ? '' : 's'} · auto-suggested`
   const allSame = sets.every((s) => s.reps === sets[0].reps && s.weight === sets[0].weight)
@@ -33,7 +74,7 @@ function formatPlannedSets(sets: PlannedSet[]) {
 export function PlanTab({ onStarted }: { onStarted: () => void }) {
   const { items: templates, add, update, remove } = useWorkoutTemplates()
   const { items: exercises, add: addExercise } = useAllExercises()
-  const { items: sessions, add: addSession } = useWorkoutSessions()
+  const { items: sessions, add: addSession, update: updateSession } = useWorkoutSessions()
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<WorkoutTemplate | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -42,30 +83,42 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
   function startTemplate(template: WorkoutTemplate) {
     const now = Date.now()
     const blockId = String(now)
-    addSession({
-      date: todayISO(),
-      entries: template.entries.map((entry) => {
-        const hasRealPlan = entry.plannedSets.some((s) => s.reps > 0 || s.weight > 0)
-        const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
-        const sets = hasRealPlan
-          ? entry.plannedSets
-          : suggestSets(sessions, entry.exerciseId, exerciseInfo)
-        return {
-          exerciseId: entry.exerciseId,
-          exerciseName: entry.exerciseName,
-          sets: sets.map((s) => ({
-            reps: s.reps,
-            weight: s.weight,
-            completed: false,
-            isEstimate: s.reps > 0 || s.weight > 0,
-          })),
-          blockId,
-          blockTitle: template.name,
-        }
-      }),
-      createdAt: now,
-      updatedAt: now,
+    const newEntries = template.entries.map((entry) => {
+      const hasRealPlan = entry.plannedSets.some(
+        (s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
+      )
+      const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
+      const sets = applyUnilateralSplit(
+        hasRealPlan ? entry.plannedSets : suggestSets(sessions, entry.exerciseId, exerciseInfo),
+        entry.exerciseName,
+      )
+      return {
+        exerciseId: entry.exerciseId,
+        exerciseName: entry.exerciseName,
+        sets: sets.map((s) => ({
+          reps: s.reps,
+          weight: s.weight,
+          ...('side' in s ? { side: s.side } : {}),
+          ...('durationSeconds' in s ? { durationSeconds: s.durationSeconds } : {}),
+          ...('restAfterSeconds' in s ? { restAfterSeconds: s.restAfterSeconds } : {}),
+          completed: false,
+          isEstimate: s.reps > 0 || s.weight > 0 || (('durationSeconds' in s ? s.durationSeconds : 0) ?? 0) > 0,
+        })),
+        blockId,
+        blockTitle: template.name,
+        templateId: template.id,
+      }
     })
+    // Today may already have a session going (e.g. lifting logged from the
+    // Log tab) — starting a template here must land in that same session
+    // rather than forking a second, same-day session doc that the Log tab's
+    // single-session-per-day view can never show alongside the first.
+    const existing = sessions.find((s) => s.date === todayISO())
+    if (existing) {
+      updateSession(existing.id, { entries: [...existing.entries, ...newEntries], updatedAt: now })
+    } else {
+      addSession({ date: todayISO(), entries: newEntries, createdAt: now, updatedAt: now })
+    }
     onStarted()
   }
 
@@ -88,11 +141,18 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
           })),
           exercisesById,
         )
-        const dominant = dominantMuscleLabel(muscleData)
+        const dominant = dominantBroadMuscleGroup(template.entries, exercisesById)
+        const dominantStyle = muscleGroupStyle(dominant ?? undefined)
         const expanded = expandedId === template.id
         return (
-          <div key={template.id} className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-            <div className="flex items-start justify-between gap-2">
+          <div
+            key={template.id}
+            className={clsx(
+              'overflow-hidden rounded-xl border-y border-r border-l-4 border-y-neutral-800 border-r-neutral-800 bg-neutral-900',
+              dominantStyle.border,
+            )}
+          >
+            <div className="flex items-center gap-2 p-3">
               <button
                 onClick={() => setExpandedId(expanded ? null : template.id)}
                 className="flex min-w-0 flex-1 items-start gap-1.5 text-left"
@@ -103,15 +163,21 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
                   <ChevronDown size={16} className="mt-0.5 shrink-0 text-neutral-600" />
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-neutral-100">{template.name}</p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {template.entries.length} exercise{template.entries.length === 1 ? '' : 's'} ·{' '}
-                    {totalSets} planned set{totalSets === 1 ? '' : 's'}
+                  <p className="truncate text-sm font-medium text-neutral-100">{template.name}</p>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-neutral-500">
+                    <span>
+                      {template.entries.length} exercise{template.entries.length === 1 ? '' : 's'} ·{' '}
+                      {totalSets} planned set{totalSets === 1 ? '' : 's'}
+                    </span>
                     {dominant && (
-                      <>
-                        {' '}
-                        · <span className="text-teal-400">{dominant}-dominant</span>
-                      </>
+                      <span
+                        className={clsx(
+                          'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                          dominantStyle.badge,
+                        )}
+                      >
+                        {dominant}
+                      </span>
                     )}
                   </p>
                 </div>
@@ -131,11 +197,19 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
                 >
                   <Trash2 size={14} />
                 </button>
+                <button
+                  onClick={() => startTemplate(template)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-500"
+                  aria-label={`Start "${template.name}"`}
+                  title="Start"
+                >
+                  <Play size={14} />
+                </button>
               </div>
             </div>
 
             {expanded && (
-              <div className="mt-3 border-t border-neutral-800 pt-3">
+              <div className="border-t border-neutral-800 p-3 pt-3">
                 <MuscleMapView data={muscleData} size="6.5rem" />
                 <ul className="mt-3 space-y-1.5">
                   {template.entries.map((entry) => (
@@ -145,20 +219,16 @@ export function PlanTab({ onStarted }: { onStarted: () => void }) {
                     >
                       <span className="truncate text-neutral-300">{entry.exerciseName}</span>
                       <span className="shrink-0 text-neutral-500">
-                        {formatPlannedSets(entry.plannedSets)}
+                        {formatPlannedSets(
+                          entry.plannedSets,
+                          isHoldBased(exercisesById.get(entry.exerciseId)?.muscleGroup),
+                        )}
                       </span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
-
-            <button
-              onClick={() => startTemplate(template)}
-              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white hover:bg-indigo-500"
-            >
-              <Play size={14} /> Start
-            </button>
           </div>
         )
       })}
@@ -231,6 +301,7 @@ function TemplateBuilder({
     () => new Set(exercises.filter((ex) => isRestricted(ex.restrictedUntil)).map((ex) => ex.id)),
     [exercises],
   )
+  const exercisesById = useMemo(() => new Map(exercises.map((ex) => [ex.id, ex])), [exercises])
 
   function updateSet(exerciseId: string, setIndex: number, patch: Partial<PlannedSet>) {
     setEntries((prev) =>
@@ -309,44 +380,86 @@ function TemplateBuilder({
                   </button>
                 </div>
                 <div className="space-y-1">
-                  {entry.plannedSets.map((set, setIndex) => (
-                    <div key={setIndex} className="flex items-center gap-1.5">
-                      <span className="w-3 text-xs text-neutral-500">{setIndex + 1}</span>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        placeholder="reps"
-                        value={set.reps || ''}
-                        onChange={(e) =>
-                          updateSet(entry.exerciseId, setIndex, {
-                            reps: Number(e.target.value) || 0,
-                          })
-                        }
-                        className={`${inputClass} py-1 text-xs`}
-                      />
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        placeholder="lbs"
-                        value={set.weight || ''}
-                        onChange={(e) =>
-                          updateSet(entry.exerciseId, setIndex, {
-                            weight: Number(e.target.value) || 0,
-                          })
-                        }
-                        className={`${inputClass} py-1 text-xs`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSet(entry.exerciseId, setIndex)}
-                        className="text-neutral-700 hover:text-red-400"
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                    </div>
-                  ))}
+                  {(() => {
+                    const isHold = isHoldBased(exercisesById.get(entry.exerciseId)?.muscleGroup)
+                    return entry.plannedSets.map((set, setIndex) =>
+                      isHold ? (
+                        <div key={setIndex} className="flex items-center gap-1.5">
+                          <span className="w-3 text-xs text-neutral-500">{setIndex + 1}</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            placeholder="hold sec"
+                            value={set.durationSeconds || ''}
+                            onChange={(e) =>
+                              updateSet(entry.exerciseId, setIndex, {
+                                durationSeconds: Number(e.target.value) || 0,
+                              })
+                            }
+                            className={`${inputClass} py-1 text-xs`}
+                          />
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            placeholder="rest sec"
+                            value={set.restAfterSeconds || ''}
+                            onChange={(e) =>
+                              updateSet(entry.exerciseId, setIndex, {
+                                restAfterSeconds: Number(e.target.value) || 0,
+                              })
+                            }
+                            className={`${inputClass} py-1 text-xs`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSet(entry.exerciseId, setIndex)}
+                            className="text-neutral-700 hover:text-red-400"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div key={setIndex} className="flex items-center gap-1.5">
+                          <span className="w-3 text-xs text-neutral-500">{setIndex + 1}</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            placeholder="reps"
+                            value={set.reps || ''}
+                            onChange={(e) =>
+                              updateSet(entry.exerciseId, setIndex, {
+                                reps: Number(e.target.value) || 0,
+                              })
+                            }
+                            className={`${inputClass} py-1 text-xs`}
+                          />
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            placeholder="lbs"
+                            value={set.weight || ''}
+                            onChange={(e) =>
+                              updateSet(entry.exerciseId, setIndex, {
+                                weight: Number(e.target.value) || 0,
+                              })
+                            }
+                            className={`${inputClass} py-1 text-xs`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSet(entry.exerciseId, setIndex)}
+                            className="text-neutral-700 hover:text-red-400"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ),
+                    )
+                  })()}
                 </div>
                 <button
                   type="button"

@@ -25,6 +25,7 @@ import {
   scheduleTaskReminder,
 } from '@/lib/notifications'
 import type { DailyTaskDef, HealthLink, HealthLinkType, TaskTrackingType } from '@/types'
+import { TodaySummary } from './TodaySummary'
 import { occurrencesForDate, sortTaskDefs, useTaskDefs, useTaskLogs } from './use-daily-tasks'
 import { WEEKDAY_LABELS } from './weekdays'
 
@@ -146,6 +147,8 @@ export function DailyPage() {
           <ChevronRight size={20} />
         </button>
       </div>
+
+      <TodaySummary date={date} />
 
       {occurrences.length === 0 && (
         <p className="py-8 text-center text-sm text-neutral-500">

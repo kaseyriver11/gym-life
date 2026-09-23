@@ -195,6 +195,28 @@ export const BACK_EXERCISES: Omit<Exercise, 'id'>[] = [
     createdAt: Date.now(),
   },
   {
+    // A separate entry from the machine version on purpose — same movement,
+    // but plate-loaded machine and dumbbell-loaded weights land on
+    // completely different scales (e.g. 135 vs 40). Sharing one catalog
+    // entry between them poisons progression suggestions with whichever
+    // equipment you used last.
+    name: 'Chest-Supported Row (Dumbbell)',
+    muscleGroup: 'Back',
+    muscleSubgroup: 'Rhomboids',
+    equipment: 'Dumbbell',
+    movementPattern: 'horizontal_pull',
+    targetMuscles: [
+      { muscle: 'Rhomboids', role: 'primary', activationScore: 0.95 },
+      { muscle: 'Trapezius (Mid/Lower)', role: 'primary', activationScore: 0.9 },
+      { muscle: 'Latissimus Dorsi', role: 'primary', activationScore: 0.85 },
+      { muscle: 'Posterior Deltoid', role: 'secondary', activationScore: 0.65 },
+      { muscle: 'Biceps Brachii', role: 'secondary', activationScore: 0.55 },
+    ],
+    repRangeLow: 8,
+    repRangeHigh: 12,
+    createdAt: Date.now(),
+  },
+  {
     name: 'Straight-Arm Cable Pulldown',
     muscleGroup: 'Back',
     muscleSubgroup: 'Lats',

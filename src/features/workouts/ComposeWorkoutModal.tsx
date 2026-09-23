@@ -32,6 +32,7 @@ export function ComposeWorkoutModal({
   restrictedIds,
   offerSaveAsTemplate,
   defaultGroupFilter,
+  singleSelect,
   onClose,
   onConfirm,
   onCreateExercise,
@@ -47,6 +48,11 @@ export function ComposeWorkoutModal({
   /** Pre-selects a muscle-group filter pill (e.g. "Cardio" for the quick
    * cardio-add entry points) instead of opening on the unfiltered list. */
   defaultGroupFilter?: string
+  /** Picking an exercise replaces the current selection instead of adding
+   * to it, and hides the multi-pick-only extras ("sets per exercise", "save
+   * as a reusable workout") — for a one-for-one swap (e.g. "Switch
+   * exercise") rather than building up a list. */
+  singleSelect?: boolean
   /** Shows an optional "Also save as a reusable workout" checkbox — only
    * makes sense where confirming actually starts/logs a session (the main
    * "Compose a workout" entry point), not for "add more to what's already
@@ -104,6 +110,10 @@ export function ComposeWorkoutModal({
 
   function toggle(id: string) {
     if (restrictedIds?.has(id)) return
+    if (singleSelect) {
+      setSelectedIds((prev) => (prev[0] === id ? [] : [id]))
+      return
+    }
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     )
@@ -333,7 +343,7 @@ export function ComposeWorkoutModal({
             </button>
           ))}
 
-        {selectedIds.length > 0 && (
+        {!singleSelect && selectedIds.length > 0 && (
           <label className="flex items-center justify-between gap-3 text-xs text-neutral-500">
             Sets per exercise <span className="text-neutral-700">(optional — overrides suggested)</span>
             <input
@@ -348,7 +358,7 @@ export function ComposeWorkoutModal({
           </label>
         )}
 
-        {offerSaveAsTemplate && selectedIds.length > 0 && (
+        {!singleSelect && offerSaveAsTemplate && selectedIds.length > 0 && (
           <div className="space-y-1.5 rounded-lg border border-dashed border-neutral-700 p-2.5">
             <label className="flex items-center gap-2 text-xs text-neutral-300">
               <input

@@ -8,6 +8,7 @@ import { SCORE_SCALE, type MuscleLoad } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
 import { MuscleRolePicker } from './MuscleRolePicker'
 import { estimatedOneRepMax } from './prs'
+import { isSetLogged } from './use-workout-sessions'
 
 const ROLE_RANK: Record<MuscleTarget['role'], number> = { primary: 0, secondary: 1, stabilizer: 2 }
 const ROLE_LABEL: Record<MuscleTarget['role'], string> = {
@@ -165,7 +166,7 @@ export function ExerciseFocusModal({
           ) : (
             <ul className="space-y-1.5">
               {history.map(({ date, entry }, i) => {
-                const completed = entry.sets.filter((s) => s.completed)
+                const completed = entry.sets.filter(isSetLogged)
                 const best = completed.reduce(
                   (max, s) => Math.max(max, estimatedOneRepMax(s.weight, s.reps)),
                   0,
@@ -178,7 +179,7 @@ export function ExerciseFocusModal({
                     <span className="min-w-0 flex-1 truncate text-right text-neutral-300">
                       {completed.length > 0
                         ? completed.map((s) => `${s.reps}×${s.weight}`).join(', ')
-                        : 'no sets completed'}
+                        : 'no sets logged'}
                     </span>
                     {best > 0 && (
                       <span className="shrink-0 text-neutral-600">~{Math.round(best)} e1RM</span>

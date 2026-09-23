@@ -126,10 +126,15 @@ export interface WorkoutSet {
   /** Set when logging a unilateral exercise (single-arm row, split squat,
    * etc.) per side instead of as one bilateral set. Absent = bilateral. */
   side?: 'left' | 'right'
-  /** Seconds held/performed — for timed exercises like planks, and for
-   * cardio (a "cardio set" is just duration ± distance; reps/weight are
-   * unused and left at 0). */
+  /** Seconds held/performed — for timed exercises like planks, for cardio (a
+   * "cardio set" is just duration ± distance; reps/weight are unused and
+   * left at 0), and for a Yoga/Pilates pose hold (reps/weight unused). */
   durationSeconds?: number
+  /** Seconds of rest/transition after this set before the next one —
+   * Yoga/Pilates only, for "pre-timing" a flow (1 min pose, 15s reset, next
+   * pose...). Read by useSequenceTimer when playing a block back
+   * automatically; ignored otherwise. */
+  restAfterSeconds?: number
   /** Distance covered — cardio only. */
   distanceMiles?: number
   /** Perceived effort — cardio only. Defaults to 'moderate' when unset. */
@@ -162,6 +167,12 @@ export interface WorkoutExerciseEntry {
    * anything added one-off ("Add another exercise", quick cardio, etc). */
   blockId?: string
   blockTitle?: string
+  /** Set alongside blockId when the block came from starting/importing a
+   * saved WorkoutTemplate (as opposed to a save-as-you-go composed workout,
+   * which has a blockId/blockTitle but no source template to point back
+   * at). Lets "switch exercise" offer a *permanent* swap — editing the
+   * template itself — in addition to a same-day-only one. */
+  templateId?: ID
 }
 
 export interface WorkoutSession {
@@ -199,7 +210,14 @@ export interface WorkoutTemplate {
   entries: {
     exerciseId: ID
     exerciseName: string
-    plannedSets: { reps: number; weight: number }[]
+    plannedSets: {
+      reps: number
+      weight: number
+      /** Planned hold time — Yoga/Pilates entries only. */
+      durationSeconds?: number
+      /** Planned rest/transition after this pose — Yoga/Pilates only. */
+      restAfterSeconds?: number
+    }[]
   }[]
   createdAt: number
   updatedAt: number
@@ -218,8 +236,6 @@ export interface HealthSnapshot {
   date: string
   steps?: number
   weightLbs?: number
-  caloriesIn?: number
-  caloriesOut?: number
   waterOz?: number
   source: 'manual' | 'health-connect'
 }

@@ -8,8 +8,9 @@ import { estimateSessionCalories } from './calories'
 import { muscleGroupStyle } from './muscle-groups'
 import { buildMuscleData } from './muscle-heat'
 import { MuscleMapView } from './MuscleMapView'
-import { bestEstimatedOneRepMaxAnySet, estimatedOneRepMax } from './prs'
+import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
 import { effectiveDurationSeconds } from './session-time'
+import { countSets, isSetLogged } from './use-workout-sessions'
 
 type ExerciseInfo = { name: string; muscleGroup?: string; equipment?: string }
 type ViewMode = 'ledger' | 'scoreboard'
@@ -27,22 +28,33 @@ function formatDuration(totalSeconds: number | null) {
 /** A set counts as "performed" for this summary if it has real numbers in
  * it — not gated on the completed toggle, since plenty of real logging
  * (reps/weight typed in, checkbox never tapped) would otherwise read as an
- * empty workout. Strength/Trend on Progress stays completed-gated; this
- * screen is about what you actually did today. */
+ * empty workout — and never an untouched greyed-out suggestion. Same rule
+ * (isSetLogged) as every other stat in the app. */
 function performedSets(entry: WorkoutExerciseEntry, isCardio: boolean) {
-  return entry.sets.filter((s) => (isCardio ? (s.durationSeconds ?? 0) > 0 : s.reps > 0))
+  return entry.sets.filter((s) => isSetLogged(s) && (isCardio ? (s.durationSeconds ?? 0) > 0 : s.reps > 0))
+}
+
+/** The weight actually moved for volume/e1RM purposes — for a bodyweight
+ * exercise that's your logged bodyweight plus whatever's added (a vest, a
+ * dip belt), not the bare `weight` field, which only ever holds the added
+ * part and reads as 0 for plain push-ups/pull-ups/dips. Without this a
+ * bodyweight set shows no volume at all, making real work look like it
+ * never happened. */
+function effectiveWeight(set: { weight: number }, isBodyweight: boolean, weightLbs?: number) {
+  return isBodyweight ? (weightLbs ?? 0) + set.weight : set.weight
 }
 
 function setsSummary(entry: WorkoutExerciseEntry, isCardio: boolean) {
   if (isCardio) {
-    const totalMin = entry.sets.reduce((sum, s) => sum + (s.durationSeconds ?? 0), 0) / 60
-    const totalMiles = entry.sets.reduce((sum, s) => sum + (s.distanceMiles ?? 0), 0)
+    const logged = entry.sets.filter(isSetLogged)
+    const totalMin = logged.reduce((sum, s) => sum + (s.durationSeconds ?? 0), 0) / 60
+    const totalMiles = logged.reduce((sum, s) => sum + (s.distanceMiles ?? 0), 0)
     const parts = [totalMin > 0 ? `${Math.round(totalMin)} min` : null, totalMiles > 0 ? `${totalMiles} mi` : null]
     return parts.filter(Boolean).join(' · ') || 'logged'
   }
   const bySide = entry.sets.some((s) => s.side)
   return entry.sets
-    .filter((s) => s.reps > 0 || s.weight > 0)
+    .filter(isSetLogged)
     .map((s) => `${s.reps}${bySide && s.side ? s.side[0].toUpperCase() : ''}×${s.weight || 'BW'}`)
     .join(' ')
 }
@@ -74,24 +86,30 @@ export function PostWorkoutSummaryModal({
       const sets = performedSets(entry, isCardio)
       if (info?.muscleGroup) muscleGroups.set(info.muscleGroup, (muscleGroups.get(info.muscleGroup) ?? 0) + 1)
 
+      // Volume counts bodyweight so a set of push-ups doesn't read as "0 lb
+      // worked" — but the e1RM PR comparison below stays off the raw
+      // weight field, same as historical sets, so bodyweight exercises
+      // aren't comparing today's bodyweight-inclusive number against a
+      // tiny historical one that never had bodyweight added to it.
+      const isBodyweight = info?.equipment === 'Bodyweight'
       let volume = 0
       let todayBest = 0
       if (!isCardio) {
         for (const s of sets) {
-          volume += s.reps * s.weight
+          volume += s.reps * effectiveWeight(s, isBodyweight, weightLbs)
           todayBest = Math.max(todayBest, estimatedOneRepMax(s.weight, s.reps))
         }
       }
       const historicalBest = isCardio
         ? 0
-        : bestEstimatedOneRepMaxAnySet(sessions, entry.exerciseId, session.id)
+        : bestEstimatedOneRepMax(sessions, entry.exerciseId, session.id)
 
       return { entry, info, isCardio, sets, volume, todayBest, historicalBest }
     })
     const totalVolume = exerciseRows.reduce((sum, r) => sum + r.volume, 0)
-    const totalSets = exerciseRows.reduce((sum, r) => sum + r.sets.length, 0)
+    const totalSets = exerciseRows.reduce((sum, r) => sum + countSets(r.sets), 0)
     return { totalVolume, totalSets, muscleGroups, exerciseRows }
-  }, [session, sessions, exercisesById])
+  }, [session, sessions, exercisesById, weightLbs])
 
   const durationSeconds = effectiveDurationSeconds(session, Date.now())
 

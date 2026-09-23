@@ -28,6 +28,7 @@ import { LEGS_EXERCISES } from './catalog-data/legs'
 import { seedCatalog } from './catalog-data/seed'
 import { SHOULDERS_EXERCISES } from './catalog-data/shoulders'
 import { TRICEPS_EXERCISES } from './catalog-data/triceps'
+import { PILATES_EXERCISES, YOGA_EXERCISES } from './catalog-data/yoga'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
 import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
@@ -57,6 +58,8 @@ function CatalogSeedTool() {
     { label: 'Glutes', data: GLUTES_EXERCISES },
     { label: 'Core', data: CORE_EXERCISES },
     { label: 'Cardio', data: CARDIO_EXERCISES },
+    { label: 'Yoga', data: YOGA_EXERCISES },
+    { label: 'Pilates', data: PILATES_EXERCISES },
   ]
 
   return (

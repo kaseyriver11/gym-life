@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import type { WorkoutSession } from '@/types'
+import { countSets, isSetLogged } from './use-workout-sessions'
 
 export function WorkoutHistoryModal({
   sessions,
@@ -39,7 +40,7 @@ export function WorkoutHistoryModal({
         <ul className="max-h-96 space-y-2 overflow-y-auto">
           {sorted.map((session) => {
             const totalSets = session.entries.reduce(
-              (sum, e) => sum + e.sets.filter((s) => s.completed).length,
+              (sum, e) => sum + countSets(e.sets.filter(isSetLogged)),
               0,
             )
             return (

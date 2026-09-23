@@ -1,7 +1,27 @@
-import { Minus, Pause, Play, Plus, TimerReset, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Minus, Pause, Play, Plus, TimerReset, X } from 'lucide-react'
+import { useState } from 'react'
 import { formatTime, REST_PRESETS, type RestTimer } from './use-rest-timer'
 
 export function RestTimerBar({ timer }: { timer: RestTimer }) {
+  // Collapsed by default while idle — anyone who doesn't use rest timers
+  // shouldn't have this permanently eating space above every workout.
+  // Once it's actually running there's no collapse control: an active
+  // countdown/stopwatch is exactly the moment you do want to see it.
+  const [expanded, setExpanded] = useState(false)
+
+  if (timer.idle && !expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="flex w-full items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900 px-3 py-2 text-left hover:border-neutral-700"
+      >
+        <TimerReset size={16} className="shrink-0 text-neutral-500" />
+        <span className="text-xs text-neutral-500">Rest Timer</span>
+        <ChevronDown size={14} className="ml-auto shrink-0 text-neutral-600" />
+      </button>
+    )
+  }
+
   if (timer.idle) {
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
@@ -27,6 +47,13 @@ export function RestTimerBar({ timer }: { timer: RestTimer }) {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setExpanded(false)}
+            className="shrink-0 text-neutral-600 hover:text-neutral-300"
+            aria-label="Collapse rest timer"
+          >
+            <ChevronUp size={14} />
+          </button>
         </div>
       </div>
     )

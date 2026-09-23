@@ -1,13 +1,19 @@
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import clsx from 'clsx'
 import { addDays, format, parseISO } from 'date-fns'
 import {
   Calculator,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsUp,
   Clock,
   Dumbbell,
   Flame,
+  GripVertical,
   History,
   Link2,
   ListPlus,
@@ -18,33 +24,37 @@ import {
   NotebookText,
   Pencil,
   PersonStanding,
+  Play,
   Plus,
+  Repeat,
   Save,
   Square,
   Trash2,
-  Trophy,
   X,
 } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import { useHealthSnapshots } from '@/features/health/use-health'
 import { useProfile } from '@/features/health/use-profile'
 import type { MuscleTarget, UserProfile, WorkoutExerciseEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '@/types'
-import { estimateCardioCalories, estimateSessionCalories } from './calories'
+import { estimateCardioCalories, estimateHoldCalories, estimateSessionCalories } from './calories'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { ExerciseFocusModal } from './ExerciseFocusModal'
-import { muscleGroupStyle } from './muscle-groups'
+import { isDurationBased, isHoldBased, muscleGroupStyle } from './muscle-groups'
 import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
 import { PlateCalcModal } from './PlateCalcModal'
 import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
-import { applySetsOverride, suggestDefaultRpe, suggestSets } from './progression'
+import { applySetsOverride, applyUnilateralSplit, suggestDefaultRpe, suggestSets, weightIncrement } from './progression'
 import { RestTimerBar } from './RestTimerBar'
 import { effectiveDurationSeconds } from './session-time'
+import { SequencePlayerBar } from './SequencePlayerBar'
+import { SetRow } from './SetRow'
 import { useAllExercises } from './use-all-exercises'
 import { formatTime, useRestTimer, type RestTimer } from './use-rest-timer'
-import { useWorkoutSessions } from './use-workout-sessions'
+import { useSequenceTimer, type SequenceStep } from './use-sequence-timer'
+import { countSets, isSetLogged, sessionSetProgress, useWorkoutSessions } from './use-workout-sessions'
 import { useWorkoutTemplates } from './use-workout-templates'
 import { WarmupCalcModal } from './WarmupCalcModal'
 import { WorkoutHistoryModal } from './WorkoutHistoryModal'
@@ -72,6 +82,37 @@ function todayISO() {
 
 function plural(count: number, word: string) {
   return `${count} ${word}${count === 1 ? '' : 's'}`
+}
+
+/** A drag-to-reorder row — a grip handle beside whatever content it wraps
+ * (a whole named block, or one ad hoc exercise/superset), so the same
+ * component works at either granularity without knowing which it's given. */
+function SortableRow({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  return (
+    // Absolutely-positioned handle instead of a flex sibling — a fixed-width
+    // grip column here used to eat into the card's own content width on
+    // every row, which is exactly what broke narrow phones (fixed-width
+    // reps/weight steppers no longer fit, pushing the "..." menu button
+    // off-screen with no way back to it). This way the card renders at its
+    // full original width regardless; the handle just floats over its top
+    // corner, straddling the page gutter and the card's own edge.
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={clsx('relative', isDragging && 'z-10 opacity-60')}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute left-0 top-2 z-10 flex h-7 w-7 -translate-x-1/2 touch-none items-center justify-center rounded-full bg-neutral-950/80 text-neutral-500 hover:text-neutral-300"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={13} />
+      </button>
+      {children}
+    </div>
+  )
 }
 
 /** Enter/Done on a numeric keypad should dismiss the field like a real form,
@@ -107,10 +148,6 @@ function computeSetNumbers(sets: WorkoutSet[]): number[] {
  * "I can't enter 0 pounds" on a bodyweight-only machine. Once either field
  * on the set carries a real number, show both as-is (including a literal
  * 0) instead of guessing at "empty" from a falsy value. */
-function hasLoggedValue(set: WorkoutSet): boolean {
-  return set.reps !== 0 || set.weight !== 0
-}
-
 function formatDuration(totalSeconds: number) {
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
@@ -302,8 +339,11 @@ function WorkoutTimerBar({
             <span className="text-neutral-600">&nbsp;· finished</span>
           ))}
         {calories != null && calories > 0 && (
-          <span className="text-neutral-600" title="Rough estimate from MET values, your weight, and time — not a precise measurement">
-            &nbsp;· ~{calories} cal
+          <span
+            className="text-neutral-600"
+            title="Rough estimate from MET values, your weight, and time — not a precise measurement. Covers everything logged today, cardio and lifting combined."
+          >
+            &nbsp;· ~{calories} cal today
           </span>
         )}
       </span>
@@ -394,7 +434,7 @@ export function LogTab({
     const blockId = templateName ? String(now) : undefined
     const entries = selected.map((ex) => {
       const suggested = suggestSets(sessions, ex.id, ex)
-      const sets = ex.muscleGroup === 'Cardio' ? suggested : applySetsOverride(suggested, setsCount)
+      const sets = isDurationBased(ex.muscleGroup) ? suggested : applySetsOverride(suggested, setsCount)
       return {
         exerciseId: ex.id,
         exerciseName: ex.name,
@@ -413,7 +453,7 @@ export function LogTab({
         entries: selected.map((ex) => ({
           exerciseId: ex.id,
           exerciseName: ex.name,
-          plannedSets: (ex.muscleGroup === 'Cardio'
+          plannedSets: (isDurationBased(ex.muscleGroup)
             ? suggestSets(sessions, ex.id, ex)
             : applySetsOverride(suggestSets(sessions, ex.id, ex), setsCount)
           ).map((s) => ({
@@ -434,30 +474,41 @@ export function LogTab({
   function importTemplate(template: WorkoutTemplate) {
     const now = Date.now()
     const blockId = String(now)
-    add({
-      date,
-      entries: template.entries.map((entry) => {
-        const hasRealPlan = entry.plannedSets.some((s) => s.reps > 0 || s.weight > 0)
-        const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
-        const sets = hasRealPlan
-          ? entry.plannedSets
-          : suggestSets(sessions, entry.exerciseId, exerciseInfo)
-        return {
-          exerciseId: entry.exerciseId,
-          exerciseName: entry.exerciseName,
-          sets: sets.map((s) => ({
-            reps: s.reps,
-            weight: s.weight,
-            completed: false,
-            isEstimate: s.reps > 0 || s.weight > 0,
-          })),
-          blockId,
-          blockTitle: template.name,
-        }
-      }),
-      createdAt: now,
-      updatedAt: now,
+    const newEntries = template.entries.map((entry) => {
+      const hasRealPlan = entry.plannedSets.some(
+        (s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
+      )
+      const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
+      const sets = applyUnilateralSplit(
+        hasRealPlan ? entry.plannedSets : suggestSets(sessions, entry.exerciseId, exerciseInfo),
+        entry.exerciseName,
+      )
+      return {
+        exerciseId: entry.exerciseId,
+        exerciseName: entry.exerciseName,
+        sets: sets.map((s) => ({
+          reps: s.reps,
+          weight: s.weight,
+          ...('side' in s ? { side: s.side } : {}),
+          ...('durationSeconds' in s ? { durationSeconds: s.durationSeconds } : {}),
+          ...('restAfterSeconds' in s ? { restAfterSeconds: s.restAfterSeconds } : {}),
+          completed: false,
+          isEstimate: s.reps > 0 || s.weight > 0 || (('durationSeconds' in s ? s.durationSeconds : 0) ?? 0) > 0,
+        })),
+        blockId,
+        blockTitle: template.name,
+        templateId: template.id,
+      }
     })
+    // Whatever's already logged for this date (a cardio entry started from
+    // the quick-add flow, most commonly) has to be merged into rather than
+    // forked into a second same-day session the day view can never show
+    // alongside the first — same fix as Plan's "Start".
+    if (session) {
+      update(session.id, { entries: [...session.entries, ...newEntries], updatedAt: now })
+    } else {
+      add({ date, entries: newEntries, createdAt: now, updatedAt: now })
+    }
     setImporting(false)
   }
 
@@ -567,6 +618,8 @@ export function LogTab({
           weightLbs={latestWeightLbs}
           profile={profile}
           timerBar={timerBar}
+          templates={templates}
+          onImportTemplate={importTemplate}
         />
       )}
 
@@ -695,6 +748,8 @@ function SessionEditor({
   weightLbs,
   profile,
   timerBar,
+  templates,
+  onImportTemplate,
 }: {
   session: WorkoutSession
   sessions: WorkoutSession[]
@@ -719,17 +774,34 @@ function SessionEditor({
     exerciseId: string,
     exercise?: ExerciseInfo,
   ) => { reps: number; weight: number }[]
-  /** The workout-duration/finish/summary bar — rendered once, attached to
-   * the first named workout block if one exists (it's that workout's
-   * timer, not "the whole day"'s), or above the list as a fallback when
-   * everything logged today is ad hoc. */
+  /** The workout-duration/finish/summary bar — rendered once, always at the
+   * very top of the page so it reads unambiguously as the whole day's
+   * total rather than looking like it belongs to whichever block it's
+   * nearest to. */
   timerBar?: React.ReactNode
+  templates: WorkoutTemplate[]
+  /** Imports a saved workout's exercises into whatever's already logged
+   * today — same merge as "Add another exercise", just from a template. */
+  onImportTemplate: (template: WorkoutTemplate) => void
 }) {
   const [entries, setEntries] = useState(session.entries)
   const [addingMore, setAddingMore] = useState(false)
   const [addingCardio, setAddingCardio] = useState(false)
+  const [importingMore, setImportingMore] = useState(false)
   const [savingAsTemplate, setSavingAsTemplate] = useState(false)
-  const { add: addTemplate } = useWorkoutTemplates()
+  const { add: addTemplate, update: updateTemplate } = useWorkoutTemplates()
+  const [switchEntryIndex, setSwitchEntryIndex] = useState<number | null>(null)
+  const [switchTarget, setSwitchTarget] = useState<ExerciseInfo | null>(null)
+  const sequenceMapRef = useRef<{ entryIndex: number; setIndex: number }[]>([])
+  const sequenceTimer = useSequenceTimer((stepIndex, actualSeconds) => {
+    const target = sequenceMapRef.current[stepIndex]
+    if (!target) return
+    updateSet(target.entryIndex, target.setIndex, {
+      durationSeconds: actualSeconds,
+      completed: true,
+      isEstimate: false,
+    })
+  })
   const [timingTarget, setTimingTarget] = useState<{ entryIndex: number; setIndex: number } | null>(
     null,
   )
@@ -737,6 +809,7 @@ function SessionEditor({
   const [warmupWeight, setWarmupWeight] = useState<number | null>(null)
   const [showMuscleMap, setShowMuscleMap] = useState(false)
   const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<number | null>(null)
+  const [confirmDeleteBlockId, setConfirmDeleteBlockId] = useState<string | null>(null)
   const [focusEntryIndex, setFocusEntryIndex] = useState<number | null>(null)
   const [exerciseMenuIndex, setExerciseMenuIndex] = useState<number | null>(null)
   const [setMenuTarget, setSetMenuTarget] = useState<{ entryIndex: number; setIndex: number } | null>(
@@ -755,6 +828,28 @@ function SessionEditor({
     if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
     confirmDeleteTimeout.current = setTimeout(() => setConfirmDeleteEntry(null), 2500)
   }
+
+  /** Deletes every exercise belonging to one specific named block — e.g.
+   * one of several identically-titled "Back Day #2" blocks sitting in the
+   * same session (from starting the same saved workout more than once) —
+   * without touching anything else that day. Targets by blockId, not
+   * title, so which one gets removed is unambiguous even though they look
+   * identical: it's whichever one you opened the menu on. */
+  function deleteBlock(blockId: string) {
+    commit(entries.filter((e) => e.blockId !== blockId))
+  }
+
+  function requestDeleteBlock(blockId: string) {
+    if (confirmDeleteBlockId === blockId) {
+      if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+      setConfirmDeleteBlockId(null)
+      deleteBlock(blockId)
+      return
+    }
+    setConfirmDeleteBlockId(blockId)
+    if (confirmDeleteTimeout.current) clearTimeout(confirmDeleteTimeout.current)
+    confirmDeleteTimeout.current = setTimeout(() => setConfirmDeleteBlockId(null), 2500)
+  }
   const exercisesById = useMemo(
     () => new Map(exercises.map((ex) => [ex.id, ex])),
     [exercises],
@@ -772,29 +867,44 @@ function SessionEditor({
     }
     return map
   }, [entries])
-  // Consecutive entries sharing a blockId came in together as one named
-  // composed/saved workout (e.g. "Back Day #2" started from Plan) — they
-  // collapse under one header, separate from cardio or extras added ad hoc
-  // into the same day. Entries with no blockId each stand alone here (still
-  // eligible for their own supersetGroup pairing below).
+  // Entries sharing a blockId came in together as one named composed/saved
+  // workout (e.g. "Back Day #2" started from Plan) — they collapse under one
+  // header, separate from cardio or extras added ad hoc into the same day.
+  // A named block reunites under its one header even when something ad hoc
+  // (like cardio dropped in mid-workout, or unitBounds not yet guarding an
+  // older save) landed between its entries — otherwise the same block ends
+  // up rendered as several fragments all titled the same thing. Entries with
+  // no blockId only group together when actually adjacent (still eligible
+  // for their own supersetGroup pairing below).
   const blockGroups = useMemo(() => {
     const blocks: {
       blockId: string | null
       blockTitle?: string
       items: { entry: WorkoutExerciseEntry; index: number }[]
     }[] = []
+    const namedBlockIndex = new Map<string, number>()
     entries.forEach((entry, index) => {
-      const last = blocks[blocks.length - 1]
+      const blockId = entry.blockId ?? null
+      if (blockId != null) {
+        const existing = namedBlockIndex.get(blockId)
+        if (existing != null) {
+          blocks[existing].items.push({ entry, index })
+          return
+        }
+        namedBlockIndex.set(blockId, blocks.length)
+        blocks.push({ blockId, blockTitle: entry.blockTitle, items: [{ entry, index }] })
+        return
+      }
       // Ad hoc entries (blockId null) all belong to the same implicit
       // "ungrouped" run together — only a *named* block boundary (a
       // different blockId, or the switch to/from null) should split them,
       // otherwise every single ad hoc entry ends up in its own run and the
       // superset-pairing check inside it never sees a neighbor to match.
-      const sameBlock = last && (entry.blockId ?? null) === last.blockId
-      if (sameBlock) {
+      const last = blocks[blocks.length - 1]
+      if (last && last.blockId === null) {
         last.items.push({ entry, index })
       } else {
-        blocks.push({ blockId: entry.blockId ?? null, blockTitle: entry.blockTitle, items: [{ entry, index }] })
+        blocks.push({ blockId: null, items: [{ entry, index }] })
       }
     })
     return blocks
@@ -814,6 +924,58 @@ function SessionEditor({
       else next.add(id)
       return next
     })
+  }
+
+  /** The unit drag-and-drop actually relocates — a named block moves whole
+   * (dragging any part of it carries the entire saved workout, and also
+   * re-consolidates it into one contiguous run if it was ever fragmented),
+   * while an ad hoc run subdivides further into one unit per superset (or
+   * lone entry), matching exactly what moveEntry's unitBounds already
+   * treats as atomic — so dragging can never split anything move-up/down
+   * wouldn't already keep together. */
+  type DragUnit =
+    | { key: string; kind: 'block'; block: (typeof blockGroups)[number] }
+    | { key: string; kind: 'entry'; items: { entry: WorkoutExerciseEntry; index: number }[] }
+
+  const dragUnits: DragUnit[] = []
+  blockGroups.forEach((block) => {
+    if (block.blockId != null) {
+      dragUnits.push({ key: block.blockId, kind: 'block', block })
+      return
+    }
+    let i = 0
+    while (i < block.items.length) {
+      const groupId = block.items[i].entry.supersetGroup
+      let j = i
+      if (groupId != null) {
+        while (j + 1 < block.items.length && block.items[j + 1].entry.supersetGroup === groupId) j++
+      }
+      const slice = block.items.slice(i, j + 1)
+      dragUnits.push({ key: `entry-${slice[0].index}`, kind: 'entry', items: slice })
+      i = j + 1
+    }
+  })
+
+  function unitIndices(unit: DragUnit): number[] {
+    return (unit.kind === 'block' ? unit.block.items : unit.items).map((i) => i.index)
+  }
+
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const fromUnit = dragUnits.find((u) => u.key === active.id)
+    const toUnit = dragUnits.find((u) => u.key === over.id)
+    if (!fromUnit || !toUnit) return
+    const fromIndices = unitIndices(fromUnit)
+    const fromSet = new Set(fromIndices)
+    const movingEntries = fromIndices.map((i) => entries[i])
+    const rest = entries.filter((_, i) => !fromSet.has(i))
+    const toFirstOriginal = Math.min(...unitIndices(toUnit))
+    const removedBefore = fromIndices.filter((i) => i < toFirstOriginal).length
+    const insertAt = toFirstOriginal - removedBefore
+    commit([...rest.slice(0, insertAt), ...movingEntries, ...rest.slice(insertAt)])
   }
 
   /** Consecutive entries sharing a supersetGroup render inside one
@@ -885,27 +1047,47 @@ function SessionEditor({
     commit(clearOrphanedGroup(entries.filter((_, i) => i !== index), groupId))
   }
 
-  /** Moves a whole superset block as a unit — clicking move-up/move-down on
-   * any exercise inside a superset relocates the entire contiguous group
-   * past its neighbor (itself a block of one, or a whole other superset),
-   * rather than splitting the group apart by reordering a single entry. */
-  function moveEntry(index: number, direction: -1 | 1) {
-    const groupId = entries[index].supersetGroup
-    let blockStart = index
-    let blockEnd = index
-    if (groupId != null) {
-      while (blockStart > 0 && entries[blockStart - 1].supersetGroup === groupId) blockStart--
-      while (blockEnd < entries.length - 1 && entries[blockEnd + 1].supersetGroup === groupId) blockEnd++
+  /** The atomic unit move-up/move-down/move-to-top relocates as a whole.
+   * A named block (a saved workout started/imported together, e.g. "Back
+   * Day #1") always wins over supersets, since a superset can live inside a
+   * block and must not be split out of it. Without a blockId, a superset is
+   * the unit; a lone entry is its own unit. This must stay in sync with
+   * blockGroups' notion of what belongs together — otherwise moving an
+   * unrelated entry (like cardio added ad hoc) one step at a time walks it
+   * straight through the middle of a block instead of jumping over it whole,
+   * shredding the block into multiple fragments that all render under the
+   * same title. */
+  function unitBounds(index: number) {
+    const entry = entries[index]
+    let start = index
+    let end = index
+    if (entry.blockId != null) {
+      while (start > 0 && entries[start - 1].blockId === entry.blockId) start--
+      while (end < entries.length - 1 && entries[end + 1].blockId === entry.blockId) end++
+    } else if (entry.supersetGroup != null) {
+      while (
+        start > 0 &&
+        entries[start - 1].supersetGroup === entry.supersetGroup &&
+        entries[start - 1].blockId == null
+      )
+        start--
+      while (
+        end < entries.length - 1 &&
+        entries[end + 1].supersetGroup === entry.supersetGroup &&
+        entries[end + 1].blockId == null
+      )
+        end++
     }
+    return { start, end }
+  }
+
+  function moveEntry(index: number, direction: -1 | 1) {
+    const { start: blockStart, end: blockEnd } = unitBounds(index)
     const movingBlock = entries.slice(blockStart, blockEnd + 1)
 
     if (direction === -1) {
       if (blockStart === 0) return
-      const neighborGroupId = entries[blockStart - 1].supersetGroup
-      let neighborStart = blockStart - 1
-      if (neighborGroupId != null) {
-        while (neighborStart > 0 && entries[neighborStart - 1].supersetGroup === neighborGroupId) neighborStart--
-      }
+      const { start: neighborStart } = unitBounds(blockStart - 1)
       commit([
         ...entries.slice(0, neighborStart),
         ...movingBlock,
@@ -914,17 +1096,57 @@ function SessionEditor({
       ])
     } else {
       if (blockEnd === entries.length - 1) return
-      const neighborGroupId = entries[blockEnd + 1].supersetGroup
-      let neighborEnd = blockEnd + 1
-      if (neighborGroupId != null) {
-        while (neighborEnd < entries.length - 1 && entries[neighborEnd + 1].supersetGroup === neighborGroupId) neighborEnd++
-      }
+      const { end: neighborEnd } = unitBounds(blockEnd + 1)
       commit([
         ...entries.slice(0, blockStart),
         ...entries.slice(blockEnd + 1, neighborEnd + 1),
         ...movingBlock,
         ...entries.slice(neighborEnd + 1),
       ])
+    }
+  }
+
+  /** Jumps a whole unit straight to the top of the list — the
+   * one-step-at-a-time moveEntry above needs a click per position, which
+   * gets tedious from the bottom of a long workout. */
+  function moveEntryToTop(index: number) {
+    const { start: blockStart, end: blockEnd } = unitBounds(index)
+    if (blockStart === 0) return
+    const movingBlock = entries.slice(blockStart, blockEnd + 1)
+    commit([...movingBlock, ...entries.slice(0, blockStart), ...entries.slice(blockEnd + 1)])
+  }
+
+  /** Replaces one entry's exercise in place, keeping its position/blockId/
+   * supersetGroup — only the exercise identity and its sets change. Sets
+   * reset to a fresh suggestion for the new exercise since the old numbers
+   * (reps/weight or hold/rest) were tuned for a different movement.
+   * `permanent` also rewrites the source template so every future start of
+   * it picks up the new exercise — only offered when the entry actually
+   * came from one (see WorkoutExerciseEntry.templateId). */
+  function switchExercise(entryIndex: number, next: ExerciseInfo, permanent: boolean) {
+    const entry = entries[entryIndex]
+    const newSets = suggestSetsFor(next.id, next).map((s) => ({
+      ...s,
+      completed: false,
+      isEstimate: s.reps > 0 || s.weight > 0,
+    }))
+    commit(
+      entries.map((e, i) =>
+        i === entryIndex ? { ...e, exerciseId: next.id, exerciseName: next.name, sets: newSets } : e,
+      ),
+    )
+    if (permanent && entry.templateId) {
+      const template = templates.find((t) => t.id === entry.templateId)
+      if (template) {
+        updateTemplate(template.id, {
+          entries: template.entries.map((te) =>
+            te.exerciseId === entry.exerciseId
+              ? { exerciseId: next.id, exerciseName: next.name, plannedSets: [{ reps: 0, weight: 0 }] }
+              : te,
+          ),
+          updatedAt: Date.now(),
+        })
+      }
     }
   }
 
@@ -969,6 +1191,31 @@ function SessionEditor({
       [],
     )
     return entryIndex === Math.max(...indices)
+  }
+
+  /** Marks a strength set done (or undoes that) — shared by the set-options
+   * menu and, while it still existed, the row's own toggle button. Moved
+   * out of the row entirely (into the "..." menu) since it was one of the
+   * fixed-width elements that no longer fit on a real phone screen
+   * alongside the reps/weight steppers. */
+  function toggleSetComplete(entryIndex: number, setIndex: number) {
+    const entry = entries[entryIndex]
+    const set = entry.sets[setIndex]
+    const info = exercisesById.get(entry.exerciseId)
+    const nowCompleted = !set.completed
+    const patch: Partial<WorkoutSet> = {
+      completed: nowCompleted,
+      isEstimate: false,
+    }
+    if (nowCompleted && set.rpe == null) {
+      const priorReps = entry.sets
+        .slice(0, setIndex)
+        .filter((s) => s.completed)
+        .map((s) => s.reps)
+      patch.rpe = suggestDefaultRpe(set.reps, priorReps, info?.repRangeLow, info?.repRangeHigh)
+    }
+    updateSet(entryIndex, setIndex, patch)
+    if (nowCompleted && isLastInGroup(entryIndex)) timer.start()
   }
 
   function focusById(id: string) {
@@ -1058,9 +1305,14 @@ function SessionEditor({
   function addSetPair(entryIndex: number) {
     const next = entries.map((entry, i) => {
       if (i !== entryIndex) return entry
-      const last = entry.sets[entry.sets.length - 1]
-      const base = last
-        ? { reps: last.reps, weight: last.weight, isEstimate: true }
+      // Only carry a weight forward from an earlier *per-side* set — the
+      // first pair added to an entry that's been logged two-handed has no
+      // real basis for guessing a one-arm weight (it isn't just half, or
+      // even necessarily different), so leave it blank rather than
+      // confidently prefilling the bilateral number.
+      const lastSided = [...entry.sets].reverse().find((s) => s.side)
+      const base = lastSided
+        ? { reps: lastSided.reps, weight: lastSided.weight, isEstimate: true }
         : { reps: 0, weight: 0 }
       return {
         ...entry,
@@ -1079,15 +1331,58 @@ function SessionEditor({
     setIndex: number,
     patch: Partial<WorkoutExerciseEntry['sets'][number]>,
   ) {
+    const editedSet = entries[entryIndex]?.sets[setIndex]
+    const weightChanged = patch.weight != null && patch.weight !== editedSet?.weight
+    const repsChanged = patch.reps != null && patch.reps !== editedSet?.reps
     const next = entries.map((entry, i) =>
       i === entryIndex
         ? {
             ...entry,
-            sets: entry.sets.map((set, j) => (j === setIndex ? { ...set, ...patch } : set)),
+            sets: entry.sets.map((set, j) => {
+              if (j === setIndex) return { ...set, ...patch }
+              // A real weight/reps entry carries forward onto any later
+              // sets that are still just a placeholder suggestion —
+              // otherwise a heavier (or lighter) working weight than the
+              // plan guessed stays invisible to the rest of the exercise,
+              // which keeps showing a stale number from last time instead
+              // of catching up to what's actually happening today.
+              if (j > setIndex && set.isEstimate && (weightChanged || repsChanged)) {
+                return {
+                  ...set,
+                  ...(weightChanged ? { weight: patch.weight } : {}),
+                  ...(repsChanged ? { reps: patch.reps } : {}),
+                }
+              }
+              return set
+            }),
           }
         : entry,
     )
     commit(next)
+  }
+
+  /** Feeds a block's poses into the sequence timer in order — every set of
+   * every entry becomes one step, so "hold 3 rounds of Warrior II" (one
+   * entry, 3 sets) plays back as 3 separate timed steps just like 3
+   * different poses would. Falls back to a 30s hold / 15s rest for any pose
+   * that was never given a planned duration, so "Start sequence" always
+   * does something reasonable rather than a silent 0-second skip. */
+  function startSequence(items: { entry: WorkoutExerciseEntry; index: number }[]) {
+    const steps: SequenceStep[] = []
+    const map: { entryIndex: number; setIndex: number }[] = []
+    items.forEach(({ entry, index }) => {
+      entry.sets.forEach((set, setIndex) => {
+        steps.push({
+          label: entry.sets.length > 1 ? `${entry.exerciseName} (${setIndex + 1})` : entry.exerciseName,
+          holdSeconds: set.durationSeconds || 30,
+          restSeconds: set.restAfterSeconds ?? 15,
+        })
+        map.push({ entryIndex: index, setIndex })
+      })
+    })
+    if (steps.length === 0) return
+    sequenceMapRef.current = map
+    sequenceTimer.start(steps)
   }
 
   function removeSet(entryIndex: number, setIndex: number) {
@@ -1190,7 +1485,7 @@ function SessionEditor({
                 info?.notes || info?.cues || info?.targetMuscles ? 'text-teal-500' : 'text-neutral-600',
               )}
               aria-label="Exercise options"
-              title="Notes, cues, warm-up, reorder, remove"
+              title="Notes, cues, warm-up, switch, reorder, remove"
             >
               <MoreVertical size={16} />
             </button>
@@ -1198,240 +1493,290 @@ function SessionEditor({
           <div className="space-y-1.5">
             {(() => {
               const setNumbers = computeSetNumbers(entry.sets)
-              return entry.sets.map((set, setIndex) => (
-              <div
-                key={setIndex}
-                className={clsx(
-                  'flex items-center gap-2',
-                  info?.muscleGroup === 'Cardio' && 'flex-wrap',
-                )}
-              >
-                <span
-                  className={clsx(
-                    'w-6 text-xs',
-                    set.side ? 'font-semibold text-teal-400' : 'text-neutral-500',
-                  )}
-                  title={set.side === 'left' ? 'Left side' : set.side === 'right' ? 'Right side' : undefined}
-                >
-                  {set.side ? `${setNumbers[setIndex]}${set.side === 'left' ? 'L' : 'R'}` : setNumbers[setIndex]}
-                </span>
-                {info?.muscleGroup === 'Cardio' ? (
-                  <>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={0.1}
-                      id={`reps-${entryIndex}-${setIndex}`}
-                      placeholder="min"
-                      value={set.durationSeconds ? set.durationSeconds / 60 : ''}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) =>
-                        updateSet(entryIndex, setIndex, {
-                          durationSeconds: Math.round((Number(e.target.value) || 0) * 60),
-                          isEstimate: false,
-                        })
-                      }
-                      className={clsx(
-                        `${inputClass} py-1.5`,
-                        set.isEstimate && 'text-neutral-500 animate-pulse-slow',
-                      )}
-                    />
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={0.01}
-                      id={`weight-${entryIndex}-${setIndex}`}
-                      placeholder="miles"
-                      value={set.distanceMiles || ''}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) =>
-                        updateSet(entryIndex, setIndex, {
-                          distanceMiles: Number(e.target.value) || 0,
-                          isEstimate: false,
-                        })
-                      }
-                      className={clsx(
-                        `${inputClass} py-1.5`,
-                        set.isEstimate && 'text-neutral-500 animate-pulse-slow',
-                      )}
-                    />
-                    <div className="flex shrink-0 items-center gap-1">
-                      {(['easy', 'moderate', 'hard'] as const).map((level) => (
-                        <button
-                          key={level}
-                          onClick={() =>
-                            updateSet(entryIndex, setIndex, { intensity: level, isEstimate: false })
-                          }
-                          className={clsx(
-                            'rounded-full px-2 py-1 text-[10px] font-medium capitalize',
-                            (set.intensity ?? 'moderate') === level
-                              ? 'bg-orange-500/20 text-orange-300'
-                              : 'text-neutral-500 hover:text-neutral-300',
-                          )}
-                        >
-                          {level}
-                        </button>
-                      ))}
+              const isCardio = info?.muscleGroup === 'Cardio'
+              const isHold = isHoldBased(info?.muscleGroup)
+              const weightStep = weightIncrement(info?.equipment, info?.muscleGroup) || 2.5
+              const activeSetIndex = (() => {
+                const idx = entry.sets.findIndex((s) => !s.completed)
+                return idx === -1 ? entry.sets.length - 1 : idx
+              })()
+              return entry.sets.map((set, setIndex) => {
+                const label = set.side
+                  ? `${setNumbers[setIndex]}${set.side === 'left' ? 'L' : 'R'}`
+                  : setNumbers[setIndex]
+
+                if (isCardio) {
+                  return (
+                    <div key={setIndex} className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={clsx('w-6 text-xs', set.side ? 'font-semibold text-teal-400' : 'text-neutral-500')}
+                        title={set.side === 'left' ? 'Left side' : set.side === 'right' ? 'Right side' : undefined}
+                      >
+                        {label}
+                      </span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step={0.1}
+                        id={`reps-${entryIndex}-${setIndex}`}
+                        placeholder="min"
+                        value={set.durationSeconds ? set.durationSeconds / 60 : ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          updateSet(entryIndex, setIndex, {
+                            durationSeconds: Math.round((Number(e.target.value) || 0) * 60),
+                            isEstimate: false,
+                          })
+                        }
+                        className={clsx(
+                          `${inputClass} py-1.5`,
+                          set.isEstimate && 'text-neutral-500 animate-pulse-slow',
+                        )}
+                      />
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step={0.01}
+                        id={`weight-${entryIndex}-${setIndex}`}
+                        placeholder="miles"
+                        value={set.distanceMiles || ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          updateSet(entryIndex, setIndex, {
+                            distanceMiles: Number(e.target.value) || 0,
+                            isEstimate: false,
+                          })
+                        }
+                        className={clsx(
+                          `${inputClass} py-1.5`,
+                          set.isEstimate && 'text-neutral-500 animate-pulse-slow',
+                        )}
+                      />
+                      <div className="flex shrink-0 items-center gap-1">
+                        {(['easy', 'moderate', 'hard'] as const).map((level) => (
+                          <button
+                            key={level}
+                            onClick={() =>
+                              updateSet(entryIndex, setIndex, { intensity: level, isEstimate: false })
+                            }
+                            className={clsx(
+                              'rounded-full px-2 py-1 text-[10px] font-medium capitalize',
+                              (set.intensity ?? 'moderate') === level
+                                ? 'bg-orange-500/20 text-orange-300'
+                                : 'text-neutral-500 hover:text-neutral-300',
+                            )}
+                          >
+                            {level}
+                          </button>
+                        ))}
+                      </div>
+                      {set.durationSeconds ? (
+                        <span className="flex shrink-0 items-center gap-1 text-[11px] text-neutral-500">
+                          ~
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            value={
+                              set.calories ??
+                              estimateCardioCalories(
+                                entry.exerciseName,
+                                set.durationSeconds,
+                                set.intensity,
+                                weightLbs ?? 180,
+                                profile,
+                              )
+                            }
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) =>
+                              updateSet(entryIndex, setIndex, { calories: Number(e.target.value) || 0 })
+                            }
+                            onKeyDown={blurOnEnter}
+                            title="Calories — edit if your machine gave you its own estimate"
+                            className="w-12 rounded-md border border-neutral-700 bg-neutral-800 px-1 py-0.5 text-center text-neutral-200 outline-none focus:border-indigo-500"
+                          />
+                          cal
+                        </span>
+                      ) : null}
+                      <button
+                        onClick={() => updateSet(entryIndex, setIndex, { completed: !set.completed })}
+                        className={`h-7 w-7 shrink-0 rounded-full border-2 ${
+                          set.completed ? 'border-indigo-500 bg-indigo-500' : 'border-neutral-600'
+                        }`}
+                        aria-label="Set completed"
+                      />
+                      {(() => {
+                        const cardioIsTiming =
+                          timingTarget?.entryIndex === entryIndex && timingTarget.setIndex === setIndex
+                        if (cardioIsTiming) {
+                          return (
+                            <span className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  updateSet(entryIndex, setIndex, { durationSeconds: timer.elapsed })
+                                  setTimingTarget(null)
+                                  timer.reset()
+                                }}
+                                className="flex items-center gap-1 rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-medium tabular-nums text-teal-300"
+                              >
+                                <Square size={10} /> {formatTime(timer.elapsed)}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setTimingTarget(null)
+                                  timer.reset()
+                                }}
+                                className="text-neutral-600 hover:text-red-400"
+                                aria-label="Cancel timing"
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                          )
+                        }
+                        return null
+                      })()}
+                      <button
+                        onClick={() => setSetMenuTarget({ entryIndex, setIndex })}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-neutral-200"
+                        aria-label="Set options"
+                      >
+                        <MoreVertical size={15} />
+                      </button>
                     </div>
-                    {set.durationSeconds ? (
-                      <span className="flex shrink-0 items-center gap-1 text-[11px] text-neutral-500">
-                        ~
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min={0}
-                          value={
-                            set.calories ??
-                            estimateCardioCalories(
-                              entry.exerciseName,
-                              set.durationSeconds,
-                              set.intensity,
-                              weightLbs ?? 180,
-                              profile,
-                            )
-                          }
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) =>
-                            updateSet(entryIndex, setIndex, { calories: Number(e.target.value) || 0 })
-                          }
-                          onKeyDown={blurOnEnter}
-                          title="Calories — edit if your machine gave you its own estimate"
-                          className="w-12 rounded-md border border-neutral-700 bg-neutral-800 px-1 py-0.5 text-center text-neutral-200 outline-none focus:border-indigo-500"
-                        />
-                        cal
-                      </span>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      id={`reps-${entryIndex}-${setIndex}`}
-                      placeholder="reps"
-                      value={hasLoggedValue(set) ? set.reps : ''}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) =>
-                        updateSet(entryIndex, setIndex, {
-                          reps: Number(e.target.value) || 0,
-                          isEstimate: false,
-                        })
-                      }
-                      onKeyDown={(e) => handleRepsEnter(e, entryIndex, setIndex)}
-                      className={clsx(
-                        `${inputClass} py-1.5`,
-                        set.isEstimate && 'text-neutral-500 animate-pulse-slow',
-                      )}
-                    />
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      id={`weight-${entryIndex}-${setIndex}`}
-                      placeholder="lbs"
-                      value={hasLoggedValue(set) ? set.weight : ''}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) =>
-                        updateSet(entryIndex, setIndex, {
-                          weight: Number(e.target.value) || 0,
-                          isEstimate: false,
-                        })
-                      }
-                      onKeyDown={(e) => handleWeightEnter(e, entryIndex, setIndex)}
-                      className={clsx(
-                        `${inputClass} py-1.5`,
-                        set.isEstimate && 'text-neutral-500 animate-pulse-slow',
-                      )}
-                    />
-                  </>
-                )}
-                <button
-                  onClick={() => {
-                    const nowCompleted = !set.completed
-                    const patch: Partial<typeof set> = {
-                      completed: nowCompleted,
-                      isEstimate: false,
-                    }
-                    if (nowCompleted && set.rpe == null && info?.muscleGroup !== 'Cardio') {
-                      const priorReps = entry.sets
-                        .slice(0, setIndex)
-                        .filter((s) => s.completed)
-                        .map((s) => s.reps)
-                      patch.rpe = suggestDefaultRpe(
-                        set.reps,
-                        priorReps,
-                        info?.repRangeLow,
-                        info?.repRangeHigh,
-                      )
-                    }
-                    updateSet(entryIndex, setIndex, patch)
-                    if (nowCompleted && isLastInGroup(entryIndex)) timer.start()
-                  }}
-                  className={`h-7 w-7 shrink-0 rounded-full border-2 ${
-                    set.completed ? 'border-indigo-500 bg-indigo-500' : 'border-neutral-600'
-                  }`}
-                  aria-label="Set completed"
-                />
-                {set.completed && info?.muscleGroup !== 'Cardio' && set.rpe != null && (
-                  <span
-                    className="shrink-0 text-[11px] tabular-nums text-neutral-500"
-                    title="RPE — how hard that felt (1-10). Edit from Set options."
-                  >
-                    RPE {set.rpe}
-                  </span>
-                )}
-                {isSetPr(entryIndex, setIndex) && (
-                  <span title="New estimated 1RM personal record" className="shrink-0">
-                    <Trophy size={13} className="text-amber-400" aria-label="New personal record" />
-                  </span>
-                )}
-                {(() => {
-                  const isTiming =
+                  )
+                }
+
+                if (isHold) {
+                  const holdIsTiming =
                     timingTarget?.entryIndex === entryIndex && timingTarget.setIndex === setIndex
-                  if (isTiming) {
-                    return (
-                      <span className="flex items-center gap-1">
+                  return (
+                    <div key={setIndex} className="flex flex-wrap items-center gap-2">
+                      <span className="w-6 shrink-0 text-xs text-neutral-500">{label}</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        id={`reps-${entryIndex}-${setIndex}`}
+                        placeholder="hold sec"
+                        value={set.durationSeconds || ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          updateSet(entryIndex, setIndex, {
+                            durationSeconds: Number(e.target.value) || 0,
+                            isEstimate: false,
+                          })
+                        }
+                        className={clsx(
+                          `${inputClass} py-1.5`,
+                          set.isEstimate && 'text-neutral-500 animate-pulse-slow',
+                        )}
+                      />
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        id={`weight-${entryIndex}-${setIndex}`}
+                        placeholder="rest sec"
+                        value={set.restAfterSeconds || ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          updateSet(entryIndex, setIndex, { restAfterSeconds: Number(e.target.value) || 0 })
+                        }
+                        className={`${inputClass} py-1.5`}
+                      />
+                      <button
+                        onClick={() => updateSet(entryIndex, setIndex, { completed: !set.completed, isEstimate: false })}
+                        className={`h-7 w-7 shrink-0 rounded-full border-2 ${
+                          set.completed ? 'border-indigo-500 bg-indigo-500' : 'border-neutral-600'
+                        }`}
+                        aria-label="Set completed"
+                      />
+                      {holdIsTiming ? (
+                        <span className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              updateSet(entryIndex, setIndex, { durationSeconds: timer.elapsed, isEstimate: false })
+                              setTimingTarget(null)
+                              timer.reset()
+                            }}
+                            className="flex items-center gap-1 rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-medium tabular-nums text-teal-300"
+                          >
+                            <Square size={10} /> {formatTime(timer.elapsed)}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setTimingTarget(null)
+                              timer.reset()
+                            }}
+                            className="text-neutral-600 hover:text-red-400"
+                            aria-label="Cancel timing"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ) : (
                         <button
                           onClick={() => {
-                            updateSet(entryIndex, setIndex, { durationSeconds: timer.elapsed })
-                            setTimingTarget(null)
-                            timer.reset()
+                            setTimingTarget({ entryIndex, setIndex })
+                            timer.startStopwatch(entry.exerciseName)
                           }}
-                          className="flex items-center gap-1 rounded-full bg-teal-500/20 px-2 py-0.5 text-xs font-medium tabular-nums text-teal-300"
+                          className="text-xs text-teal-400 hover:underline"
+                          title="Time this hold live instead of typing a number"
                         >
-                          <Square size={10} /> {formatTime(timer.elapsed)}
+                          Time it
                         </button>
-                        <button
-                          onClick={() => {
-                            setTimingTarget(null)
-                            timer.reset()
-                          }}
-                          className="text-neutral-600 hover:text-red-400"
-                          aria-label="Cancel timing"
-                        >
-                          <X size={12} />
-                        </button>
-                      </span>
-                    )
-                  }
-                  return set.durationSeconds ? (
-                    <span className="flex items-center gap-1 text-xs text-neutral-500">
-                      <Clock size={11} /> {formatTime(set.durationSeconds)}
-                    </span>
-                  ) : null
-                })()}
-                <button
-                  onClick={() => setSetMenuTarget({ entryIndex, setIndex })}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-neutral-200"
-                  aria-label="Set options"
-                >
-                  <MoreVertical size={15} />
-                </button>
-              </div>
-              ))
+                      )}
+                      {set.durationSeconds ? (
+                        <span className="flex shrink-0 items-center gap-1 text-[11px] text-neutral-500">
+                          ~{estimateHoldCalories(info!.muscleGroup as 'Yoga' | 'Pilates', set.durationSeconds, weightLbs ?? 180, profile)} cal
+                        </span>
+                      ) : null}
+                      <button
+                        onClick={() => setSetMenuTarget({ entryIndex, setIndex })}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center text-neutral-600 hover:text-neutral-200"
+                        aria-label="Set options"
+                      >
+                        <MoreVertical size={15} />
+                      </button>
+                    </div>
+                  )
+                }
+
+                const isTiming =
+                  timingTarget?.entryIndex === entryIndex && timingTarget.setIndex === setIndex
+                return (
+                  <SetRow
+                    key={setIndex}
+                    label={label}
+                    isSided={!!set.side}
+                    set={set}
+                    isActive={setIndex === activeSetIndex}
+                    weightStep={weightStep}
+                    isPr={isSetPr(entryIndex, setIndex)}
+                    isTiming={isTiming}
+                    timerElapsed={timer.elapsed}
+                    repsId={`reps-${entryIndex}-${setIndex}`}
+                    weightId={`weight-${entryIndex}-${setIndex}`}
+                    onRepsKeyDown={(e) => handleRepsEnter(e, entryIndex, setIndex)}
+                    onWeightKeyDown={(e) => handleWeightEnter(e, entryIndex, setIndex)}
+                    onChangeReps={(reps) => updateSet(entryIndex, setIndex, { reps, isEstimate: false })}
+                    onChangeWeight={(weight) => updateSet(entryIndex, setIndex, { weight, isEstimate: false })}
+                    onStopTiming={() => {
+                      updateSet(entryIndex, setIndex, { durationSeconds: timer.elapsed })
+                      setTimingTarget(null)
+                      timer.reset()
+                    }}
+                    onCancelTiming={() => {
+                      setTimingTarget(null)
+                      timer.reset()
+                    }}
+                    onOpenMenu={() => setSetMenuTarget({ entryIndex, setIndex })}
+                  />
+                )
+              })
             })()}
           </div>
           <div className="mt-2 flex items-center justify-between">
@@ -1469,27 +1814,62 @@ function SessionEditor({
         )
   }
 
-  const firstNamedBlockId = blockGroups.find((b) => b.blockId != null)?.blockId ?? null
+  // "Where am I" cue for the whole session — counted by real logged numbers
+  // (same "logged" signal the dashboard's own progress pill uses), not the
+  // separate completed-toggle, since plenty of real logging here never
+  // touches that checkbox. The first exercise with an unlogged set is
+  // "current"; once every set everywhere is logged this just reports the
+  // last exercise.
+  const { totalSets: totalSetCount, loggedSets: completedSetCount } = sessionSetProgress({ entries })
+  const currentExerciseIndex = entries.findIndex((e) => e.sets.some((s) => !isSetLogged(s)))
+  const currentExercisePosition =
+    (currentExerciseIndex === -1 ? entries.length - 1 : currentExerciseIndex) + 1
 
   return (
     <div className="space-y-3">
-      {firstNamedBlockId == null && timerBar}
-      {blockGroups.map((block, blockIndex) => {
-        if (block.blockId == null) {
-          const followsNamedBlock = blockGroups.slice(0, blockIndex).some((b) => b.blockId != null)
+      {!session.endedAt && entries.length > 0 && totalSetCount > 0 && (
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-3 py-2">
+          <div className="flex items-center justify-between text-[11px] font-medium text-neutral-400">
+            <span>
+              Exercise {currentExercisePosition} of {entries.length}
+            </span>
+            <span className="tabular-nums">
+              {completedSetCount}/{totalSetCount} sets
+            </span>
+          </div>
+          <div className="mt-1 h-1 overflow-hidden rounded-full bg-neutral-800">
+            <div
+              className="h-full rounded-full bg-indigo-500 transition-[width]"
+              style={{ width: `${(completedSetCount / totalSetCount) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+      {timerBar}
+      <SequencePlayerBar timer={sequenceTimer} />
+      <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={dragUnits.map((u) => u.key)} strategy={verticalListSortingStrategy}>
+      {dragUnits.map((unit, unitIndex) => {
+        if (unit.kind === 'entry') {
+          // A named block and an ad hoc run always alternate in dragUnits
+          // (consecutive ad hoc entries are never split across two units),
+          // so "starts a new ad hoc run that follows a block" reduces to
+          // just checking the immediately preceding unit.
+          const showAddedSeparately = unitIndex > 0 && dragUnits[unitIndex - 1].kind === 'block'
           return (
-            <Fragment key={`${block.items[0].entry.exerciseId}-${block.items[0].index}`}>
-              {followsNamedBlock && (
+            <SortableRow key={unit.key} id={unit.key}>
+              {showAddedSeparately && (
                 <p className="pt-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
                   Added separately
                 </p>
               )}
-              {renderEntryItems(block.items)}
-            </Fragment>
+              {renderEntryItems(unit.items)}
+            </SortableRow>
           )
         }
-        const collapsed = collapsedBlocks.has(block.blockId)
-        const totalSets = block.items.reduce((sum, { entry }) => sum + entry.sets.length, 0)
+        const block = unit.block
+        const collapsed = collapsedBlocks.has(block.blockId!)
+        const totalSets = block.items.reduce((sum, { entry }) => sum + countSets(entry.sets), 0)
         const muscleGroups = [
           ...new Set(
             block.items
@@ -1497,37 +1877,63 @@ function SessionEditor({
               .filter((g): g is string => !!g),
           ),
         ]
+        const isSequenceBlock = block.items.every(({ entry }) =>
+          isHoldBased(exercisesById.get(entry.exerciseId)?.muscleGroup),
+        )
         return (
-          <div
-            key={block.blockId}
-            className="overflow-hidden rounded-xl border-2 border-indigo-500/40 bg-indigo-500/[0.04]"
-          >
-            <button
-              onClick={() => toggleBlock(block.blockId!)}
-              className="flex w-full items-center gap-2.5 bg-indigo-500/10 p-3 text-left hover:bg-indigo-500/15"
-            >
-              {collapsed ? (
-                <ChevronRight size={16} className="shrink-0 text-indigo-400" />
-              ) : (
-                <ChevronDown size={16} className="shrink-0 text-indigo-400" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-neutral-100">{block.blockTitle}</p>
-                <p className="truncate text-[11px] text-indigo-300/80">
-                  {plural(block.items.length, 'exercise')} · {plural(totalSets, 'set')}
-                  {muscleGroups.length > 0 && ` · ${muscleGroups.join(', ')}`}
-                </p>
+          <SortableRow key={unit.key} id={unit.key}>
+          <div className="overflow-hidden rounded-xl border-2 border-indigo-500/40 bg-indigo-500/[0.04]">
+            <div className="flex items-stretch gap-1 bg-indigo-500/10">
+              <button
+                onClick={() => toggleBlock(block.blockId!)}
+                className="flex min-w-0 flex-1 items-center gap-2.5 p-3 text-left hover:bg-indigo-500/15"
+              >
+                {collapsed ? (
+                  <ChevronRight size={16} className="shrink-0 text-indigo-400" />
+                ) : (
+                  <ChevronDown size={16} className="shrink-0 text-indigo-400" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-neutral-100">{block.blockTitle}</p>
+                  <p className="truncate text-[11px] text-indigo-300/80">
+                    {plural(block.items.length, 'exercise')} · {plural(totalSets, 'set')}
+                    {muscleGroups.length > 0 && ` · ${muscleGroups.join(', ')}`}
+                  </p>
+                </div>
+              </button>
+              <button
+                onClick={() => requestDeleteBlock(block.blockId!)}
+                className="flex shrink-0 items-center px-2.5 text-indigo-300/50 hover:text-red-400"
+                aria-label={`Delete this "${block.blockTitle}" block`}
+                title="Delete just this block — other blocks this day, even ones with the same name, are untouched"
+              >
+                {confirmDeleteBlockId === block.blockId ? (
+                  <span className="whitespace-nowrap text-[11px] font-semibold text-red-400">Confirm?</span>
+                ) : (
+                  <Trash2 size={15} />
+                )}
+              </button>
+            </div>
+            {isSequenceBlock && (
+              <div className="border-t border-indigo-500/20 p-2">
+                <button
+                  disabled={sequenceTimer.active}
+                  onClick={() => startSequence(block.items)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+                >
+                  <Play size={13} /> Start sequence — hands-free timed flow
+                </button>
               </div>
-            </button>
-            {block.blockId === firstNamedBlockId && timerBar && (
-              <div className="border-t border-indigo-500/20 bg-neutral-950/40 px-3 py-1.5">{timerBar}</div>
             )}
             {!collapsed && (
               <div className="space-y-1.5 p-2 pt-2.5">{renderEntryItems(block.items)}</div>
             )}
           </div>
+          </SortableRow>
         )
       })}
+        </SortableContext>
+      </DndContext>
 
       <div className="flex gap-2">
         <button
@@ -1544,6 +1950,16 @@ function SessionEditor({
         >
           <Flame size={16} />
         </button>
+        {templates.length > 0 && (
+          <button
+            onClick={() => setImportingMore(true)}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-700 px-4 text-sm text-neutral-400 hover:border-indigo-500 hover:text-indigo-400"
+            aria-label="Import a saved workout"
+            title="Import a saved workout into today's session"
+          >
+            <NotebookText size={16} />
+          </button>
+        )}
         {entries.length > 0 && (
           <button
             onClick={() => setSavingAsTemplate(true)}
@@ -1566,6 +1982,17 @@ function SessionEditor({
         )}
       </div>
 
+      {importingMore && (
+        <ImportTemplateModal
+          templates={templates}
+          onClose={() => setImportingMore(false)}
+          onImport={(template) => {
+            onImportTemplate(template)
+            setImportingMore(false)
+          }}
+        />
+      )}
+
       {addingMore && (
         <ComposeWorkoutModal
           title="Add to workout"
@@ -1579,7 +2006,7 @@ function SessionEditor({
               ...entries,
               ...selected.map((ex) => {
                 const suggested = suggestSetsFor(ex.id, ex)
-                const sets = ex.muscleGroup === 'Cardio' ? suggested : applySetsOverride(suggested, setsCount)
+                const sets = isDurationBased(ex.muscleGroup) ? suggested : applySetsOverride(suggested, setsCount)
                 return {
                   exerciseId: ex.id,
                   exerciseName: ex.name,
@@ -1622,6 +2049,58 @@ function SessionEditor({
         />
       )}
 
+      {switchEntryIndex != null && entries[switchEntryIndex] && (
+        <ComposeWorkoutModal
+          title={`Switch "${entries[switchEntryIndex].exerciseName}"`}
+          confirmLabel={() => 'Continue'}
+          exercises={exercises}
+          excludeIds={new Set([entries[switchEntryIndex].exerciseId])}
+          singleSelect
+          onClose={() => setSwitchEntryIndex(null)}
+          onConfirm={(selected) => {
+            const next = selected[0]
+            if (!next) return
+            if (entries[switchEntryIndex].templateId) {
+              setSwitchTarget(next)
+            } else {
+              switchExercise(switchEntryIndex, next, false)
+              setSwitchEntryIndex(null)
+            }
+          }}
+        />
+      )}
+
+      {switchTarget && switchEntryIndex != null && entries[switchEntryIndex] && (
+        <Modal title={`Switch to "${switchTarget.name}"`} onClose={() => setSwitchTarget(null)}>
+          <div className="space-y-2">
+            <p className="text-sm text-neutral-400">
+              This exercise came from the saved workout "{entries[switchEntryIndex].blockTitle}". Switch just
+              for today, or for that saved workout going forward too?
+            </p>
+            <button
+              onClick={() => {
+                switchExercise(switchEntryIndex, switchTarget, false)
+                setSwitchTarget(null)
+                setSwitchEntryIndex(null)
+              }}
+              className={primaryButtonClass}
+            >
+              Just for today
+            </button>
+            <button
+              onClick={() => {
+                switchExercise(switchEntryIndex, switchTarget, true)
+                setSwitchTarget(null)
+                setSwitchEntryIndex(null)
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-500/10 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-500/20"
+            >
+              Today, and every future "{entries[switchEntryIndex].blockTitle}"
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {calcWeight != null && (
         <PlateCalcModal initialWeight={calcWeight} onClose={() => setCalcWeight(null)} />
       )}
@@ -1650,7 +2129,7 @@ function SessionEditor({
                 >
                   <NotebookPen size={16} /> Notes, cues &amp; muscle info
                 </button>
-                {info?.muscleGroup !== 'Cardio' && (
+                {!isDurationBased(info?.muscleGroup) && (
                   <button
                     onClick={() => {
                       setWarmupWeight(entry.sets[0]?.weight || 0)
@@ -1662,6 +2141,15 @@ function SessionEditor({
                   </button>
                 )}
                 <button
+                  onClick={() => {
+                    setSwitchEntryIndex(idx)
+                    setExerciseMenuIndex(null)
+                  }}
+                  className={menuItemClass}
+                >
+                  <Repeat size={16} /> Switch exercise
+                </button>
+                <button
                   disabled={idx === 0}
                   onClick={() => {
                     moveEntry(idx, -1)
@@ -1671,6 +2159,17 @@ function SessionEditor({
                 >
                   <MoveUp size={16} /> Move up
                 </button>
+                {idx > 1 && (
+                  <button
+                    onClick={() => {
+                      moveEntryToTop(idx)
+                      setExerciseMenuIndex(null)
+                    }}
+                    className={menuItemClass}
+                  >
+                    <ChevronsUp size={16} /> Move to top
+                  </button>
+                )}
                 <button
                   disabled={idx === entries.length - 1}
                   onClick={() => {
@@ -1722,6 +2221,23 @@ function SessionEditor({
               onClose={() => setSetMenuTarget(null)}
             >
               <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    toggleSetComplete(entryIndex, setIndex)
+                    setSetMenuTarget(null)
+                  }}
+                  className={menuItemClass}
+                >
+                  <span
+                    className={clsx(
+                      'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
+                      set.completed ? 'border-indigo-500 bg-indigo-500' : 'border-neutral-600',
+                    )}
+                  >
+                    {set.completed && <Check size={12} strokeWidth={3} />}
+                  </span>
+                  {set.completed ? 'Mark not done' : 'Mark done'}
+                </button>
                 {set.completed && info?.muscleGroup !== 'Cardio' && (
                   <label className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-200">
                     <span>RPE — how hard did that feel?</span>
@@ -1744,7 +2260,7 @@ function SessionEditor({
                     />
                   </label>
                 )}
-                {info?.muscleGroup !== 'Cardio' &&
+                {!isDurationBased(info?.muscleGroup) &&
                   info?.equipment !== 'Machine' &&
                   info?.equipment !== 'Dumbbell' && (
                     <button

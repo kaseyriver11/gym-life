@@ -1,4 +1,6 @@
 import type { UserProfile, WorkoutExerciseEntry } from '@/types'
+import { isHoldBased } from './muscle-groups'
+import { isSetLogged } from './use-workout-sessions'
 
 /**
  * MET (metabolic equivalent) values from the Compendium of Physical
@@ -23,6 +25,10 @@ const CARDIO_MET: Record<string, number> = {
 const DEFAULT_CARDIO_MET = 7.0
 /** Resistance training, vigorous effort (Compendium code 02054). */
 const STRENGTH_MET = 6.0
+/** Hatha yoga (Compendium code 02150) / Pilates, general (02160) — held
+ * poses, not per-pose-calibrated like CARDIO_MET since intensity barely
+ * varies pose to pose the way it does across cardio machines. */
+const HOLD_MET: Record<'Yoga' | 'Pilates', number> = { Yoga: 2.5, Pilates: 3.0 }
 
 /** Typical time a straight set takes including its rest, for sessions with
  * no reliable elapsed time to work from at all (timer removed and nothing
@@ -75,6 +81,19 @@ export function estimateCardioCalories(
   return Math.round(met * weightLbs * LBS_TO_KG * (durationSeconds / 3600))
 }
 
+/** Estimated calories for one held pose — same duration-driven math as
+ * cardio, just off a flat per-modality MET instead of a per-exercise-name
+ * table (a plank and a forward fold burn about the same). */
+export function estimateHoldCalories(
+  muscleGroup: 'Yoga' | 'Pilates',
+  durationSeconds: number,
+  weightLbs: number,
+  profile?: UserProfile,
+): number {
+  const met = HOLD_MET[muscleGroup] * metMultiplier(profile, weightLbs)
+  return Math.round(met * weightLbs * LBS_TO_KG * (durationSeconds / 3600))
+}
+
 /**
  * Estimates calories burned for a whole session. Each cardio block uses its
  * own hand-tracked duration at that activity's MET — that's a reliable,
@@ -82,7 +101,7 @@ export function estimateCardioCalories(
  * off the session's overall elapsed clock: forgetting to hit "Finish
  * workout" (leaving the timer running for hours) used to inflate the
  * estimate right along with it. Instead it's driven by how many sets were
- * actually completed, at a flat per-set duration, personalized by
+ * actually performed, at a flat per-set duration, personalized by
  * age/height/sex/weight where that's available.
  */
 export function estimateSessionCalories(
@@ -99,11 +118,19 @@ export function estimateSessionCalories(
   for (const entry of session.entries) {
     const info = exercisesById.get(entry.exerciseId)
     if (info?.muscleGroup === 'Cardio') {
-      for (const s of entry.sets) {
+      for (const s of entry.sets.filter(isSetLogged)) {
         cardioCalories += s.calories ?? estimateCardioCalories(info.name, s.durationSeconds ?? 0, s.intensity, weightLbs, profile)
       }
+    } else if (isHoldBased(info?.muscleGroup)) {
+      for (const s of entry.sets.filter(isSetLogged)) {
+        cardioCalories += s.calories ?? estimateHoldCalories(info!.muscleGroup as 'Yoga' | 'Pilates', s.durationSeconds ?? 0, weightLbs, profile)
+      }
     } else {
-      completedStrengthSets += entry.sets.filter((s) => s.completed).length
+      // Counted by really-logged sets (isSetLogged), not the completed
+      // toggle — plenty of real logging (numbers typed in, checkbox never
+      // tapped) would otherwise vanish from this estimate entirely, while
+      // an untouched suggestion for a skipped exercise shouldn't count.
+      completedStrengthSets += entry.sets.filter((s) => isSetLogged(s) && s.reps > 0).length
     }
   }
 
