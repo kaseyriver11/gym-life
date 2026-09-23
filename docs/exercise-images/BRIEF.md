@@ -21,15 +21,23 @@ so this can be filled in gradually.
 |---|---|
 | Size | **1536 × 1024** (landscape 3:2) — ChatGPT's native landscape size |
 | Background | Solid **#171717** (near-black, matches the app) — no gradients, no floor texture |
-| Figure | One gender-neutral athletic figure, light gray **#D4D4D4**, simple flat shading |
-| Equipment | Drawn simply in mid gray **#737373** |
+| Figure | One faceless, gender-neutral athletic **3D matte mannequin**, light gray **#D4D4D4**, soft studio lighting — see [`style-reference.png`](./style-reference.png) |
+| Clothing | **Barefoot.** Plain tight briefs in slightly darker gray **#9A9A9A** — in every image, not just front/back views |
+| Equipment | Realistic but simple, gray tones (#737373 and darker) |
 | Accent | None — muscle highlighting is already done by the app's muscle map |
 | Text | **None** — no labels, arrows with words, logos or watermarks |
 | View | Side view unless a front view shows the movement better (e.g. lateral raises, wide-stance squats) |
 | Panels | **Lifts: 2 panels side by side** — start position on the left, end position on the right, same figure, same camera. **Holds (Mobility/Yoga/Pilates): 1 panel**, figure centered. The `panels` column says which. |
 
 Keep the **same figure, style, camera distance and background for every
-image** — consistency matters more than detail.
+image** — consistency matters more than detail. Attach
+[`style-reference.png`](./style-reference.png) at the start of every new
+chat (it shows the look — but ignore its shoes; figures are barefoot in
+briefs).
+
+No muscle highlighting in the images: the app draws a data-driven muscle
+map directly under each image, and an AI-drawn one would often disagree
+with it.
 
 ## Prompt to paste into ChatGPT (once, at the start of a chat)
 
@@ -37,10 +45,11 @@ image** — consistency matters more than detail.
 > fitness app. Use this exact style for every image I ask for:
 >
 > - 1536×1024 landscape, solid #171717 background, nothing else in the scene
-> - one gender-neutral athletic figure in flat light gray (#D4D4D4) with
->   minimal shading, simple mid-gray (#737373) equipment
-> - clean, modern, minimal vector-illustration look; correct anatomy and
->   joint angles; realistic proportions
+> - one faceless, gender-neutral athletic 3D matte mannequin in light gray
+>   (#D4D4D4), soft studio lighting, realistic gray gym equipment
+> - barefoot (no shoes or socks), wearing plain tight briefs in a slightly
+>   darker gray (#9A9A9A) — same in every image
+> - correct anatomy and joint angles; realistic proportions
 > - no text, labels, arrows, logos or watermarks
 > - side view unless I say otherwise
 > - for "2 panels": show the start position on the left and the end position
@@ -63,5 +72,7 @@ Save each image with its `filename`.
   prompt — long chats drift in style.
 - Reject images with wrong form (rounded back on a deadlift, knees caving
   on a squat, bar path off). The position notes are there to catch these.
-- If a figure's style drifts, re-attach one of your best earlier images and
-  say "match this style exactly".
+- If a figure's style drifts, re-attach `style-reference.png` (or one of
+  your best images since) and say "match this style exactly".
+- Check both panels actually differ in the right way — e.g. a cable
+  stack's plates should lift as the handle moves away from the machine.
