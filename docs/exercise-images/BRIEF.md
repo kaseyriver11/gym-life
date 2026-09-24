@@ -22,7 +22,7 @@ so this can be filled in gradually.
 | Size | **1536 × 1024** (landscape 3:2) — ChatGPT's native landscape size |
 | Background | Solid **#171717** (near-black, matches the app) — no gradients, no floor texture |
 | Figure | One faceless, gender-neutral athletic **3D matte mannequin**, light gray **#D4D4D4**, soft studio lighting — see [`style-reference.png`](./style-reference.png) |
-| Clothing | **Barefoot.** Plain tight briefs in slightly darker gray **#9A9A9A** — in every image, not just front/back views |
+| Clothing | **Barefoot.** Plain tight mid-thigh compression shorts in slightly darker gray **#9A9A9A** — in every image |
 | Equipment | Realistic but simple, gray tones (#737373 and darker) |
 | Accent | None — muscle highlighting is already done by the app's muscle map |
 | Text | **None** — no labels, arrows with words, logos or watermarks |
@@ -32,8 +32,8 @@ so this can be filled in gradually.
 Keep the **same figure, style, camera distance and background for every
 image** — consistency matters more than detail. Attach
 [`style-reference.png`](./style-reference.png) at the start of every new
-chat (it shows the look — but ignore its shoes; figures are barefoot in
-briefs).
+chat — it's the approved look (barefoot, gray compression shorts, same
+mannequin and machine style).
 
 No muscle highlighting in the images: the app draws a data-driven muscle
 map directly under each image, and an AI-drawn one would often disagree
@@ -47,8 +47,8 @@ with it.
 > - 1536×1024 landscape, solid #171717 background, nothing else in the scene
 > - one faceless, gender-neutral athletic 3D matte mannequin in light gray
 >   (#D4D4D4), soft studio lighting, realistic gray gym equipment
-> - barefoot (no shoes or socks), wearing plain tight briefs in a slightly
->   darker gray (#9A9A9A) — same in every image
+> - barefoot (no shoes or socks), wearing plain tight mid-thigh compression
+>   shorts in a slightly darker gray (#9A9A9A) — same in every image
 > - correct anatomy and joint angles; realistic proportions
 > - no text, labels, arrows, logos or watermarks
 > - side view unless I say otherwise
