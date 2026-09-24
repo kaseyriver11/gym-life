@@ -1,17 +1,9 @@
 import clsx from 'clsx'
-import { addDays, format, parseISO } from 'date-fns'
+import { addDays, format } from 'date-fns'
 import { Droplet, Footprints, SlidersHorizontal, Smartphone } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { useEffect, useRef, useState } from 'react'
 import { CircularProgress } from '@/components/CircularProgress'
+import { BodySection } from './BodySection'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import { useWorkoutSessions } from '@/features/workouts/use-workout-sessions'
 import { useDashboardPrefs } from '../dashboard/use-dashboard-prefs'
@@ -204,14 +196,6 @@ export function HealthPage() {
       setHcBusy(false)
     }
   }
-
-  const weightData = useMemo(
-    () =>
-      [...items]
-        .filter((s) => s.weightLbs != null)
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [items],
-  )
 
   async function saveToday(e: React.FormEvent) {
     e.preventDefault()
@@ -434,39 +418,14 @@ export function HealthPage() {
         </button>
       </form>
 
-      {weightData.length > 1 && (
-        <div className="h-56 rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-          <p className="mb-2 text-xs font-medium text-neutral-400">Weight trend</p>
-          <ResponsiveContainer width="100%" height="90%">
-            <LineChart data={weightData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(d) => format(parseISO(d), 'M/d')}
-                stroke="#737373"
-                fontSize={11}
-              />
-              <YAxis stroke="#737373" fontSize={11} width={36} domain={['auto', 'auto']} />
-              <Tooltip
-                labelFormatter={(d) => format(parseISO(d as string), 'MMM d, yyyy')}
-                contentStyle={{
-                  background: '#171717',
-                  border: '1px solid #404040',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="weightLbs"
-                stroke="#34d399"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <BodySection
+        snapshots={items}
+        onSaveWeight={async (lbs) => {
+          setWeight(lbs.toString())
+          if (todaySnapshot) await update(todaySnapshot.id, { weightLbs: lbs })
+          else await add({ date: today, weightLbs: lbs, source: 'manual' })
+        }}
+      />
     </div>
   )
 }

@@ -249,6 +249,9 @@ export interface UserProfile {
   ageYears?: number
   heightIn?: number
   sex?: 'male' | 'female'
+  /** Which body measurements the check-in asks for (keys from
+   * health/body-metrics.ts MEASUREMENTS). Unset = the defaults. */
+  trackedMeasurements?: string[]
 }
 
 export interface HealthSnapshot {
@@ -310,5 +313,17 @@ export interface FlexCheck {
   id: ID
   date: string
   results: Record<string, number>
+  createdAt: number
+}
+
+/** A body check-in: tape measurements (inches, keyed by
+ * health/body-metrics.ts MEASUREMENTS) and optional body-fat %. Weight
+ * itself lives on that day's HealthSnapshot; progress photos stay on the
+ * device only (health/progress-photos.ts) and are never uploaded. */
+export interface BodyCheck {
+  id: ID
+  date: string
+  measurements: Record<string, number>
+  bodyFatPct?: number
   createdAt: number
 }
