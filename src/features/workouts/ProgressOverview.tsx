@@ -3,7 +3,7 @@ import { addDays, format, parseISO } from 'date-fns'
 import { Flame } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { WorkoutSession } from '@/types'
-import { Card, TrendLine } from './ProgressCharts'
+import { Card, Stat, TrendLine } from './ProgressCharts'
 import {
   activityByDate,
   weekStartISO,
@@ -14,7 +14,7 @@ import {
   type ExerciseInfo,
 } from './progress-stats'
 import { muscleGroupStyle } from './muscle-groups'
-import { strengthScoreTrend } from './strength-score'
+import { strengthIndexTrend } from './strength-score'
 
 /** Categorical colors for the three kinds of training, validated for
  * contrast and color-blind separation against the dark card surface. The
@@ -210,40 +210,47 @@ function StrengthTrendCard({
   exercisesById: Map<string, ExerciseInfo>
   snapshots: { date: string; weightLbs?: number }[]
 }) {
-  const data = useMemo(
-    () => strengthScoreTrend(sessions, exercisesById, snapshots),
+  const { points: all, relative } = useMemo(
+    () => strengthIndexTrend(sessions, exercisesById, snapshots),
     [sessions, exercisesById, snapshots],
   )
-  const hasBodyweight = snapshots.some((s) => s.weightLbs != null)
-  const change =
-    data.length >= 2 && data[0].score > 0
-      ? Math.round(((data[data.length - 1].score - data[0].score) / data[0].score) * 100)
-      : null
+  // A point built from one or two lifts is mostly noise — wait until at
+  // least three repeated lifts back it.
+  const points = all.filter((p) => p.exercises >= 3)
+  const last = points[points.length - 1]
+  const monthAgoISO = format(addDays(new Date(), -28), 'yyyy-MM-dd')
+  const monthAgo = [...points].reverse().find((p) => p.date <= monthAgoISO)
+  const pct = (n: number) => `${n >= 0 ? '+' : ''}${Math.round(n * 10) / 10}%`
 
   return (
-    <Card
-      title="Strength score"
-      aside={
-        change != null && (
-          <span className={clsx('text-xs font-semibold', change >= 0 ? 'text-teal-400' : 'text-red-400')}>
-            {change >= 0 ? '+' : ''}
-            {change}% since first session
-          </span>
-        )
-      }
-    >
-      {!hasBodyweight ? (
+    <Card title="Strength index">
+      {points.length < 2 ? (
         <p className="py-4 text-center text-sm text-neutral-500">
-          Log your bodyweight on the Health tab to turn this on — the score is measured relative to bodyweight.
+          Log the same lifts across a couple of sessions to see a trend.
         </p>
-      ) : data.length < 2 ? (
-        <p className="py-4 text-center text-sm text-neutral-500">Log a couple more sessions to see a trend.</p>
       ) : (
         <>
-          <TrendLine data={data} dataKey="score" color="#2dd4bf" label="Score" />
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            <Stat label="Since you started" value={pct(last.index - 100)} />
+            <Stat
+              label="Last 4 weeks"
+              value={monthAgo ? pct(((last.index - monthAgo.index) / monthAgo.index) * 100) : '—'}
+            />
+            <Stat label="Lifts counted" value={`${last.exercises}`} sub="logged 2+ times" />
+          </div>
+          <TrendLine
+            data={points}
+            dataKey="index"
+            color="#2dd4bf"
+            label="Index"
+            formatValue={(v) => `${Math.round(v)}`}
+          />
           <p className="mt-2 text-[11px] text-neutral-600">
-            Every logged set's effort relative to your bodyweight at the time — so getting lighter without losing
-            strength holds steady instead of reading as a decline.
+            100 = where you started. Each lift you've logged at least twice is compared only with itself (best
+            estimated 1RM per session{relative ? ', relative to your bodyweight at the time' : ''}), then averaged — so
+            a long session or a different split doesn't move it, and one odd lift can't swing it; getting stronger
+            does.
+            {!relative && ' Log bodyweight on the Health tab to measure strength relative to bodyweight.'}
           </p>
         </>
       )}
