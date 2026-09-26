@@ -41,6 +41,7 @@ export function useAllExercises() {
         cues: note?.cues,
         targetMuscles: note?.targetMuscles ?? ex.targetMuscles,
         restrictedUntil: note?.restrictedUntil,
+        perSide: note?.perSide ?? ex.perSide,
       }
     }
     return [

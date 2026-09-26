@@ -15,12 +15,11 @@ import { formatTime } from './use-rest-timer'
  * Cardio sets keep their own distinct layout inline in LogTab — they're a
  * single duration/distance/intensity block, not a reps×weight row.
  *
- * No dedicated "mark complete" button — reps + weight steppers, the label,
- * and the "..." menu button already fill the available width on a real
- * phone screen, and a fixed-width always-visible circle on top of that
- * pushed the menu button off-screen entirely. "Mark complete" moved into
- * the "..." menu instead; marking it there still collapses the row into
- * the compact checkmark view below. */
+ * The set number itself is the "done" button: tapping it marks the set
+ * complete with whatever's in it — so doing exactly the greyed-out
+ * suggestion is one tap, not two numbers to retype. (A separate circle
+ * didn't fit next to the steppers on a phone; the number was already
+ * there.) */
 export function SetRow({
   label,
   isSided,
@@ -39,6 +38,7 @@ export function SetRow({
   onStopTiming,
   onCancelTiming,
   onOpenMenu,
+  onToggleComplete,
 }: {
   label: string | number
   isSided: boolean
@@ -64,11 +64,14 @@ export function SetRow({
    * which was one of the fixed-width elements that stopped fitting next to
    * the reps/weight steppers on a real phone screen. */
   onOpenMenu: () => void
+  /** Marks the set done (accepting suggested numbers as-is), or undoes it. */
+  onToggleComplete: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const collapsed = set.completed && !expanded
 
   const labelClass = clsx('w-6 shrink-0 text-xs', isSided ? 'font-semibold text-teal-400' : 'text-neutral-500')
+  const hasNumbers = set.reps > 0 || set.weight > 0
 
   if (collapsed) {
     return (
@@ -96,7 +99,22 @@ export function SetRow({
         isActive && 'border border-indigo-500/40 bg-indigo-500/[0.06]',
       )}
     >
-      <span className={labelClass}>{label}</span>
+      <button
+        type="button"
+        onClick={onToggleComplete}
+        disabled={!hasNumbers}
+        title={set.isEstimate ? 'Did exactly this — mark done' : 'Mark done'}
+        aria-label={`Mark set ${label} done`}
+        className={clsx(
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-semibold tabular-nums transition',
+          isSided ? 'text-teal-300' : 'text-neutral-300',
+          hasNumbers
+            ? 'border-indigo-500/70 hover:bg-indigo-500 hover:text-neutral-950'
+            : 'border-neutral-700 text-neutral-600',
+        )}
+      >
+        {label}
+      </button>
       <NumberStepper
         id={repsId}
         value={set.reps}

@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import clsx from 'clsx'
 import { addDays, format, parseISO } from 'date-fns'
 import {
+  BarChart3,
   Calculator,
   Check,
   ChevronDown,
@@ -11,6 +12,7 @@ import {
   ChevronRight,
   ChevronsUp,
   Clock,
+  Columns2,
   Dumbbell,
   Flame,
   GripVertical,
@@ -40,6 +42,7 @@ import { useProfile } from '@/features/health/use-profile'
 import type { MuscleTarget, UserProfile, WorkoutExerciseEntry, WorkoutSession, WorkoutSet, WorkoutTemplate } from '@/types'
 import { estimateHoldCalories, estimateSessionCalories } from './calories'
 import { HealthImportBanner } from '@/features/health/HealthImport'
+import { CardCues } from './CardCues'
 import { CardioSetRow } from './CardioSetRow'
 import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { ExerciseFocusModal } from './ExerciseFocusModal'
@@ -50,7 +53,8 @@ import { PlateCalcModal } from './PlateCalcModal'
 import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
 import {
   applySetsOverride,
-  applyUnilateralSplit,
+  isUnilateral,
+  setsForTemplateEntry,
   suggestDefaultRpe,
   suggestSets,
   weightIncrement,
@@ -84,6 +88,7 @@ type ExerciseInfo = {
   formCues?: string[]
   targetMuscles?: MuscleTarget[]
   source?: 'catalog' | 'custom'
+  perSide?: boolean
 }
 
 function todayISO() {
@@ -305,9 +310,9 @@ function WorkoutTimerBar({
     return (
       <div className="flex items-center justify-between px-0.5 py-1">
         <div className="flex items-center gap-3 text-xs text-neutral-600">
-          {session.endedAt && onViewSummary && (
-            <button onClick={onViewSummary} className="hover:text-indigo-400 hover:underline">
-              View summary
+          {onViewSummary && (
+            <button onClick={onViewSummary} className="flex items-center gap-1.5 hover:text-indigo-400">
+              <BarChart3 size={13} /> Summary
             </button>
           )}
           <button onClick={onEnableTimer} className="flex items-center gap-1.5 hover:text-teal-400">
@@ -358,6 +363,16 @@ function WorkoutTimerBar({
         )}
       </span>
       <div className="flex items-center gap-3">
+        {onViewSummary && (
+          <button
+            onClick={onViewSummary}
+            className="text-neutral-500 hover:text-indigo-400"
+            aria-label="Workout summary"
+            title="Summary so far"
+          >
+            <BarChart3 size={14} />
+          </button>
+        )}
         <button
           onClick={openEditor}
           className="text-neutral-500 hover:text-neutral-300"
@@ -486,15 +501,8 @@ export function LogTab({
     const now = Date.now()
     const blockId = String(now)
     const newEntries = template.entries.map((entry) => {
-      const hasRealPlan = entry.plannedSets.some(
-        (s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
-      )
       const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
-      const sets = applyUnilateralSplit(
-        hasRealPlan ? entry.plannedSets : suggestSets(sessions, entry.exerciseId, exerciseInfo),
-        entry.exerciseName,
-        exerciseInfo?.perSide,
-      )
+      const sets = setsForTemplateEntry(sessions, entry, exerciseInfo)
       return {
         exerciseId: entry.exerciseId,
         exerciseName: entry.exerciseName,
@@ -535,7 +543,7 @@ export function LogTab({
       onClearDuration={() => update(session.id, { noTimer: true, durationOverrideSeconds: undefined })}
       onEnableTimer={() => update(session.id, { noTimer: false, durationOverrideSeconds: undefined, createdAt: Date.now() })}
       onSetDuration={(seconds) => update(session.id, { durationOverrideSeconds: seconds })}
-      onViewSummary={session.endedAt ? () => setShowSummary(true) : undefined}
+      onViewSummary={session.entries.length > 0 ? () => setShowSummary(true) : undefined}
       exercisesById={exercisesById}
       weightLbs={latestWeightLbs}
       profile={profile}
@@ -778,7 +786,7 @@ function SessionEditor({
   }) => Promise<{ id: string }>
   onSaveNote: (
     exerciseId: string,
-    data: { notes?: string; cues?: string; targetMuscles?: MuscleTarget[] },
+    data: { notes?: string; cues?: string; targetMuscles?: MuscleTarget[]; perSide?: boolean },
   ) => void
   weightLbs?: number
   /** Optional age/height/sex to personalize the cardio calorie readout —
@@ -805,6 +813,7 @@ function SessionEditor({
   const [savingAsTemplate, setSavingAsTemplate] = useState(false)
   const { add: addTemplate, update: updateTemplate } = useWorkoutTemplates()
   const [switchEntryIndex, setSwitchEntryIndex] = useState<number | null>(null)
+  const [addToTemplateIndex, setAddToTemplateIndex] = useState<number | null>(null)
   const [switchTarget, setSwitchTarget] = useState<ExerciseInfo | null>(null)
   const sequenceMapRef = useRef<{ entryIndex: number; setIndex: number }[]>([])
   const sequenceTimer = useSequenceTimer((stepIndex, actualSeconds) => {
@@ -1352,23 +1361,32 @@ function SessionEditor({
     const editedSet = entries[entryIndex]?.sets[setIndex]
     const weightChanged = patch.weight != null && patch.weight !== editedSet?.weight
     const repsChanged = patch.reps != null && patch.reps !== editedSet?.reps
+    const edited = editedSet ? { ...editedSet, ...patch } : undefined
     const next = entries.map((entry, i) =>
       i === entryIndex
         ? {
             ...entry,
             sets: entry.sets.map((set, j) => {
               if (j === setIndex) return { ...set, ...patch }
-              // A real weight/reps entry carries forward onto any later
-              // sets that are still just a placeholder suggestion —
-              // otherwise a heavier (or lighter) working weight than the
-              // plan guessed stays invisible to the rest of the exercise,
-              // which keeps showing a stale number from last time instead
-              // of catching up to what's actually happening today.
-              if (j > setIndex && set.isEstimate && (weightChanged || repsChanged)) {
+              // What you just entered carries forward to later sets of the
+              // same exercise (same side, for one-arm work) that you
+              // haven't touched yet:
+              //  - a blank set (no suggestion — a new exercise) takes the
+              //    numbers you just did, as a greyed-out starting point;
+              //  - a greyed-out suggestion takes a changed number only if
+              //    it was the same as what you just changed — so a
+              //    straight-set plan follows your real working weight, but
+              //    a ramp (45, 55, 65) keeps its later, heavier sets.
+              if (j <= setIndex || !edited || set.completed || set.side !== editedSet?.side) return set
+              const isBlank = !set.isEstimate && set.reps === 0 && set.weight === 0 && !set.durationSeconds
+              if (isBlank && (edited.reps > 0 || edited.weight > 0) && (weightChanged || repsChanged)) {
+                return { ...set, reps: edited.reps, weight: edited.weight, isEstimate: true }
+              }
+              if (set.isEstimate && (weightChanged || repsChanged)) {
                 return {
                   ...set,
-                  ...(weightChanged ? { weight: patch.weight } : {}),
-                  ...(repsChanged ? { reps: patch.reps } : {}),
+                  ...(weightChanged && set.weight === editedSet?.weight ? { weight: patch.weight } : {}),
+                  ...(repsChanged && set.reps === editedSet?.reps ? { reps: patch.reps } : {}),
                 }
               }
               return set
@@ -1484,19 +1502,8 @@ function SessionEditor({
                     )}
                   </div>
                 )}
-                {info?.cues && (
-                  <ul className="mt-1 space-y-0.5">
-                    {info.cues
-                      .split('\n')
-                      .map((line) => line.trim())
-                      .filter(Boolean)
-                      .map((line, i) => (
-                        <li key={i} className="flex gap-1.5 text-[11px] leading-tight text-neutral-400">
-                          <span className="text-neutral-600">•</span>
-                          <span>{line}</span>
-                        </li>
-                      ))}
-                  </ul>
+                {!isDurationBased(info?.muscleGroup) && (
+                  <CardCues cues={info?.cues} onSave={(cues) => onSaveNote(entry.exerciseId, { cues })} />
                 )}
               </div>
             </div>
@@ -1698,6 +1705,7 @@ function SessionEditor({
                       timer.reset()
                     }}
                     onOpenMenu={() => setSetMenuTarget({ entryIndex, setIndex })}
+                    onToggleComplete={() => toggleSetComplete(entryIndex, setIndex)}
                   />
                 )
               })
@@ -2034,6 +2042,35 @@ function SessionEditor({
         <WarmupCalcModal initialWeight={warmupWeight} onClose={() => setWarmupWeight(null)} />
       )}
 
+      {addToTemplateIndex != null && entries[addToTemplateIndex] && (
+        <Modal title="Add to a saved workout" onClose={() => setAddToTemplateIndex(null)}>
+          <AddToTemplateList
+            entry={entries[addToTemplateIndex]}
+            templates={templates}
+            onPick={(template) => {
+              const entry = entries[addToTemplateIndex]
+              const count = entry.sets.some((s) => s.side)
+                ? Math.ceil(entry.sets.length / 2)
+                : entry.sets.length
+              updateTemplate(template.id, {
+                entries: [
+                  ...template.entries,
+                  {
+                    exerciseId: entry.exerciseId,
+                    exerciseName: entry.exerciseName,
+                    // Blank planned sets: your history drives the numbers
+                    // each time (see setsForTemplateEntry).
+                    plannedSets: Array.from({ length: Math.max(1, count) }, () => ({ reps: 0, weight: 0 })),
+                  },
+                ],
+                updatedAt: Date.now(),
+              })
+              setAddToTemplateIndex(null)
+            }}
+          />
+        </Modal>
+      )}
+
       {exerciseMenuIndex != null &&
         entries[exerciseMenuIndex] &&
         (() => {
@@ -2074,6 +2111,67 @@ function SessionEditor({
                 >
                   <Repeat size={16} /> Switch exercise
                 </button>
+                {info?.muscleGroup !== 'Cardio' &&
+                  (() => {
+                    const oneSide = isUnilateral(sessions, entry.exerciseId, info)
+                    return (
+                      <button
+                        onClick={() => {
+                          const nextMode = !oneSide
+                          onSaveNote(entry.exerciseId, { perSide: nextMode })
+                          // Nothing logged yet for this exercise today:
+                          // re-suggest its sets in the new mode right away.
+                          // Otherwise it applies from next time.
+                          if (!entry.sets.some(isSetLogged)) {
+                            const fresh = suggestSetsFor(entry.exerciseId, { ...info!, perSide: nextMode })
+                            commit(
+                              entries.map((e, i) =>
+                                i === idx
+                                  ? {
+                                      ...e,
+                                      sets: fresh.map((s) => ({
+                                        ...s,
+                                        completed: false,
+                                        isEstimate: s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
+                                      })),
+                                    }
+                                  : e,
+                              ),
+                            )
+                          }
+                          setExerciseMenuIndex(null)
+                        }}
+                        className={menuItemClass}
+                      >
+                        <Columns2 size={16} />
+                        <span className="flex-1">One arm / leg at a time</span>
+                        <span
+                          className={clsx(
+                            'relative h-5 w-9 shrink-0 rounded-full transition',
+                            oneSide ? 'bg-teal-500' : 'bg-neutral-700',
+                          )}
+                        >
+                          <span
+                            className={clsx(
+                              'absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all',
+                              oneSide ? 'left-[18px]' : 'left-0.5',
+                            )}
+                          />
+                        </span>
+                      </button>
+                    )
+                  })()}
+                {!entry.templateId && templates.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setAddToTemplateIndex(idx)
+                      setExerciseMenuIndex(null)
+                    }}
+                    className={menuItemClass}
+                  >
+                    <ListPlus size={16} /> Add to a saved workout…
+                  </button>
+                )}
                 <button
                   disabled={idx === 0}
                   onClick={() => {
@@ -2279,10 +2377,14 @@ function SessionEditor({
                 targetMuscles: info?.targetMuscles,
                 muscleGroup: info?.muscleGroup,
                 muscleSubgroup: info?.muscleSubgroup,
+                equipment: info?.equipment,
+                repRangeLow: info?.repRangeLow,
+                repRangeHigh: info?.repRangeHigh,
+                perSide: info?.perSide,
                 source: info?.source,
               }}
               sessions={sessions}
-              excludeSessionId={session.id}
+              asOfDate={session.date}
               onSaveNote={(data) => onSaveNote(entry.exerciseId, data)}
               onClose={() => setFocusEntryIndex(null)}
             />
@@ -2377,5 +2479,39 @@ function SaveAsTemplateModal({
         </button>
       </div>
     </Modal>
+  )
+}
+
+/** Saved workouts to append a one-off exercise to — ones that already have
+ * it are shown but disabled. */
+function AddToTemplateList({
+  entry,
+  templates,
+  onPick,
+}: {
+  entry: WorkoutExerciseEntry
+  templates: WorkoutTemplate[]
+  onPick: (template: WorkoutTemplate) => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="mb-2 text-xs text-neutral-500">
+        Adds {entry.exerciseName} to the end of the workout. Its numbers will come from your history each time.
+      </p>
+      {templates.map((t) => {
+        const has = t.entries.some((e) => e.exerciseId === entry.exerciseId)
+        return (
+          <button
+            key={t.id}
+            disabled={has}
+            onClick={() => onPick(t)}
+            className="flex w-full items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2.5 text-left text-sm text-neutral-200 hover:border-indigo-500 disabled:opacity-40"
+          >
+            <span className="truncate">{t.name}</span>
+            <span className="shrink-0 text-xs text-neutral-500">{has ? 'already in it' : `${t.entries.length} exercises`}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }

@@ -1,14 +1,15 @@
 import { format } from 'date-fns'
 import type { WorkoutTemplate } from '@/types'
-import { applyUnilateralSplit, suggestSets } from './progression'
+import { setsForTemplateEntry } from './progression'
 import { useAllExercises } from './use-all-exercises'
 import { useWorkoutSessions } from './use-workout-sessions'
 
 /**
  * Starts a saved workout into today's session — shared by the Plan tab's
- * play buttons and the program "Next up" cards (Plan and Home). Planned
- * numbers from the template win; otherwise each exercise gets progression
- * suggestions from history. All as greyed-out estimates until confirmed.
+ * play buttons and the program "Next up" cards (Plan and Home). Each
+ * exercise gets progression suggestions from your history (see
+ * setsForTemplateEntry for when the workout's own numbers apply instead).
+ * All as greyed-out estimates until confirmed.
  */
 export function useStartTemplate() {
   const { items: exercises } = useAllExercises()
@@ -21,15 +22,8 @@ export function useStartTemplate() {
     // to replay a program's rotation in order.
     const blockId = String(now)
     const newEntries = template.entries.map((entry) => {
-      const hasRealPlan = entry.plannedSets.some(
-        (s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
-      )
       const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
-      const sets = applyUnilateralSplit(
-        hasRealPlan ? entry.plannedSets : suggestSets(sessions, entry.exerciseId, exerciseInfo),
-        entry.exerciseName,
-        exerciseInfo?.perSide,
-      )
+      const sets = setsForTemplateEntry(sessions, entry, exerciseInfo)
       return {
         exerciseId: entry.exerciseId,
         exerciseName: entry.exerciseName,

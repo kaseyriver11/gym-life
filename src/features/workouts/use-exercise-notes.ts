@@ -19,6 +19,10 @@ export interface ExerciseNote {
    * clearing this must write `null` (not `undefined`) or the field is left
    * untouched instead of cleared. */
   restrictedUntil?: string | null
+  /** Your own "one arm / leg at a time" setting for this exercise —
+   * overrides the catalog's perSide and the name/history guess (see
+   * progression.ts isUnilateral). */
+  perSide?: boolean
   updatedAt: number
 }
 

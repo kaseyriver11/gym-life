@@ -78,9 +78,19 @@ export function ProgressExercise({
   )
   const selectedId = exerciseId || options[0]?.exerciseId || ''
   const info = exercisesById.get(selectedId)
-  const points = useMemo(
+  const allPoints = useMemo(
     () => (selectedId ? exerciseHistory(sessions, selectedId, info, snapshots) : []),
     [sessions, selectedId, info, snapshots],
+  )
+  // One-arm and two-arm sessions of the same exercise aren't comparable
+  // (per-arm weights are lighter) — when both exist, chart one at a time.
+  const hasSided = allPoints.some((p) => p.sets.some((s) => s.side))
+  const hasBilateral = allPoints.some((p) => !p.sets.some((s) => s.side))
+  const [modeChoice, setModeChoice] = useState<'two' | 'one'>('two')
+  const mode = hasSided && !hasBilateral ? 'one' : hasBilateral && !hasSided ? 'two' : modeChoice
+  const points = useMemo(
+    () => allPoints.filter((p) => p.sets.some((s) => s.side) === (mode === 'one')),
+    [allPoints, mode],
   )
   const kind = exerciseKind(info, points.flatMap((p) => p.sets))
   const metricOptions = kind === 'cardio' ? METRICS.weighted : METRICS[kind]
@@ -144,8 +154,18 @@ export function ProgressExercise({
       )}
 
       <Card>
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <Chips options={metricOptions} value={metric} onChange={setMetricChoice} />
+          {hasSided && hasBilateral && (
+            <Chips
+              options={[
+                { key: 'two', label: 'Two-arm' },
+                { key: 'one', label: 'One-arm' },
+              ]}
+              value={mode}
+              onChange={setModeChoice}
+            />
+          )}
         </div>
         {points.length < 2 ? (
           <p className="py-6 text-center text-sm text-neutral-500">One session so far — log it again to see a trend.</p>

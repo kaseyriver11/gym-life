@@ -482,9 +482,13 @@ function ScoreboardView({
         <span className="text-[11px] font-semibold uppercase tracking-widest text-[#767c92]">
           {format(parseISO(session.date), 'EEE · MMM d')}
         </span>
-        {session.endedAt && (
+        {session.endedAt ? (
           <span className="rounded bg-[#ff5c6a] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#14161c]">
             Finished
+          </span>
+        ) : (
+          <span className="rounded border border-[#767c92] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#9096ac]">
+            In progress
           </span>
         )}
       </div>

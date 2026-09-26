@@ -73,20 +73,56 @@ function roundToHalf(value: number) {
 /** A suggested set: reps/weight for lifts, or a hold time for poses. */
 export type SuggestedSet = { reps: number; weight: number; side?: 'left' | 'right'; durationSeconds?: number }
 
-function findEntry(sessions: WorkoutSession[], exerciseId: string, skip = 0) {
-  const matches = sessions
-    .filter((s) => s.entries.some((e) => e.exerciseId === exerciseId))
-    .sort((a, b) => b.date.localeCompare(a.date))
-  const session = matches[skip]
-  return session?.entries.find((e) => e.exerciseId === exerciseId) ?? null
+type LoggedSet = WorkoutSession['entries'][number]['sets'][number]
+
+/** One past session of an exercise: its really-logged sets (all entries of
+ * that exercise in the session merged — an exercise added twice in one day
+ * is still one day's work). */
+export interface LoggedSession {
+  date: string
+  sets: LoggedSet[]
+  /** Logged one side at a time (left/right sets). */
+  sided: boolean
+}
+
+/** Sessions where this exercise was actually logged, newest first. Skipped
+ * entries (all greyed-out suggestions) don't count as "last time". */
+export function loggedHistory(sessions: WorkoutSession[], exerciseId: string): LoggedSession[] {
+  const out: LoggedSession[] = []
+  for (const session of sessions) {
+    const sets = session.entries
+      .filter((e) => e.exerciseId === exerciseId)
+      .flatMap((e) => e.sets.filter(isSetLogged))
+    if (sets.length > 0) out.push({ date: session.date, sets, sided: sets.some((s) => s.side) })
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+/**
+ * Whether this exercise is done one limb at a time. Your own setting (the
+ * "One arm / leg at a time" toggle, stored as a personal perSide override)
+ * or the catalog's perSide flag decides; failing that, a "Single-Arm..."
+ * style name; failing that, however you logged it last time — so an
+ * exercise you split into L/R once comes back split, without you having to
+ * find a setting first.
+ */
+export function isUnilateral(sessions: WorkoutSession[], exerciseId: string, exercise: ExerciseInfo = {}): boolean {
+  if (exercise.perSide != null) return exercise.perSide
+  if (isUnilateralByName(exercise.name)) return true
+  return loggedHistory(sessions, exerciseId)[0]?.sided ?? false
 }
 
 /**
  * Suggests this exercise's next sets using double progression (add reps
  * within a target range before adding weight) plus light autoregulation
- * (logged/inferred RPE and missed reps hold you back or trigger a deload)
- * instead of a blind flat weight bump. Falls back to one blank set if
- * there's no history at all.
+ * (a very high RPE holds the weight; missing the bottom of the range two
+ * sessions running triggers a ~10% deload).
+ *
+ * Each set progresses from the SAME set last time, so a ramp (45, 55, 65)
+ * or pyramid keeps its shape instead of collapsing to the first set's
+ * weight. One-arm and two-arm sessions of the same exercise are kept apart:
+ * only history logged the same way as today feeds the suggestion (one-arm
+ * numbers say little about a two-arm set).
  */
 export function suggestSets(
   sessions: WorkoutSession[],
@@ -99,33 +135,23 @@ export function suggestSets(
   // count — always exactly one activity block, regardless of history.
   if (isDurationBased(exercise.muscleGroup)) return [{ reps: 0, weight: 0 }]
 
-  const forceUnilateral = isUnilateralByName(exercise.name)
-  const last = findEntry(sessions, exerciseId)
-  if (!last || last.sets.length === 0) {
-    if (forceUnilateral) {
-      return Array.from({ length: 3 }).flatMap(
-        () =>
-          [
-            { reps: 0, weight: 0, side: 'left' },
-            { reps: 0, weight: 0, side: 'right' },
-          ] as const,
-      )
-    }
-    return [{ reps: 0, weight: 0 }, { reps: 0, weight: 0 }, { reps: 0, weight: 0 }]
-  }
+  const sided = isUnilateral(sessions, exerciseId, exercise)
+  const all = loggedHistory(sessions, exerciseId)
+  const history = all.filter((h) => h.sided === sided)
+  const blank = (count: number): SuggestedSet[] =>
+    sided
+      ? Array.from({ length: count }).flatMap(() => [
+          { reps: 0, weight: 0, side: 'left' as const },
+          { reps: 0, weight: 0, side: 'right' as const },
+        ])
+      : Array.from({ length: count }, () => ({ reps: 0, weight: 0 }))
 
-  // "Performed" = really logged (isSetLogged), same as every stat in the
-  // app — typing the numbers in counts even if the completed toggle was
-  // never tapped, and an untouched suggestion never does.
-  const completed = last.sets.filter(isSetLogged)
-  if (completed.length === 0) {
-    if (forceUnilateral && !last.sets.some((s) => s.side)) {
-      return last.sets.flatMap((s) => [
-        { reps: s.reps, weight: s.weight, side: 'left' as const },
-        { reps: s.reps, weight: s.weight, side: 'right' as const },
-      ])
-    }
-    return last.sets.map((s) => ({ reps: s.reps, weight: s.weight, side: s.side }))
+  if (history.length === 0) {
+    // Never done this way before. Keep the set count from any history (the
+    // other mode) but not its weights — they don't transfer.
+    const other = all[0]
+    const count = other ? (other.sided ? Math.ceil(other.sets.length / 2) : other.sets.length) : 3
+    return blank(count)
   }
 
   const repLow = exercise.repRangeLow ?? DEFAULT_REP_LOW
@@ -133,86 +159,45 @@ export function suggestSets(
   const increment = weightIncrement(exercise.equipment, exercise.muscleGroup)
   const isDumbbellLike = exercise.equipment === 'Dumbbell' || exercise.equipment === 'Kettlebell'
 
-  function target(completedForSide: typeof completed): { targetWeight: number; targetReps: number } {
-    const baseWeight = completedForSide[0].weight
-    const bestReps = Math.max(...completedForSide.map((s) => s.reps))
-    const anyMissed = completedForSide.some((s) => s.reps < repLow)
-    const allHitTop = completedForSide.every((s) => s.reps >= repHigh)
-    const rated = completedForSide.filter((s) => s.rpe != null)
-    const avgRpe = rated.length ? rated.reduce((sum, s) => sum + (s.rpe ?? 0), 0) / rated.length : null
-    const feltBrutal = avgRpe != null && avgRpe >= 9
-
-    if (anyMissed) {
-      const prev = findEntry(sessions, exerciseId, 1)
-      const prevCompleted = prev?.sets.filter(isSetLogged) ?? []
-      const prevAlsoMissed = prevCompleted.some((s) => s.reps < repLow)
-      const deload = prevAlsoMissed && increment > 0 ? roundToHalf(baseWeight * 0.9) : baseWeight
+  function progress(set: LoggedSet, prevSet: LoggedSet | undefined): { reps: number; weight: number } {
+    if (set.reps < repLow) {
+      // Missed the bottom of the range. Twice in a row at this weight =
+      // deload ~10%; once = hold the weight and aim for the bottom again.
+      const missedTwice = !!prevSet && prevSet.reps < repLow && prevSet.weight <= set.weight && increment > 0
+      const deload = missedTwice ? roundToHalf(set.weight * 0.9) : set.weight
       return {
-        // A deload off a "clean" dumbbell/kettlebell weight (a multiple of
-        // 5) should land on another weight that actually exists on the
-        // rack — but if the logged weight itself wasn't a multiple of 5,
-        // that's the user telling us they have finer-grained plates, so
-        // leave their own precision alone.
-        targetWeight: isDumbbellLike && baseWeight % 5 === 0 ? Math.round(deload / 5) * 5 : deload,
-        targetReps: repLow,
+        // Land a dumbbell deload on a weight that exists on the rack —
+        // unless the logged weight itself wasn't a multiple of 5 (you have
+        // finer-grained plates), in which case keep your precision.
+        weight: isDumbbellLike && set.weight % 5 === 0 ? Math.round(deload / 5) * 5 : deload,
+        reps: repLow,
       }
     }
-    if (allHitTop && !feltBrutal) {
-      return { targetWeight: baseWeight + increment, targetReps: repLow }
-    }
-    return { targetWeight: baseWeight, targetReps: Math.min(repHigh, bestReps + 1) }
+    const feltBrutal = set.rpe != null && set.rpe >= 9.5
+    if (set.reps >= repHigh && increment === 0) return { weight: set.weight, reps: set.reps + 1 } // bodyweight: reps only
+    if (set.reps >= repHigh && !feltBrutal) return { weight: set.weight + increment, reps: repLow }
+    return { weight: set.weight, reps: Math.min(repHigh, set.reps + 1) }
   }
 
-  // A unilateral exercise (left/right sets) progresses each side off its own
-  // numbers — one side lagging shouldn't hold back (or get dragged along by)
-  // the other, and losing the side tag entirely here is what made these
-  // exercises render as flat, unpaired rows instead of an L/R split.
-  //
-  // The exercise's NAME is the authoritative signal, not whatever happened
-  // to be logged last time — gating on `historicallySided` too used to mean
-  // one stray "Add L/R set" tap on an ordinary bilateral exercise (never
-  // named "single-arm/leg") would permanently flip every future suggestion
-  // for it into an L/R split, and the reverse: an exercise genuinely meant
-  // to be tracked two ways (a two-arm session, a one-arm session on another
-  // day, same catalog entry) would ping-pong its suggested weight between
-  // completely different numbers depending purely on which was logged most
-  // recently. If you actually want a movement tracked both ways with its
-  // own separate progression per version, give the unilateral version its
-  // own catalog entry (e.g. "Single-Arm Dumbbell Row") rather than
-  // alternating L/R on the same one.
-  const historicallySided = last.sets.some((s) => s.side)
-  if (forceUnilateral) {
-    if (historicallySided) {
-      // A side with nothing completed (skipped that day) has no numbers to
-      // progress from — just carry its last logged reps/weight forward as-is
-      // rather than crashing on an empty completed-sets array.
-      function targetForSide(side: 'left' | 'right') {
-        const completedForSide = completed.filter((s) => s.side === side)
-        if (completedForSide.length > 0) return target(completedForSide)
-        const lastForSide = last!.sets.filter((s) => s.side === side)
-        const fallback = lastForSide[lastForSide.length - 1]
-        return { targetWeight: fallback?.weight ?? 0, targetReps: fallback?.reps ?? 0 }
-      }
-      const left = targetForSide('left')
-      const right = targetForSide('right')
-      return last.sets.map((s) => {
-        const t = s.side === 'right' ? right : left
-        return { reps: t.targetReps, weight: t.targetWeight, side: s.side }
-      })
-    }
-    // Newly recognized as unilateral (by name) but history still has it
-    // logged bilaterally from before — there's no real per-side data to
-    // split, so start both sides from the same bilateral progression as a
-    // reasonable first guess and let the actual L/R split take over from here.
-    const { targetWeight, targetReps } = target(completed)
-    return last.sets.flatMap(() => [
-      { reps: targetReps, weight: targetWeight, side: 'left' as const },
-      { reps: targetReps, weight: targetWeight, side: 'right' as const },
-    ])
+  const [last, prev] = history
+  if (!sided) {
+    return last.sets.map((set, i) => progress(set, prev?.sets[i]))
   }
-
-  const { targetWeight, targetReps } = target(completed)
-  return last.sets.map(() => ({ reps: targetReps, weight: targetWeight }))
+  // One side at a time: each side progresses off its own sets.
+  const bySide = (h: LoggedSession | undefined, side: 'left' | 'right') => h?.sets.filter((s) => s.side === side) ?? []
+  const lastL = bySide(last, 'left')
+  const lastR = bySide(last, 'right')
+  const prevL = bySide(prev, 'left')
+  const prevR = bySide(prev, 'right')
+  const pairs = Math.max(lastL.length, lastR.length)
+  const out: SuggestedSet[] = []
+  for (let i = 0; i < pairs; i++) {
+    // A side skipped that set borrows the other side's numbers.
+    const l = lastL[i] ?? lastR[i]
+    const r = lastR[i] ?? lastL[i]
+    out.push({ ...progress(l, prevL[i]), side: 'left' }, { ...progress(r, prevR[i]), side: 'right' })
+  }
+  return out
 }
 
 /** Starting hold for a pose/stretch you've never logged. */
@@ -237,8 +222,7 @@ function suggestHolds(
 ): SuggestedSet[] {
   const perSide = !!exercise.perSide
   const progresses = exercise.muscleGroup !== 'Pilates'
-  const last = findEntry(sessions, exerciseId)
-  const logged = last?.sets.filter((s) => isSetLogged(s) && (s.durationSeconds ?? 0) > 0) ?? []
+  const logged = (loggedHistory(sessions, exerciseId)[0]?.sets ?? []).filter((s) => (s.durationSeconds ?? 0) > 0)
   const next = (sec: number) => (progresses ? Math.min(HOLD_CAP_SECONDS, Math.max(sec, sec + HOLD_STEP_SECONDS)) : sec)
 
   if (logged.length === 0) {
@@ -263,6 +247,33 @@ function suggestHolds(
     ...(s.side ? { side: s.side } : {}),
     durationSeconds: next(s.durationSeconds!),
   }))
+}
+
+/**
+ * The sets a saved workout's exercise should start with. Your own history
+ * wins over numbers stored in the workout — otherwise a workout saved with
+ * that day's weights suggests those same weights forever and never
+ * progresses. The workout's numbers are used only for an exercise you've
+ * never logged, and always for holds (a routine's hold/rest timings are
+ * its design, not a guess). Either way the workout's set count is kept.
+ */
+export function setsForTemplateEntry(
+  sessions: WorkoutSession[],
+  entry: {
+    exerciseId: string
+    exerciseName: string
+    plannedSets: { reps: number; weight: number; durationSeconds?: number; restAfterSeconds?: number }[]
+  },
+  exercise: ExerciseInfo | undefined,
+): (SuggestedSet & { restAfterSeconds?: number })[] {
+  const info = { ...exercise, name: entry.exerciseName }
+  const hasPlan = entry.plannedSets.some((s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0)
+  const neverLogged = loggedHistory(sessions, entry.exerciseId).length === 0
+  if (hasPlan && (isHoldBased(exercise?.muscleGroup) || neverLogged)) {
+    return applyUnilateralSplit(entry.plannedSets, entry.exerciseName, isUnilateral(sessions, entry.exerciseId, info))
+  }
+  const suggested = suggestSets(sessions, entry.exerciseId, info)
+  return isDurationBased(exercise?.muscleGroup) ? suggested : applySetsOverride(suggested, entry.plannedSets.length || undefined)
 }
 
 /**
