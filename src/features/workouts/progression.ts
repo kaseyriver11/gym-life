@@ -66,6 +66,20 @@ export function weightIncrement(equipment?: string, muscleGroup?: string): numbe
   return 2.5
 }
 
+/**
+ * Your own logged weights overrule the equipment's default step: a cable
+ * stack or machine that only moves in 5s (every weight you've ever logged
+ * on it is a multiple of 5) shouldn't be told to go 115 -> 117.5. Only
+ * widens the step, never narrows it — a single odd weight (plate-loaded,
+ * add-on pin) keeps the finer default.
+ */
+function stepFromHistory(defaultStep: number, history: LoggedSession[]): number {
+  if (defaultStep === 0 || defaultStep >= 5) return defaultStep
+  const weights = history.flatMap((h) => h.sets.map((s) => s.weight)).filter((w) => w > 0)
+  if (weights.length === 0) return defaultStep
+  return weights.every((w) => w % 5 === 0) ? 5 : defaultStep
+}
+
 function roundToHalf(value: number) {
   return Math.round(value * 2) / 2
 }
@@ -156,7 +170,7 @@ export function suggestSets(
 
   const repLow = exercise.repRangeLow ?? DEFAULT_REP_LOW
   const repHigh = exercise.repRangeHigh ?? DEFAULT_REP_HIGH
-  const increment = weightIncrement(exercise.equipment, exercise.muscleGroup)
+  const increment = stepFromHistory(weightIncrement(exercise.equipment, exercise.muscleGroup), all)
   const isDumbbellLike = exercise.equipment === 'Dumbbell' || exercise.equipment === 'Kettlebell'
 
   function progress(set: LoggedSet, prevSet: LoggedSet | undefined): { reps: number; weight: number } {
@@ -255,7 +269,8 @@ function suggestHolds(
  * that day's weights suggests those same weights forever and never
  * progresses. The workout's numbers are used only for an exercise you've
  * never logged, and always for holds (a routine's hold/rest timings are
- * its design, not a guess). Either way the workout's set count is kept.
+ * its design, not a guess). A workout with real planned numbers keeps its
+ * set count; one with blank planned sets takes the count from history.
  */
 export function setsForTemplateEntry(
   sessions: WorkoutSession[],
@@ -273,7 +288,11 @@ export function setsForTemplateEntry(
     return applyUnilateralSplit(entry.plannedSets, entry.exerciseName, isUnilateral(sessions, entry.exerciseId, info))
   }
   const suggested = suggestSets(sessions, entry.exerciseId, info)
-  return isDurationBased(exercise?.muscleGroup) ? suggested : applySetsOverride(suggested, entry.plannedSets.length || undefined)
+  // Only a workout with real planned numbers has a deliberate set count.
+  // Blank planned sets (the Plan builder adds ONE per exercise by default)
+  // say nothing about how many sets you do — history's count wins.
+  if (!hasPlan || isDurationBased(exercise?.muscleGroup)) return suggested
+  return applySetsOverride(suggested, entry.plannedSets.length || undefined)
 }
 
 /**
