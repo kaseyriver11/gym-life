@@ -10,7 +10,7 @@ import { isDurationBased } from './muscle-groups'
 import { MuscleMapView } from './MuscleMapView'
 import { MuscleRolePicker } from './MuscleRolePicker'
 import { formatSeconds } from './progress-stats'
-import { isUnilateral, loggedHistory, suggestSets, type SuggestedSet } from './progression'
+import { isUnilateral, loggedHistory, suggestSets, workingRange, type SuggestedSet } from './progression'
 import { estimatedOneRepMax } from './prs'
 
 const ROLE_RANK: Record<MuscleTarget['role'], number> = { primary: 0, secondary: 1, stabilizer: 2 }
@@ -75,6 +75,7 @@ function TodayCard({
   const oneSide = isUnilateral(before, exercise.id, exercise)
   const suggestion = useMemo(() => suggestSets(before, exercise.id, exercise), [before, exercise])
   const last = history.find((h) => h.sided === oneSide) ?? history[0]
+  const range = workingRange(history.filter((h) => h.sided === oneSide), exercise)
 
   // Best estimated 1RM per session, oldest first, for the sparkline.
   const trend = useMemo(
@@ -134,7 +135,15 @@ function TodayCard({
         )}
       </div>
       <div className="border-t border-neutral-800 pt-2">
-        <p className="text-[11px] text-teal-400">Suggested today{oneSide ? ' · one side at a time' : ''}</p>
+        <p className="text-[11px] text-teal-400">
+          Suggested today{oneSide ? ' · one side at a time' : ''}
+          {!timed && (
+            <span className="text-neutral-500">
+              {' '}
+              · {range.low}–{range.high} reps{range.personal ? ' (your usual)' : ''}
+            </span>
+          )}
+        </p>
         <p className="text-sm font-medium text-neutral-100">{setsLine(suggestion, timed)}</p>
       </div>
     </div>

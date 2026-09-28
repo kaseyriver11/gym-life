@@ -80,6 +80,55 @@ function stepFromHistory(defaultStep: number, history: LoggedSession[]): number 
   return weights.every((w) => w % 5 === 0) ? 5 : defaultStep
 }
 
+/** Rep bands a personal range snaps to. Fixed bands, not "your usual ±2":
+ * a range centred on your recent reps moves up as your reps do (12, 13, 14
+ * -> aim for 15, then 16...) and never lets the weight go up. Since the
+ * weight steps up at the top of a band, your usual count stays inside it. */
+const REP_BANDS: [number, number][] = [
+  [1, 5],
+  [6, 9],
+  [10, 14],
+  [15, 20],
+  [21, 30],
+]
+/** Sessions looked at to find your usual rep count. */
+const HABIT_WINDOW = 5
+
+/**
+ * The rep range progression works within. The catalog's range is a
+ * textbook default — if you habitually train the lift outside it (12s on a
+ * lift the catalog calls 6–10), that's your choice, not a miss: the range
+ * becomes the rep band your usual count falls in (10–14 for 12s). Your
+ * usual count is the median working set over your last few sessions, so
+ * one heavy or light day doesn't move it.
+ */
+export function workingRange(
+  history: LoggedSession[],
+  exercise: Pick<ExerciseInfo, 'repRangeLow' | 'repRangeHigh'> = {},
+): { low: number; high: number; personal: boolean } {
+  const low = exercise.repRangeLow ?? DEFAULT_REP_LOW
+  const high = exercise.repRangeHigh ?? DEFAULT_REP_HIGH
+  const reps = history
+    .slice(0, HABIT_WINDOW)
+    .flatMap((h) => h.sets.map((s) => s.reps))
+    .filter((r) => r > 0)
+    .sort((a, b) => a - b)
+  if (reps.length === 0) return { low, high, personal: false }
+  const mid = reps.length / 2
+  const habit = Math.round(reps.length % 2 ? reps[Math.floor(mid)] : (reps[mid - 1] + reps[mid]) / 2)
+  if (habit >= low && habit <= high) return { low, high, personal: false }
+  const band = REP_BANDS.find(([, top]) => habit <= top) ?? [habit - 5, habit + 5]
+  return { low: band[0], high: band[1], personal: true }
+}
+
+/** Reps at `weight` that match the effort of `reps` at `fromWeight`
+ * (same estimated 1RM, Epley). */
+function equivalentReps(fromWeight: number, reps: number, weight: number): number {
+  if (fromWeight <= 0 || weight <= 0) return reps
+  const oneRepMax = fromWeight * (1 + reps / 30)
+  return 30 * (oneRepMax / weight - 1)
+}
+
 function roundToHalf(value: number) {
   return Math.round(value * 2) / 2
 }
@@ -132,6 +181,12 @@ export function isUnilateral(sessions: WorkoutSession[], exerciseId: string, exe
  * (a very high RPE holds the weight; missing the bottom of the range two
  * sessions running triggers a ~10% deload).
  *
+ * Kept deliberately gentle — a nudge on last time, never a different
+ * workout: one rep more, or once you top out the range, one weight step
+ * up with only as many fewer reps as the heavier weight calls for (so
+ * 12x50 becomes about 10x55, not 6x55). The range itself follows how you
+ * actually train the lift (see workingRange).
+ *
  * Each set progresses from the SAME set last time, so a ramp (45, 55, 65)
  * or pyramid keeps its shape instead of collapsing to the first set's
  * weight. One-arm and two-arm sessions of the same exercise are kept apart:
@@ -168,28 +223,37 @@ export function suggestSets(
     return blank(count)
   }
 
-  const repLow = exercise.repRangeLow ?? DEFAULT_REP_LOW
-  const repHigh = exercise.repRangeHigh ?? DEFAULT_REP_HIGH
+  const { low: repLow, high: repHigh } = workingRange(history, exercise)
   const increment = stepFromHistory(weightIncrement(exercise.equipment, exercise.muscleGroup), all)
   const isDumbbellLike = exercise.equipment === 'Dumbbell' || exercise.equipment === 'Kettlebell'
 
   function progress(set: LoggedSet, prevSet: LoggedSet | undefined): { reps: number; weight: number } {
     if (set.reps < repLow) {
-      // Missed the bottom of the range. Twice in a row at this weight =
-      // deload ~10%; once = hold the weight and aim for the bottom again.
-      const missedTwice = !!prevSet && prevSet.reps < repLow && prevSet.weight <= set.weight && increment > 0
+      // Missed the bottom of the range. Twice in a row at the SAME weight =
+      // stuck: deload ~10%. A miss right after moving up in weight (the top
+      // set of a ramp, 8x65 then 9x70) is progress, so hold the weight.
+      const missedTwice = !!prevSet && prevSet.reps < repLow && prevSet.weight === set.weight && increment > 0
       const deload = missedTwice ? roundToHalf(set.weight * 0.9) : set.weight
       return {
         // Land a dumbbell deload on a weight that exists on the rack —
         // unless the logged weight itself wasn't a multiple of 5 (you have
         // finer-grained plates), in which case keep your precision.
         weight: isDumbbellLike && set.weight % 5 === 0 ? Math.round(deload / 5) * 5 : deload,
-        reps: repLow,
+        // Deloaded: back to the bottom of the range. Holding: just one more
+        // rep than last time, not a jump straight to the bottom.
+        reps: missedTwice ? repLow : Math.min(repLow, set.reps + 1),
       }
     }
     const feltBrutal = set.rpe != null && set.rpe >= 9.5
     if (set.reps >= repHigh && increment === 0) return { weight: set.weight, reps: set.reps + 1 } // bodyweight: reps only
-    if (set.reps >= repHigh && !feltBrutal) return { weight: set.weight + increment, reps: repLow }
+    if (set.reps >= repHigh && !feltBrutal) {
+      // One step heavier, a touch harder than last time's effort (+1 rep
+      // over the equal-effort count), never below the range or at/above
+      // last time's reps.
+      const weight = set.weight + increment
+      const reps = Math.round(equivalentReps(set.weight, set.reps, weight)) + 1
+      return { weight, reps: Math.max(repLow, Math.min(set.reps - 1, reps)) }
+    }
     return { weight: set.weight, reps: Math.min(repHigh, set.reps + 1) }
   }
 
