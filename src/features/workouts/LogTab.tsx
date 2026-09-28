@@ -54,6 +54,7 @@ import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
 import {
   applySetsOverride,
   isUnilateral,
+  plannedFromSets,
   setsForTemplateEntry,
   suggestDefaultRpe,
   suggestSets,
@@ -478,14 +479,11 @@ export function LogTab({
         entries: selected.map((ex) => ({
           exerciseId: ex.id,
           exerciseName: ex.name,
-          plannedSets: (isDurationBased(ex.muscleGroup)
-            ? suggestSets(sessions, ex.id, ex)
-            : applySetsOverride(suggestSets(sessions, ex.id, ex), setsCount)
-          ).map((s) => ({
-            reps: s.reps,
-            weight: s.weight,
-            ...(s.durationSeconds ? { durationSeconds: s.durationSeconds } : {}),
-          })),
+          ...plannedFromSets(
+            isDurationBased(ex.muscleGroup)
+              ? suggestSets(sessions, ex.id, ex)
+              : applySetsOverride(suggestSets(sessions, ex.id, ex), setsCount),
+          ),
         })),
         createdAt: now,
         updatedAt: now,
@@ -877,6 +875,18 @@ function SessionEditor({
     () => new Map(exercises.map((ex) => [ex.id, ex])),
     [exercises],
   )
+
+  /** Whether this entry is being done one arm/leg at a time: its own sets
+   * say so once it has any; otherwise its saved workout's choice, then the
+   * exercise-wide one. */
+  function entryIsOneSide(entry: WorkoutExerciseEntry): boolean {
+    if (entry.sets.length > 0) return entry.sets.some((s) => s.side)
+    const info = exercisesById.get(entry.exerciseId)
+    const templateMode = templates
+      .find((t) => t.id === entry.templateId)
+      ?.entries.find((te) => te.exerciseId === entry.exerciseId)?.perSide
+    return isUnilateral(sessions, entry.exerciseId, { ...info, perSide: templateMode ?? info?.perSide })
+  }
   const anySetCompleted = useMemo(
     () => entries.some((e) => e.sets.some((s) => s.completed)),
     [entries],
@@ -2058,6 +2068,7 @@ function SessionEditor({
                   {
                     exerciseId: entry.exerciseId,
                     exerciseName: entry.exerciseName,
+                    perSide: entry.sets.some((s) => s.side),
                     // Blank planned sets: your history drives the numbers
                     // each time (see setsForTemplateEntry).
                     plannedSets: Array.from({ length: Math.max(1, count) }, () => ({ reps: 0, weight: 0 })),
@@ -2113,12 +2124,26 @@ function SessionEditor({
                 </button>
                 {info?.muscleGroup !== 'Cardio' &&
                   (() => {
-                    const oneSide = isUnilateral(sessions, entry.exerciseId, info)
+                    const oneSide = entryIsOneSide(entry)
+                    const template = entry.templateId ? templates.find((t) => t.id === entry.templateId) : undefined
                     return (
                       <button
                         onClick={() => {
                           const nextMode = !oneSide
-                          onSaveNote(entry.exerciseId, { perSide: nextMode })
+                          // From a saved workout: remember the mode for THAT
+                          // workout only, so the same exercise can be
+                          // one-arm in one workout and two-arm in another.
+                          // Otherwise it's the exercise-wide setting.
+                          if (template?.entries.some((te) => te.exerciseId === entry.exerciseId)) {
+                            updateTemplate(template.id, {
+                              entries: template.entries.map((te) =>
+                                te.exerciseId === entry.exerciseId ? { ...te, perSide: nextMode } : te,
+                              ),
+                              updatedAt: Date.now(),
+                            })
+                          } else {
+                            onSaveNote(entry.exerciseId, { perSide: nextMode })
+                          }
                           // Nothing logged yet for this exercise today:
                           // re-suggest its sets in the new mode right away.
                           // Otherwise it applies from next time.
@@ -2380,7 +2405,7 @@ function SessionEditor({
                 equipment: info?.equipment,
                 repRangeLow: info?.repRangeLow,
                 repRangeHigh: info?.repRangeHigh,
-                perSide: info?.perSide,
+                perSide: entryIsOneSide(entry),
                 source: info?.source,
               }}
               sessions={sessions}
@@ -2422,7 +2447,7 @@ function SessionEditor({
               entries: entries.map((e) => ({
                 exerciseId: e.exerciseId,
                 exerciseName: e.exerciseName,
-                plannedSets: e.sets.map((s) => ({ reps: s.reps, weight: s.weight })),
+                ...plannedFromSets(e.sets.map((s) => ({ reps: s.reps, weight: s.weight, side: s.side }))),
               })),
               createdAt: now,
               updatedAt: now,

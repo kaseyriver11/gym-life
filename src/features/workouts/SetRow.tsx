@@ -101,16 +101,23 @@ export function SetRow({
     >
       <button
         type="button"
-        onClick={onToggleComplete}
-        disabled={!hasNumbers}
-        title={set.isEstimate ? 'Did exactly this — mark done' : 'Mark done'}
-        aria-label={`Mark set ${label} done`}
+        onClick={() => {
+          // A done set reopened for editing collapses again once it's
+          // re-marked done — otherwise it stays open and the tap looks
+          // like it did nothing.
+          setExpanded(false)
+          onToggleComplete()
+        }}
+        disabled={!hasNumbers && !set.completed}
+        title={set.completed ? 'Mark not done' : set.isEstimate ? 'Did exactly this — mark done' : 'Mark done'}
+        aria-label={set.completed ? `Mark set ${label} not done` : `Mark set ${label} done`}
         className={clsx(
           'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-semibold tabular-nums transition',
-          isSided ? 'text-teal-300' : 'text-neutral-300',
-          hasNumbers
-            ? 'border-indigo-500/70 hover:bg-indigo-500 hover:text-neutral-950'
-            : 'border-neutral-700 text-neutral-600',
+          set.completed
+            ? 'border-indigo-500 bg-indigo-500 text-neutral-950'
+            : hasNumbers
+              ? clsx('border-indigo-500/70 hover:bg-indigo-500 hover:text-neutral-950', isSided ? 'text-teal-300' : 'text-neutral-300')
+              : 'border-neutral-700 text-neutral-600',
         )}
       >
         {label}

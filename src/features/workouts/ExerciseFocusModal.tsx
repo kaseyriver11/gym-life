@@ -1,6 +1,5 @@
 import clsx from 'clsx'
 import { format, parseISO } from 'date-fns'
-import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Line, LineChart, ResponsiveContainer, YAxis } from 'recharts'
 import { Modal } from '@/components/Modal'
@@ -56,7 +55,8 @@ function setsLine(sets: (WorkoutSet | SuggestedSet)[], timed: boolean): string {
 }
 
 /** Last time, today's suggestion, and the trend — what's actually useful
- * mid-workout, instead of an ever-growing list of every past session. */
+ * mid-workout. The full session-by-session list lives at the bottom of the
+ * view (HistoryList). */
 function TodayCard({
   exercise,
   sessions,
@@ -141,8 +141,57 @@ function TodayCard({
   )
 }
 
+const HISTORY_PAGE = 10
+
+/** Every past session of this exercise, newest first — each set as logged,
+ * so you can see how the numbers actually moved, not just last time. */
+function HistoryList({
+  exercise,
+  sessions,
+  asOfDate,
+}: {
+  exercise: FocusExercise
+  sessions: WorkoutSession[]
+  asOfDate?: string
+}) {
+  const [shown, setShown] = useState(HISTORY_PAGE)
+  const history = useMemo(
+    () => loggedHistory(asOfDate ? sessions.filter((s) => s.date < asOfDate) : sessions, exercise.id),
+    [sessions, asOfDate, exercise.id],
+  )
+  if (history.length === 0) return null
+  const timed = isDurationBased(exercise.muscleGroup)
+
+  return (
+    <div className="rounded-lg border border-neutral-800 bg-neutral-950/50 p-3">
+      <p className="mb-2 text-xs font-medium text-neutral-400">History</p>
+      <ul className="divide-y divide-neutral-800">
+        {history.slice(0, shown).map((h) => (
+          <li key={h.date} className="flex gap-3 py-2 first:pt-0 last:pb-0">
+            <span className="w-14 shrink-0 text-xs tabular-nums text-neutral-500">
+              {format(parseISO(h.date), 'MMM d')}
+              {parseISO(h.date).getFullYear() !== new Date().getFullYear() && (
+                <span className="block text-[10px]">{format(parseISO(h.date), 'yyyy')}</span>
+              )}
+            </span>
+            <span className="min-w-0 flex-1 text-sm tabular-nums text-neutral-200">{setsLine(h.sets, timed)}</span>
+          </li>
+        ))}
+      </ul>
+      {history.length > shown && (
+        <button
+          onClick={() => setShown((n) => n + HISTORY_PAGE)}
+          className="mt-2 text-xs text-indigo-400 hover:underline"
+        >
+          Show more ({history.length - shown} older)
+        </button>
+      )}
+    </div>
+  )
+}
+
 /** "Focus this exercise" view — last time, today's suggestion and trend;
- * form cues; your own cues/notes; and (collapsed) the muscle breakdown.
+ * form cues; your own cues/notes; the muscle breakdown; and full history.
  * All personalization here lives in the user's own exerciseNotes doc,
  * never the shared catalog. */
 export function ExerciseFocusModal({
@@ -163,7 +212,6 @@ export function ExerciseFocusModal({
   const [notes, setNotes] = useState(exercise.notes ?? '')
   const [cues, setCues] = useState(exercise.cues ?? '')
   const [targetMuscles, setTargetMuscles] = useState<MuscleTarget[]>(() => exercise.targetMuscles ?? [])
-  const [showMuscles, setShowMuscles] = useState(false)
   // Catalog exercises can have a demo image bundled at
   // public/exercise-images/<catalog id>.webp — hidden if there isn't one.
   const [imageMissing, setImageMissing] = useState(exercise.source !== 'catalog')
@@ -272,22 +320,13 @@ export function ExerciseFocusModal({
         </div>
 
         <div className="rounded-lg border border-neutral-800">
-          <button
-            onClick={() => setShowMuscles((v) => !v)}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left"
-          >
+          <div className="flex w-full items-center gap-2 px-3 py-2">
             <span className="shrink-0 text-xs font-medium text-neutral-400">Muscles</span>
             <span className="min-w-0 flex-1 truncate text-xs text-neutral-300">
               {primaryNames.length > 0 ? primaryNames.join(', ') : exercise.muscleGroup ?? '—'}
             </span>
-            {showMuscles ? (
-              <ChevronUp size={14} className="shrink-0 text-neutral-500" />
-            ) : (
-              <ChevronDown size={14} className="shrink-0 text-neutral-500" />
-            )}
-          </button>
-          {showMuscles && (
-            <div className="space-y-3 border-t border-neutral-800 p-3">
+          </div>
+          <div className="space-y-3 border-t border-neutral-800 p-3">
               <MuscleMapView data={heatData} size="5rem" unusedLabel="Not worked by this exercise" />
               {exercise.source === 'catalog' ? (
                 <div className="space-y-1">
@@ -314,9 +353,10 @@ export function ExerciseFocusModal({
                   }}
                 />
               )}
-            </div>
-          )}
+          </div>
         </div>
+
+        <HistoryList exercise={exercise} sessions={sessions} asOfDate={asOfDate} />
       </div>
     </Modal>
   )

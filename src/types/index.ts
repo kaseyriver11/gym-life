@@ -229,6 +229,12 @@ export interface WorkoutTemplate {
   entries: {
     exerciseId: ID
     exerciseName: string
+    /** This workout does the exercise one arm/leg at a time (true) or both
+     * together (false) — so the same lift can be one-arm on Push Day #2 and
+     * two-arm on Push Day #1, each suggested from its own history. Unset on
+     * older workouts: falls back to the exercise-wide setting. When true,
+     * plannedSets holds one planned set per left+right PAIR. */
+    perSide?: boolean
     plannedSets: {
       reps: number
       weight: number

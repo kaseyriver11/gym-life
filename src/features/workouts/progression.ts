@@ -277,22 +277,53 @@ export function setsForTemplateEntry(
   entry: {
     exerciseId: string
     exerciseName: string
+    perSide?: boolean
     plannedSets: { reps: number; weight: number; durationSeconds?: number; restAfterSeconds?: number }[]
   },
   exercise: ExerciseInfo | undefined,
 ): (SuggestedSet & { restAfterSeconds?: number })[] {
-  const info = { ...exercise, name: entry.exerciseName }
+  // The workout's own one-arm/two-arm choice wins over the exercise-wide one.
+  const info = { ...exercise, name: entry.exerciseName, perSide: entry.perSide ?? exercise?.perSide }
+  const sided = isUnilateral(sessions, entry.exerciseId, info)
   const hasPlan = entry.plannedSets.some((s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0)
-  const neverLogged = loggedHistory(sessions, entry.exerciseId).length === 0
-  if (hasPlan && (isHoldBased(exercise?.muscleGroup) || neverLogged)) {
-    return applyUnilateralSplit(entry.plannedSets, entry.exerciseName, isUnilateral(sessions, entry.exerciseId, info))
+  const all = loggedHistory(sessions, entry.exerciseId)
+  if (hasPlan && (isHoldBased(exercise?.muscleGroup) || all.length === 0)) {
+    return applyUnilateralSplit(entry.plannedSets, entry.exerciseName, sided)
   }
-  const suggested = suggestSets(sessions, entry.exerciseId, info)
+  const suggested = suggestSets(sessions, entry.exerciseId, { ...info, perSide: sided })
   // Only a workout with real planned numbers has a deliberate set count.
   // Blank planned sets (the Plan builder adds ONE per exercise by default)
   // say nothing about how many sets you do — history's count wins.
   if (!hasPlan || isDurationBased(exercise?.muscleGroup)) return suggested
-  return applySetsOverride(suggested, entry.plannedSets.length || undefined)
+  let count = entry.plannedSets.length
+  // Workouts saved before perSide existed stored each L/R pair as two
+  // planned sets, so 3 pairs came back as 6. If the count is exactly double
+  // the pairs you did last time this way, it's that — not 6 real sets.
+  const lastSame = all.find((h) => h.sided === sided)
+  if (entry.perSide == null && sided && lastSame && count === 2 * Math.ceil(lastSame.sets.length / 2)) {
+    count /= 2
+  }
+  return applySetsOverride(suggested, count || undefined)
+}
+
+/**
+ * A session entry's sets as a saved workout's planned sets — one planned
+ * set per left+right pair for one-limb work (the left side's numbers), with
+ * the mode recorded so starting the workout rebuilds the pairs.
+ */
+export function plannedFromSets(
+  sets: { reps: number; weight: number; side?: 'left' | 'right'; durationSeconds?: number }[],
+): { perSide: boolean; plannedSets: { reps: number; weight: number; durationSeconds?: number }[] } {
+  const perSide = sets.some((s) => s.side)
+  const rows = perSide ? sets.filter((s) => s.side !== 'right') : sets
+  return {
+    perSide,
+    plannedSets: rows.map((s) => ({
+      reps: s.reps,
+      weight: s.weight,
+      ...(s.durationSeconds ? { durationSeconds: s.durationSeconds } : {}),
+    })),
+  }
 }
 
 /**
