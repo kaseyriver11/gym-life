@@ -639,6 +639,20 @@ export function LogTab({
           timerBar={timerBar}
           templates={templates}
           onImportTemplate={importTemplate}
+          onMoveHistory={(fromId, date, to) => {
+            // Re-file that day's sets of one exercise under another — for
+            // sets logged under the wrong exercise. Only that exercise's
+            // entries on that date change.
+            for (const s of sessions.filter((x) => x.date === date)) {
+              if (!s.entries.some((e) => e.exerciseId === fromId)) continue
+              update(s.id, {
+                entries: s.entries.map((e) =>
+                  e.exerciseId === fromId ? { ...e, exerciseId: to.id, exerciseName: to.name } : e,
+                ),
+                updatedAt: Date.now(),
+              })
+            }
+          }}
         />
       )}
 
@@ -769,6 +783,7 @@ function SessionEditor({
   timerBar,
   templates,
   onImportTemplate,
+  onMoveHistory,
 }: {
   session: WorkoutSession
   sessions: WorkoutSession[]
@@ -802,6 +817,7 @@ function SessionEditor({
   /** Imports a saved workout's exercises into whatever's already logged
    * today — same merge as "Add another exercise", just from a template. */
   onImportTemplate: (template: WorkoutTemplate) => void
+  onMoveHistory: (fromExerciseId: string, date: string, to: { id: string; name: string }) => void
 }) {
   const [entries, setEntries] = useState(session.entries)
   const [addingMore, setAddingMore] = useState(false)
@@ -2443,6 +2459,8 @@ function SessionEditor({
               }}
               sessions={sessions}
               asOfDate={session.date}
+              exercises={exercises}
+              onMoveSession={(date, to) => onMoveHistory(entry.exerciseId, date, to)}
               onSaveNote={(data) => onSaveNote(entry.exerciseId, data)}
               onClose={() => setFocusEntryIndex(null)}
             />

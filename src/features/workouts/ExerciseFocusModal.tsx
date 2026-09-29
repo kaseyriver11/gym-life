@@ -5,6 +5,7 @@ import { Line, LineChart, ResponsiveContainer, YAxis } from 'recharts'
 import { Modal } from '@/components/Modal'
 import type { MuscleTarget, WorkoutSession, WorkoutSet } from '@/types'
 import { weightsForExercise } from './body-map'
+import { ComposeWorkoutModal } from './ComposeWorkoutModal'
 import { SCORE_SCALE, type MuscleLoad } from './muscle-heat'
 import { isDurationBased } from './muscle-groups'
 import { MuscleMapView } from './MuscleMapView'
@@ -196,16 +197,23 @@ const HISTORY_PAGE = 10
 
 /** Every past session of this exercise, newest first — each set as logged,
  * so you can see how the numbers actually moved, not just last time. */
+type ExerciseOption = React.ComponentProps<typeof ComposeWorkoutModal>['exercises'][number]
+
 function HistoryList({
   exercise,
   sessions,
   asOfDate,
+  exercises,
+  onMoveSession,
 }: {
   exercise: FocusExercise
   sessions: WorkoutSession[]
   asOfDate?: string
+  exercises?: ExerciseOption[]
+  onMoveSession?: (date: string, to: ExerciseOption) => void
 }) {
   const [shown, setShown] = useState(HISTORY_PAGE)
+  const [moving, setMoving] = useState<LoggedSession | null>(null)
   const history = useMemo(
     () => loggedHistory(asOfDate ? sessions.filter((s) => s.date < asOfDate) : sessions, exercise.id),
     [sessions, asOfDate, exercise.id],
@@ -226,6 +234,15 @@ function HistoryList({
               )}
             </span>
             <span className="min-w-0 flex-1 text-sm tabular-nums text-neutral-200">{setsLine(h.sets, timed)}</span>
+            {onMoveSession && exercises && (
+              <button
+                onClick={() => setMoving(h)}
+                className="shrink-0 self-start text-[11px] text-neutral-500 hover:text-indigo-400"
+                title="Logged under the wrong exercise? Move this day's sets to the right one"
+              >
+                Move
+              </button>
+            )}
           </li>
         ))}
       </ul>
@@ -236,6 +253,20 @@ function HistoryList({
         >
           Show more ({history.length - shown} older)
         </button>
+      )}
+      {moving && exercises && onMoveSession && (
+        <ComposeWorkoutModal
+          title={`Move ${format(parseISO(moving.date), 'MMM d')} (${setsLine(moving.sets, timed)}) to…`}
+          confirmLabel={() => 'Move sets here'}
+          exercises={exercises}
+          excludeIds={new Set([exercise.id])}
+          singleSelect
+          onClose={() => setMoving(null)}
+          onConfirm={(selected) => {
+            if (selected[0]) onMoveSession(moving.date, selected[0])
+            setMoving(null)
+          }}
+        />
       )}
     </div>
   )
@@ -249,11 +280,17 @@ export function ExerciseFocusModal({
   exercise,
   sessions,
   asOfDate,
+  exercises,
+  onMoveSession,
   onSaveNote,
   onClose,
 }: {
   exercise: FocusExercise
   sessions: WorkoutSession[]
+  /** For "Move" on a history row: the exercises it can be moved to, and the
+   * move itself (re-files that day's sets of this exercise under another). */
+  exercises?: ExerciseOption[]
+  onMoveSession?: (date: string, to: ExerciseOption) => void
   /** Suggestions/history are as of this date (the day being logged), so
    * today's own sets don't count as "last time". */
   asOfDate?: string
@@ -407,7 +444,13 @@ export function ExerciseFocusModal({
           </div>
         </div>
 
-        <HistoryList exercise={exercise} sessions={sessions} asOfDate={asOfDate} />
+        <HistoryList
+          exercise={exercise}
+          sessions={sessions}
+          asOfDate={asOfDate}
+          exercises={exercises}
+          onMoveSession={onMoveSession}
+        />
       </div>
     </Modal>
   )

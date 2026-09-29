@@ -33,6 +33,7 @@ import { PILATES_EXERCISES, YOGA_EXERCISES } from './catalog-data/yoga'
 import { EQUIPMENT_ICONS, EQUIPMENT_TYPES, type Equipment } from './equipment'
 import { MuscleMapModal } from './MuscleMapModal'
 import { buildMuscleData } from './muscle-heat'
+import { matchesExerciseSearch } from './exercise-search'
 import { MUSCLE_GROUPS, muscleGroupStyle, type MuscleGroup } from './muscle-groups'
 import { MuscleRolePicker } from './MuscleRolePicker'
 import { RESTRICTION_DURATIONS, isRestricted, restrictedUntilFromMonths, restrictionLabel } from './restrictions'
@@ -208,7 +209,7 @@ function AddExercisePanel({
 
   const query = name.trim().toLowerCase()
   const potentialMatches =
-    query.length >= 2 ? items.filter((ex) => ex.name.toLowerCase().includes(query)) : []
+    query.length >= 2 ? items.filter((ex) => matchesExerciseSearch(ex, query)) : []
 
   return (
     <form
@@ -297,7 +298,7 @@ function SearchExercisePanel({
 
   const filtered = items.filter(
     (ex) =>
-      ex.name.toLowerCase().includes(search.trim().toLowerCase()) &&
+      matchesExerciseSearch(ex, search) &&
       (!groupFilter || ex.muscleGroup === groupFilter) &&
       (!equipmentFilter || ex.equipment === equipmentFilter),
   )

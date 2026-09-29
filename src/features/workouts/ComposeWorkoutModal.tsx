@@ -5,6 +5,7 @@ import { Modal } from '@/components/Modal'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import type { MuscleTarget } from '@/types'
 import { EQUIPMENT_TYPES, type Equipment } from './equipment'
+import { matchesExerciseSearch } from './exercise-search'
 import { MUSCLE_GROUPS, muscleGroupStyle, type MuscleGroup } from './muscle-groups'
 import { MuscleRolePicker } from './MuscleRolePicker'
 
@@ -103,7 +104,7 @@ export function ComposeWorkoutModal({
   )
 
   const filtered = available.filter((ex) => {
-    const matchesSearch = ex.name.toLowerCase().includes(search.toLowerCase())
+    const matchesSearch = matchesExerciseSearch(ex, search)
     const matchesGroup = !groupFilter || ex.muscleGroup === groupFilter
     return matchesSearch && matchesGroup
   })
