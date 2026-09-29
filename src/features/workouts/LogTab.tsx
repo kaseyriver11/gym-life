@@ -69,6 +69,7 @@ import { useAllExercises } from './use-all-exercises'
 import { formatTime, useRestTimer, type RestTimer } from './use-rest-timer'
 import { useSequenceTimer, type SequenceStep } from './use-sequence-timer'
 import { countSets, isSetLogged, sessionSetProgress, useWorkoutSessions } from './use-workout-sessions'
+import { useWorkoutPrefs } from './use-workout-prefs'
 import { useWorkoutTemplates } from './use-workout-templates'
 import { WarmupCalcModal } from './WarmupCalcModal'
 import { WorkoutHistoryModal } from './WorkoutHistoryModal'
@@ -579,8 +580,6 @@ export function LogTab({
 
       <HealthImportBanner />
 
-      {session && <RestTimerBar timer={timer} />}
-
       {showSummary && session && (
         <PostWorkoutSummaryModal
           session={session}
@@ -837,6 +836,7 @@ function SessionEditor({
     null,
   )
   const confirmDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { restTimerAuto, setRestTimerAuto } = useWorkoutPrefs()
 
   function requestRemoveEntry(index: number) {
     if (confirmDeleteEntry === index) {
@@ -1248,7 +1248,7 @@ function SessionEditor({
       patch.rpe = suggestDefaultRpe(set.reps, priorReps, info?.repRangeLow, info?.repRangeHigh)
     }
     updateSet(entryIndex, setIndex, patch)
-    if (nowCompleted && isLastInGroup(entryIndex)) timer.start()
+    if (nowCompleted && restTimerAuto && isLastInGroup(entryIndex)) timer.start()
   }
 
   function focusById(id: string) {
@@ -1765,6 +1765,29 @@ function SessionEditor({
   const currentExercisePosition =
     (currentExerciseIndex === -1 ? entries.length - 1 : currentExerciseIndex) + 1
 
+  /** "Go next" on the rest timer: end the rest and bring your next set
+   * (the first one not yet logged) into view — opening its block if it's
+   * collapsed. */
+  function goToNextSet() {
+    timer.reset()
+    if (currentExerciseIndex === -1) return
+    const entry = entries[currentExerciseIndex]
+    const setIndex = entry.sets.findIndex((s) => !isSetLogged(s))
+    if (entry.blockId && collapsedBlocks.has(entry.blockId)) {
+      setCollapsedBlocks((prev) => {
+        const next = new Set(prev)
+        next.delete(entry.blockId!)
+        return next
+      })
+    }
+    // After the block (if any) has rendered open.
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`reps-${currentExerciseIndex}-${setIndex}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+    )
+  }
+
   return (
     <div className="space-y-3">
       {!session.endedAt && entries.length > 0 && totalSetCount > 0 && (
@@ -1786,6 +1809,16 @@ function SessionEditor({
         </div>
       )}
       {timerBar}
+      {/* Pinned to the top while running, so it's there however far down
+          the workout you scroll. */}
+      <div className={clsx(!timer.idle && 'sticky top-0 z-30 -mx-1 px-1')}>
+        <RestTimerBar
+          timer={timer}
+          autoStart={restTimerAuto}
+          onAutoStartChange={setRestTimerAuto}
+          onGoNext={currentExerciseIndex === -1 ? undefined : goToNextSet}
+        />
+      </div>
       <SequencePlayerBar timer={sequenceTimer} />
       <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={dragUnits.map((u) => u.key)} strategy={verticalListSortingStrategy}>

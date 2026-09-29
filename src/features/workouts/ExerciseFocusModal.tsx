@@ -10,7 +10,14 @@ import { isDurationBased } from './muscle-groups'
 import { MuscleMapView } from './MuscleMapView'
 import { MuscleRolePicker } from './MuscleRolePicker'
 import { formatSeconds } from './progress-stats'
-import { isUnilateral, loggedHistory, suggestSets, workingRange, type SuggestedSet } from './progression'
+import {
+  isUnilateral,
+  loggedHistory,
+  suggestSets,
+  workingRange,
+  type LoggedSession,
+  type SuggestedSet,
+} from './progression'
 import { estimatedOneRepMax } from './prs'
 
 const ROLE_RANK: Record<MuscleTarget['role'], number> = { primary: 0, secondary: 1, stabilizer: 2 }
@@ -54,6 +61,31 @@ function setsLine(sets: (WorkoutSet | SuggestedSet)[], timed: boolean): string {
     .join(', ')
 }
 
+const TYPICAL_WINDOW = 5
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+/** Your typical session over the last few: set by set, the median reps and
+ * weight of that set across sessions (shaped like the most recent one).
+ * Medians, so one odd day doesn't skew it. */
+function typicalSets(history: LoggedSession[]): SuggestedSet[] {
+  const recent = history.slice(0, TYPICAL_WINDOW)
+  if (recent.length < 2) return []
+  return recent[0].sets.map((set, i) => {
+    const same = recent.map((h) => h.sets[i]).filter((s): s is WorkoutSet => !!s)
+    return {
+      reps: Math.round(median(same.map((s) => s.reps))),
+      weight: Math.round(median(same.map((s) => s.weight)) * 2) / 2,
+      durationSeconds: Math.round(median(same.map((s) => s.durationSeconds ?? 0))),
+      ...(set.side ? { side: set.side } : {}),
+    }
+  })
+}
+
 /** Last time, today's suggestion, and the trend — what's actually useful
  * mid-workout. The full session-by-session list lives at the bottom of the
  * view (HistoryList). */
@@ -75,7 +107,9 @@ function TodayCard({
   const oneSide = isUnilateral(before, exercise.id, exercise)
   const suggestion = useMemo(() => suggestSets(before, exercise.id, exercise), [before, exercise])
   const last = history.find((h) => h.sided === oneSide) ?? history[0]
-  const range = workingRange(history.filter((h) => h.sided === oneSide), exercise)
+  const sameWay = useMemo(() => history.filter((h) => h.sided === oneSide), [history, oneSide])
+  const range = workingRange(sameWay, exercise)
+  const typical = useMemo(() => typicalSets(sameWay), [sameWay])
 
   // Best estimated 1RM per session, oldest first, for the sparkline.
   const trend = useMemo(
@@ -110,6 +144,14 @@ function TodayCard({
             Last time · {format(parseISO(last.date), 'MMM d')} · {history.length} session{history.length === 1 ? '' : 's'}
           </p>
           <p className="text-sm text-neutral-200">{setsLine(last.sets, timed)}</p>
+          {typical.length > 0 && (
+            <>
+              <p className="mt-1.5 text-[11px] text-neutral-500">
+                Typical · last {Math.min(TYPICAL_WINDOW, sameWay.length)} sessions
+              </p>
+              <p className="text-sm text-neutral-300">{setsLine(typical, timed)}</p>
+            </>
+          )}
         </div>
         {trend.length >= 2 && (
           <div className="w-24 shrink-0">
