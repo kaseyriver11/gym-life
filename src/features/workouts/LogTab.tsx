@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from '@/components/Modal'
+import { cancelWorkoutIdleReminder, scheduleWorkoutIdleReminder } from '@/lib/notifications'
 import { inputClass, primaryButtonClass } from '@/components/form'
 import { useHealthSnapshots } from '@/features/health/use-health'
 import { useProfile } from '@/features/health/use-profile'
@@ -639,6 +640,10 @@ export function LogTab({
           timerBar={timerBar}
           templates={templates}
           onImportTemplate={importTemplate}
+          onFinishWorkout={() => {
+            update(session.id, { endedAt: Date.now() })
+            setShowSummary(true)
+          }}
           onMoveHistory={(fromId, date, to) => {
             // Re-file that day's sets of one exercise under another — for
             // sets logged under the wrong exercise. Only that exercise's
@@ -717,7 +722,10 @@ export function LogTab({
             setDate(pickedDate)
             setShowHistory(false)
           }}
-          onDelete={(id) => remove(id)}
+          onDelete={(id) => {
+            if (sessions.find((x) => x.id === id)?.date === format(new Date(), 'yyyy-MM-dd')) cancelWorkoutIdleReminder()
+            remove(id)
+          }}
           onClose={() => setShowHistory(false)}
         />
       )}
@@ -783,6 +791,7 @@ function SessionEditor({
   timerBar,
   templates,
   onImportTemplate,
+  onFinishWorkout,
   onMoveHistory,
 }: {
   session: WorkoutSession
@@ -818,6 +827,7 @@ function SessionEditor({
    * today — same merge as "Add another exercise", just from a template. */
   onImportTemplate: (template: WorkoutTemplate) => void
   onMoveHistory: (fromExerciseId: string, date: string, to: { id: string; name: string }) => void
+  onFinishWorkout: () => void
 }) {
   const [entries, setEntries] = useState(session.entries)
   const [addingMore, setAddingMore] = useState(false)
@@ -853,6 +863,28 @@ function SessionEditor({
   )
   const confirmDeleteTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { restTimerAuto, setRestTimerAuto } = useWorkoutPrefs()
+  const [finishPrompt, setFinishPrompt] = useState(false)
+
+  // A workout left mid-way: 5 minutes after the last change to today's
+  // workout, a notification nudges you to finish logging it. Every edit
+  // pushes it back (it replaces the pending one); finishing cancels it.
+  // Scheduled with the OS, so it fires with the app closed or screen off.
+  useEffect(() => {
+    // Browsing another day leaves today's reminder alone.
+    if (session.date !== format(new Date(), 'yyyy-MM-dd')) return
+    if (session.endedAt || entries.length === 0) {
+      cancelWorkoutIdleReminder()
+      return
+    }
+    const { totalSets, loggedSets } = sessionSetProgress({ entries })
+    const left = totalSets - loggedSets
+    scheduleWorkoutIdleReminder(
+      Date.now() + 5 * 60 * 1000,
+      left > 0
+        ? `No sets logged in 5 minutes — ${left} set${left === 1 ? '' : 's'} left. Finish logging your workout.`
+        : 'Every set is logged — tap to finish your workout.',
+    )
+  }, [entries, session.date, session.endedAt])
 
   function requestRemoveEntry(index: number) {
     if (confirmDeleteEntry === index) {
@@ -1130,7 +1162,60 @@ function SessionEditor({
     return { start, end }
   }
 
+  /** Inside a named block, the exercise (or its superset) moves among the
+   * block's own exercises — the block as a whole only moves by dragging
+   * its header. Otherwise "Move up" on any exercise of a saved workout
+   * moved the entire workout, and its exercises couldn't be reordered. */
+  function withinBlockBounds(index: number) {
+    const entry = entries[index]
+    let start = index
+    let end = index
+    if (entry.supersetGroup != null) {
+      const same = (e: WorkoutExerciseEntry) => e.supersetGroup === entry.supersetGroup && e.blockId === entry.blockId
+      while (start > 0 && same(entries[start - 1])) start--
+      while (end < entries.length - 1 && same(entries[end + 1])) end++
+    }
+    return { start, end }
+  }
+
+  function moveWithinBlock(index: number, direction: -1 | 1) {
+    const blockId = entries[index].blockId
+    const { start, end } = withinBlockBounds(index)
+    const neighborIndex = direction === -1 ? start - 1 : end + 1
+    if (entries[neighborIndex]?.blockId !== blockId) return
+    const neighbor = withinBlockBounds(neighborIndex)
+    const moving = entries.slice(start, end + 1)
+    if (direction === -1) {
+      commit([
+        ...entries.slice(0, neighbor.start),
+        ...moving,
+        ...entries.slice(neighbor.start, start),
+        ...entries.slice(end + 1),
+      ])
+    } else {
+      commit([
+        ...entries.slice(0, start),
+        ...entries.slice(end + 1, neighbor.end + 1),
+        ...moving,
+        ...entries.slice(neighbor.end + 1),
+      ])
+    }
+  }
+
+  /** Whether moveWithinBlock / moveEntry can go that way from here. */
+  function canMove(index: number, direction: -1 | 1) {
+    if (entries[index].blockId == null) {
+      return direction === -1 ? index > 0 : index < entries.length - 1
+    }
+    const { start, end } = withinBlockBounds(index)
+    return entries[direction === -1 ? start - 1 : end + 1]?.blockId === entries[index].blockId
+  }
+
   function moveEntry(index: number, direction: -1 | 1) {
+    if (entries[index].blockId != null) {
+      moveWithinBlock(index, direction)
+      return
+    }
     const { start: blockStart, end: blockEnd } = unitBounds(index)
     const movingBlock = entries.slice(blockStart, blockEnd + 1)
 
@@ -1264,6 +1349,20 @@ function SessionEditor({
       patch.rpe = suggestDefaultRpe(set.reps, priorReps, info?.repRangeLow, info?.repRangeHigh)
     }
     updateSet(entryIndex, setIndex, patch)
+    // That was the last set of the whole workout: no rest needed — offer
+    // to finish instead.
+    const workoutDone =
+      nowCompleted &&
+      entries.every((e, i) =>
+        e.sets.every((s, j) =>
+          i === entryIndex && j === setIndex ? isSetLogged({ ...s, ...patch }) : isSetLogged(s),
+        ),
+      )
+    if (workoutDone) {
+      timer.reset()
+      setFinishPrompt(true)
+      return
+    }
     if (nowCompleted && restTimerAuto && isLastInGroup(entryIndex)) timer.start()
   }
 
@@ -2038,6 +2137,29 @@ function SessionEditor({
         />
       )}
 
+      {finishPrompt && !session.endedAt && (
+        <Modal title="Every set is done" onClose={() => setFinishPrompt(false)}>
+          <div className="space-y-2">
+            <p className="text-sm text-neutral-400">That was the last set of today's workout. Finish it now?</p>
+            <button
+              onClick={() => {
+                setFinishPrompt(false)
+                onFinishWorkout()
+              }}
+              className={primaryButtonClass}
+            >
+              Finish workout
+            </button>
+            <button
+              onClick={() => setFinishPrompt(false)}
+              className="w-full rounded-lg py-2.5 text-sm text-neutral-400 hover:bg-neutral-800"
+            >
+              Keep going
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {switchEntryIndex != null && entries[switchEntryIndex] && (
         <ComposeWorkoutModal
           title={`Switch "${entries[switchEntryIndex].exerciseName}"`}
@@ -2247,7 +2369,7 @@ function SessionEditor({
                   </button>
                 )}
                 <button
-                  disabled={idx === 0}
+                  disabled={!canMove(idx, -1)}
                   onClick={() => {
                     moveEntry(idx, -1)
                     setExerciseMenuIndex(null)
@@ -2256,7 +2378,7 @@ function SessionEditor({
                 >
                   <MoveUp size={16} /> Move up
                 </button>
-                {idx > 1 && (
+                {idx > 1 && entry.blockId == null && (
                   <button
                     onClick={() => {
                       moveEntryToTop(idx)
@@ -2268,7 +2390,7 @@ function SessionEditor({
                   </button>
                 )}
                 <button
-                  disabled={idx === entries.length - 1}
+                  disabled={!canMove(idx, 1)}
                   onClick={() => {
                     moveEntry(idx, 1)
                     setExerciseMenuIndex(null)

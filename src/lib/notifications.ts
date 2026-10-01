@@ -163,3 +163,63 @@ export async function cancelRestTimerAlert() {
     // Nothing pending/delivered — fine.
   }
 }
+
+/** Fixed id for the one "finish your workout" reminder that can be pending —
+ * every bit of logging pushes it back by replacing it. */
+const WORKOUT_IDLE_NOTIFICATION_ID = 2147480002
+const WORKOUT_CHANNEL_ID = 'workout'
+
+let workoutChannelReady: Promise<boolean> | null = null
+
+function ensureWorkoutChannel(): Promise<boolean> {
+  workoutChannelReady ??= (async () => {
+    const { display } = await LocalNotifications.requestPermissions()
+    if (display !== 'granted') return false
+    await LocalNotifications.createChannel({
+      id: WORKOUT_CHANNEL_ID,
+      name: 'Workout reminders',
+      description: 'Reminds you to finish logging a workout you stopped logging',
+      importance: 4,
+      vibration: true,
+      visibility: 1,
+    })
+    return true
+  })().catch(() => {
+    workoutChannelReady = null
+    return false
+  })
+  return workoutChannelReady
+}
+
+/** (Re)schedules the "finish logging your workout" reminder for `at`,
+ * replacing any pending one. Native only. */
+export async function scheduleWorkoutIdleReminder(at: number, body: string) {
+  if (!Capacitor.isNativePlatform()) return
+  if (!(await ensureWorkoutChannel())) return
+  try {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: WORKOUT_IDLE_NOTIFICATION_ID,
+          title: 'Still working out?',
+          body,
+          channelId: WORKOUT_CHANNEL_ID,
+          schedule: { at: new Date(at), allowWhileIdle: true },
+          autoCancel: true,
+        },
+      ],
+    })
+  } catch {
+    // Couldn't schedule — the reminder is a nicety, never block logging.
+  }
+}
+
+export async function cancelWorkoutIdleReminder() {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: WORKOUT_IDLE_NOTIFICATION_ID }] })
+    await LocalNotifications.removeDeliveredNotificationsById({ ids: [WORKOUT_IDLE_NOTIFICATION_ID] })
+  } catch {
+    // Nothing pending/delivered — fine.
+  }
+}

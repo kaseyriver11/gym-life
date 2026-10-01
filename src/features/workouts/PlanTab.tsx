@@ -301,6 +301,16 @@ function TemplateBuilder({
     )
   }
 
+  function moveEntry(index: number, direction: -1 | 1) {
+    setEntries((prev) => {
+      const target = index + direction
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
   function removeEntry(exerciseId: string) {
     setEntries((prev) => prev.filter((e) => e.exerciseId !== exerciseId))
   }
@@ -330,12 +340,30 @@ function TemplateBuilder({
             time you did it.
           </p>
           <div className="max-h-72 space-y-2 overflow-y-auto">
-            {entries.map((entry) => (
+            {entries.map((entry, entryIndex) => (
               <div key={entry.exerciseId} className="rounded-lg bg-neutral-800/50 p-2">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span className="truncate text-sm font-medium text-neutral-200">
+                <div className="mb-1.5 flex items-center gap-1">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-200">
                     {entry.exerciseName}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => moveEntry(entryIndex, -1)}
+                    disabled={entryIndex === 0}
+                    className="flex h-7 w-7 items-center justify-center text-neutral-500 hover:text-neutral-200 disabled:opacity-25"
+                    aria-label={`Move ${entry.exerciseName} up`}
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveEntry(entryIndex, 1)}
+                    disabled={entryIndex === entries.length - 1}
+                    className="flex h-7 w-7 items-center justify-center text-neutral-500 hover:text-neutral-200 disabled:opacity-25"
+                    aria-label={`Move ${entry.exerciseName} down`}
+                  >
+                    <ChevronDown size={16} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => removeEntry(entry.exerciseId)}
