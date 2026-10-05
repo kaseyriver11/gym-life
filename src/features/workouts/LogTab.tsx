@@ -55,9 +55,11 @@ import { bestEstimatedOneRepMax, estimatedOneRepMax } from './prs'
 import {
   applySetsOverride,
   isUnilateral,
+  loggedHistory,
   plannedFromSets,
   setsForTemplateEntry,
   suggestDefaultRpe,
+  templateSidedness,
   suggestSets,
   weightIncrement,
   type SuggestedSet,
@@ -502,7 +504,7 @@ export function LogTab({
     const blockId = String(now)
     const newEntries = template.entries.map((entry) => {
       const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
-      const sets = setsForTemplateEntry(sessions, entry, exerciseInfo)
+      const sets = setsForTemplateEntry(sessions, entry, exerciseInfo, template.id)
       return {
         exerciseId: entry.exerciseId,
         exerciseName: entry.exerciseName,
@@ -925,15 +927,63 @@ function SessionEditor({
   )
 
   /** Whether this entry is being done one arm/leg at a time: its own sets
-   * say so once it has any; otherwise its saved workout's choice, then the
-   * exercise-wide one. */
+   * say so once it has any; otherwise its saved workout's choice (or how
+   * you did it last time in that workout), then the exercise-wide one. */
   function entryIsOneSide(entry: WorkoutExerciseEntry): boolean {
     if (entry.sets.length > 0) return entry.sets.some((s) => s.side)
     const info = exercisesById.get(entry.exerciseId)
-    const templateMode = templates
-      .find((t) => t.id === entry.templateId)
-      ?.entries.find((te) => te.exerciseId === entry.exerciseId)?.perSide
+    const templateMode =
+      templates.find((t) => t.id === entry.templateId)?.entries.find((te) => te.exerciseId === entry.exerciseId)
+        ?.perSide ?? templateSidedness(sessions, entry.exerciseId, entry.templateId)
     return isUnilateral(sessions, entry.exerciseId, { ...info, perSide: templateMode ?? info?.perSide })
+  }
+
+  /** Flips an entry between one arm/leg at a time and both together. From a
+   * saved workout it's remembered for THAT workout only, so the same
+   * exercise can be one-arm in one workout and two-arm in another;
+   * otherwise it's the exercise-wide setting. Nothing logged yet for it
+   * today: its sets are re-suggested in the new mode right away (from that
+   * mode's own history); otherwise it applies from next time. */
+  function toggleOneSide(idx: number) {
+    const entry = entries[idx]
+    const info = exercisesById.get(entry.exerciseId)
+    const nextMode = !entryIsOneSide(entry)
+    const template = entry.templateId ? templates.find((t) => t.id === entry.templateId) : undefined
+    if (template?.entries.some((te) => te.exerciseId === entry.exerciseId)) {
+      updateTemplate(template.id, {
+        entries: template.entries.map((te) => (te.exerciseId === entry.exerciseId ? { ...te, perSide: nextMode } : te)),
+        updatedAt: Date.now(),
+      })
+    } else {
+      onSaveNote(entry.exerciseId, { perSide: nextMode })
+    }
+    if (!entry.sets.some(isSetLogged)) {
+      const fresh = suggestSetsFor(entry.exerciseId, { ...info!, perSide: nextMode })
+      commit(
+        entries.map((e, i) =>
+          i === idx
+            ? {
+                ...e,
+                sets: fresh.map((s) => ({
+                  ...s,
+                  completed: false,
+                  isEstimate: s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
+                })),
+              }
+            : e,
+        ),
+      )
+    }
+  }
+
+  /** Exercises you've done both ways get a one-tap switch on their card
+   * (until a set is logged), so a lift that's one-arm in another workout
+   * can be flipped back without digging into the menu. */
+  function showsSideSwitch(entry: WorkoutExerciseEntry): boolean {
+    if (entry.sets.some(isSetLogged)) return false
+    if (isDurationBased(exercisesById.get(entry.exerciseId)?.muscleGroup)) return false
+    const history = loggedHistory(sessions, entry.exerciseId)
+    return history.some((h) => h.sided) && history.some((h) => !h.sided)
   }
   const anySetCompleted = useMemo(
     () => entries.some((e) => e.sets.some((s) => s.completed)),
@@ -1604,6 +1654,34 @@ function SessionEditor({
                     {entry.exerciseName}
                   </p>
                 </button>
+                {showsSideSwitch(entry) &&
+                  (() => {
+                    const oneSide = entryIsOneSide(entry)
+                    return (
+                      <div
+                        className="mt-1 inline-flex rounded-full border border-neutral-700 p-0.5 text-[11px] font-medium"
+                        role="group"
+                        aria-label="One arm at a time or both"
+                      >
+                        {[
+                          { label: 'Both', on: !oneSide },
+                          { label: 'L / R', on: oneSide },
+                        ].map((opt) => (
+                          <button
+                            key={opt.label}
+                            onClick={() => !opt.on && toggleOneSide(entryIndex)}
+                            aria-pressed={opt.on}
+                            className={clsx(
+                              'rounded-full px-2.5 py-0.5 transition',
+                              opt.on ? 'bg-teal-500/20 text-teal-300' : 'text-neutral-500 hover:text-neutral-300',
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 {(info?.muscleGroup || info?.equipment || entry.supersetGroup != null) && (
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     {info?.muscleGroup && (
@@ -2296,45 +2374,10 @@ function SessionEditor({
                 {info?.muscleGroup !== 'Cardio' &&
                   (() => {
                     const oneSide = entryIsOneSide(entry)
-                    const template = entry.templateId ? templates.find((t) => t.id === entry.templateId) : undefined
                     return (
                       <button
                         onClick={() => {
-                          const nextMode = !oneSide
-                          // From a saved workout: remember the mode for THAT
-                          // workout only, so the same exercise can be
-                          // one-arm in one workout and two-arm in another.
-                          // Otherwise it's the exercise-wide setting.
-                          if (template?.entries.some((te) => te.exerciseId === entry.exerciseId)) {
-                            updateTemplate(template.id, {
-                              entries: template.entries.map((te) =>
-                                te.exerciseId === entry.exerciseId ? { ...te, perSide: nextMode } : te,
-                              ),
-                              updatedAt: Date.now(),
-                            })
-                          } else {
-                            onSaveNote(entry.exerciseId, { perSide: nextMode })
-                          }
-                          // Nothing logged yet for this exercise today:
-                          // re-suggest its sets in the new mode right away.
-                          // Otherwise it applies from next time.
-                          if (!entry.sets.some(isSetLogged)) {
-                            const fresh = suggestSetsFor(entry.exerciseId, { ...info!, perSide: nextMode })
-                            commit(
-                              entries.map((e, i) =>
-                                i === idx
-                                  ? {
-                                      ...e,
-                                      sets: fresh.map((s) => ({
-                                        ...s,
-                                        completed: false,
-                                        isEstimate: s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0,
-                                      })),
-                                    }
-                                  : e,
-                              ),
-                            )
-                          }
+                          toggleOneSide(idx)
                           setExerciseMenuIndex(null)
                         }}
                         className={menuItemClass}

@@ -23,7 +23,7 @@ export function useStartTemplate() {
     const blockId = String(now)
     const newEntries = template.entries.map((entry) => {
       const exerciseInfo = exercises.find((ex) => ex.id === entry.exerciseId)
-      const sets = setsForTemplateEntry(sessions, entry, exerciseInfo)
+      const sets = setsForTemplateEntry(sessions, entry, exerciseInfo, template.id)
       return {
         exerciseId: entry.exerciseId,
         exerciseName: entry.exerciseName,

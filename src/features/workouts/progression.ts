@@ -93,6 +93,8 @@ const REP_BANDS: [number, number][] = [
 ]
 /** Sessions looked at to find your usual rep count. */
 const HABIT_WINDOW = 5
+/** Sessions looked at to find your usual set count. */
+const COUNT_WINDOW = 3
 
 /**
  * The rep range progression works within. The catalog's range is a
@@ -175,6 +177,27 @@ export function isUnilateral(sessions: WorkoutSession[], exerciseId: string, exe
   return loggedHistory(sessions, exerciseId)[0]?.sided ?? false
 }
 
+/** How you logged this exercise the last time you did it as part of this
+ * saved workout (one side at a time or not), or undefined if never. Lets a
+ * workout saved before it remembered its own one-arm/two-arm choice follow
+ * its own history instead of whatever another workout did most recently. */
+export function templateSidedness(
+  sessions: WorkoutSession[],
+  exerciseId: string,
+  templateId: string | undefined,
+): boolean | undefined {
+  if (!templateId) return undefined
+  let latest: { date: string; sided: boolean } | undefined
+  for (const session of sessions) {
+    if (latest && session.date <= latest.date) continue
+    const sets = session.entries
+      .filter((e) => e.exerciseId === exerciseId && e.templateId === templateId)
+      .flatMap((e) => e.sets.filter(isSetLogged))
+    if (sets.length > 0) latest = { date: session.date, sided: sets.some((s) => s.side) }
+  }
+  return latest?.sided
+}
+
 /**
  * Suggests this exercise's next sets using double progression (add reps
  * within a target range before adding weight) plus light autoregulation
@@ -191,7 +214,8 @@ export function isUnilateral(sessions: WorkoutSession[], exerciseId: string, exe
  * or pyramid keeps its shape instead of collapsing to the first set's
  * weight. One-arm and two-arm sessions of the same exercise are kept apart:
  * only history logged the same way as today feeds the suggestion (one-arm
- * numbers say little about a two-arm set).
+ * numbers say little about a two-arm set). The set count is your usual one,
+ * not just last time's — see below.
  */
 export function suggestSets(
   sessions: WorkoutSession[],
@@ -257,23 +281,45 @@ export function suggestSets(
     return { weight: set.weight, reps: Math.min(repHigh, set.reps + 1) }
   }
 
-  const [last, prev] = history
+  // How many sets you usually do: the median count over your last few
+  // sessions, so one day where only a set or two got logged (or you cut it
+  // short) doesn't shrink the next suggestion. With two sessions, the
+  // larger. A deliberate change sticks after two sessions.
+  const setCount = (h: LoggedSession) =>
+    h.sided
+      ? Math.max(h.sets.filter((s) => s.side === 'left').length, h.sets.filter((s) => s.side === 'right').length)
+      : h.sets.length
+  const counts = history
+    .slice(0, COUNT_WINDOW)
+    .map(setCount)
+    .sort((a, b) => a - b)
+  const count = counts[Math.floor(counts.length / 2)]
+
+  // Set i progresses off the most recent session that actually has a set i
+  // (and the session before that one, for the stuck/deload check) — so a
+  // missing set comes from your last full day, not from nowhere.
+  function fromHistory(sets: (h: LoggedSession) => LoggedSet[], i: number): [LoggedSet, LoggedSet | undefined] | undefined {
+    const at = history.findIndex((h) => sets(h)[i])
+    if (at < 0) return undefined
+    return [sets(history[at])[i], history[at + 1] ? sets(history[at + 1])[i] : undefined]
+  }
+
   if (!sided) {
-    return last.sets.map((set, i) => progress(set, prev?.sets[i]))
+    const out: SuggestedSet[] = []
+    for (let i = 0; i < count; i++) {
+      const src = fromHistory((h) => h.sets, i)
+      if (src) out.push(progress(...src))
+    }
+    return out
   }
   // One side at a time: each side progresses off its own sets.
-  const bySide = (h: LoggedSession | undefined, side: 'left' | 'right') => h?.sets.filter((s) => s.side === side) ?? []
-  const lastL = bySide(last, 'left')
-  const lastR = bySide(last, 'right')
-  const prevL = bySide(prev, 'left')
-  const prevR = bySide(prev, 'right')
-  const pairs = Math.max(lastL.length, lastR.length)
+  const bySide = (side: 'left' | 'right') => (h: LoggedSession) => h.sets.filter((s) => s.side === side)
   const out: SuggestedSet[] = []
-  for (let i = 0; i < pairs; i++) {
+  for (let i = 0; i < count; i++) {
     // A side skipped that set borrows the other side's numbers.
-    const l = lastL[i] ?? lastR[i]
-    const r = lastR[i] ?? lastL[i]
-    out.push({ ...progress(l, prevL[i]), side: 'left' }, { ...progress(r, prevR[i]), side: 'right' })
+    const l = fromHistory(bySide('left'), i) ?? fromHistory(bySide('right'), i)
+    const r = fromHistory(bySide('right'), i) ?? fromHistory(bySide('left'), i)
+    if (l && r) out.push({ ...progress(...l), side: 'left' }, { ...progress(...r), side: 'right' })
   }
   return out
 }
@@ -345,9 +391,12 @@ export function setsForTemplateEntry(
     plannedSets: { reps: number; weight: number; durationSeconds?: number; restAfterSeconds?: number }[]
   },
   exercise: ExerciseInfo | undefined,
+  templateId?: string,
 ): (SuggestedSet & { restAfterSeconds?: number })[] {
-  // The workout's own one-arm/two-arm choice wins over the exercise-wide one.
-  const info = { ...exercise, name: entry.exerciseName, perSide: entry.perSide ?? exercise?.perSide }
+  // The workout's own one-arm/two-arm choice wins over the exercise-wide
+  // one; unset (older workouts), how you did it last time in this workout.
+  const perSide = entry.perSide ?? templateSidedness(sessions, entry.exerciseId, templateId) ?? exercise?.perSide
+  const info = { ...exercise, name: entry.exerciseName, perSide }
   const sided = isUnilateral(sessions, entry.exerciseId, info)
   const hasPlan = entry.plannedSets.some((s) => s.reps > 0 || s.weight > 0 || (s.durationSeconds ?? 0) > 0)
   const all = loggedHistory(sessions, entry.exerciseId)
