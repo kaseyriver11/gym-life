@@ -24,6 +24,7 @@ import {
   MoveUp,
   NotebookPen,
   NotebookText,
+  Pause,
   Pencil,
   PersonStanding,
   Play,
@@ -65,7 +66,7 @@ import {
   type SuggestedSet,
 } from './progression'
 import { RestTimerBar } from './RestTimerBar'
-import { effectiveDurationSeconds } from './session-time'
+import { effectiveDurationSeconds, pausePatch, resumePatch } from './session-time'
 import { SequencePlayerBar } from './SequencePlayerBar'
 import { SetRow } from './SetRow'
 import { useAllExercises } from './use-all-exercises'
@@ -180,6 +181,7 @@ function formatDuration(totalSeconds: number) {
 function WorkoutTimerBar({
   session,
   onToggle,
+  onPauseToggle,
   onClearDuration,
   onEnableTimer,
   onSetDuration,
@@ -190,6 +192,8 @@ function WorkoutTimerBar({
 }: {
   session: WorkoutSession
   onToggle: () => void
+  /** Pauses the live clock (a break mid-workout), or resumes it. */
+  onPauseToggle: () => void
   /** Clears whatever duration source is active (live clock or a manual
    * entry) without touching any logged sets — back to "nothing timed yet." */
   onClearDuration: () => void
@@ -234,10 +238,15 @@ function WorkoutTimerBar({
   }
 
   useEffect(() => {
-    if (session.endedAt || session.noTimer || session.durationOverrideSeconds != null) return
+    if (session.endedAt || session.noTimer || session.durationOverrideSeconds != null || session.pausedAt != null) return
+    // Tick once right away so a resumed clock doesn't show a stale time.
+    const first = setTimeout(() => setNow(Date.now()), 0)
     const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [session.endedAt, session.noTimer, session.durationOverrideSeconds])
+    return () => {
+      clearTimeout(first)
+      clearInterval(interval)
+    }
+  }, [session.endedAt, session.noTimer, session.durationOverrideSeconds, session.pausedAt])
 
   const effectiveSeconds = effectiveDurationSeconds(session, now)
 
@@ -339,12 +348,32 @@ function WorkoutTimerBar({
       ? estimateSessionCalories(session, exercisesById, weightLbs, profile)
       : null
   const isManual = session.durationOverrideSeconds != null
+  const paused = session.pausedAt != null && !session.endedAt
+  const canPause = !session.endedAt && !isManual
 
   return (
     <div className="flex items-center justify-between rounded-lg bg-neutral-900 px-3 py-2">
-      <span className="flex items-center gap-1.5 text-xs tabular-nums text-neutral-400">
-        <Clock size={13} />
-        {formatDuration(effectiveSeconds)}
+      <span className={clsx('flex items-center gap-1.5 text-xs tabular-nums', paused ? 'text-amber-400' : 'text-neutral-400')}>
+        {canPause ? (
+          <button
+            onClick={onPauseToggle}
+            className={clsx(
+              'flex items-center gap-1 rounded-md px-1.5 py-0.5',
+              paused ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25' : 'hover:bg-neutral-800 hover:text-neutral-200',
+            )}
+            aria-label={paused ? 'Resume workout clock' : 'Pause workout clock'}
+            title={paused ? 'Resume the workout clock' : 'Pause the workout clock — taking a break'}
+          >
+            {paused ? <Play size={12} /> : <Pause size={12} />}
+            {formatDuration(effectiveSeconds)}
+          </button>
+        ) : (
+          <>
+            <Clock size={13} />
+            {formatDuration(effectiveSeconds)}
+          </>
+        )}
+        {paused && <span>&nbsp;· paused</span>}
         {isManual && (
           <span className="text-neutral-600" title="Manually entered, not tracked live">
             *
@@ -538,12 +567,28 @@ export function LogTab({
     <WorkoutTimerBar
       session={session}
       onToggle={() => {
-        const finishing = !session.endedAt
-        update(session.id, { endedAt: session.endedAt ? undefined : Date.now() })
-        if (finishing) setShowSummary(true)
+        const now = Date.now()
+        if (session.endedAt) {
+          // Reopening later shouldn't count the time it sat finished.
+          update(session.id, { endedAt: undefined, pausedMs: (session.pausedMs ?? 0) + Math.max(0, now - session.endedAt) })
+        } else {
+          // Finishing while paused: it ended when the pause began.
+          update(session.id, { endedAt: session.pausedAt ?? now, pausedAt: undefined })
+          setShowSummary(true)
+        }
       }}
+      onPauseToggle={() =>
+        update(session.id, session.pausedAt != null ? resumePatch(session, Date.now()) : pausePatch(Date.now()))
+      }
       onClearDuration={() => update(session.id, { noTimer: true, durationOverrideSeconds: undefined })}
-      onEnableTimer={() => update(session.id, { noTimer: false, durationOverrideSeconds: undefined, createdAt: Date.now() })}
+      onEnableTimer={() => update(session.id, {
+          noTimer: false,
+          durationOverrideSeconds: undefined,
+          createdAt: Date.now(),
+          pausedAt: undefined,
+          pausedMs: undefined,
+        })
+      }
       onSetDuration={(seconds) => update(session.id, { durationOverrideSeconds: seconds })}
       onViewSummary={session.entries.length > 0 ? () => setShowSummary(true) : undefined}
       exercisesById={exercisesById}
@@ -632,7 +677,14 @@ export function LogTab({
           session={session}
           sessions={sessions}
           exercises={exercises}
-          onSave={(entries) => update(session.id, { entries, updatedAt: Date.now() })}
+          onSave={(entries) => {
+            const now = Date.now()
+            // Logging a set while paused means you're back — restart the
+            // clock rather than relying on remembering to hit Resume.
+            const logged = (es: WorkoutExerciseEntry[]) => es.reduce((n, e) => n + e.sets.filter(isSetLogged).length, 0)
+            const back = session.pausedAt != null && logged(entries) > logged(session.entries)
+            update(session.id, { entries, updatedAt: now, ...(back ? resumePatch(session, now) : {}) })
+          }}
           timer={timer}
           onCreateExercise={addExercise}
           onSaveNote={saveNote}
@@ -643,7 +695,7 @@ export function LogTab({
           templates={templates}
           onImportTemplate={importTemplate}
           onFinishWorkout={() => {
-            update(session.id, { endedAt: Date.now() })
+            update(session.id, { endedAt: session.pausedAt ?? Date.now(), pausedAt: undefined })
             setShowSummary(true)
           }}
           onMoveHistory={(fromId, date, to) => {
@@ -874,7 +926,8 @@ function SessionEditor({
   useEffect(() => {
     // Browsing another day leaves today's reminder alone.
     if (session.date !== format(new Date(), 'yyyy-MM-dd')) return
-    if (session.endedAt || entries.length === 0) {
+    // Paused on purpose (a break) — no nagging until you're back.
+    if (session.endedAt || session.pausedAt != null || entries.length === 0) {
       cancelWorkoutIdleReminder()
       return
     }
@@ -886,7 +939,7 @@ function SessionEditor({
         ? `No sets logged in 5 minutes — ${left} set${left === 1 ? '' : 's'} left. Finish logging your workout.`
         : 'Every set is logged — tap to finish your workout.',
     )
-  }, [entries, session.date, session.endedAt])
+  }, [entries, session.date, session.endedAt, session.pausedAt])
 
   function requestRemoveEntry(index: number) {
     if (confirmDeleteEntry === index) {

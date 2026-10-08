@@ -213,6 +213,11 @@ export interface WorkoutSession {
    * doesn't time workouts at all. Always takes priority over the live
    * clock wherever duration is shown or used (calorie estimate included). */
   durationOverrideSeconds?: number
+  /** Set while the workout clock is paused (a break mid-workout — school
+   * run, phone call) to when the pause began. */
+  pausedAt?: number
+  /** Total ms of earlier pauses, left out of the duration. */
+  pausedMs?: number
   createdAt: number
   updatedAt: number
 }

@@ -80,6 +80,35 @@ function stepFromHistory(defaultStep: number, history: LoggedSession[]): number 
   return weights.every((w) => w % 5 === 0) ? 5 : defaultStep
 }
 
+/** Plates a gym actually stocks. A lift where you hold one plate (plate
+ * front raise, Svend press, pinch hold) can only move between these —
+ * nobody owns a 50lb plate, so 45 goes to 55, not 50. */
+const PLATE_LADDER = [2.5, 5, 10, 25, 35, 45, 55]
+
+/** Holding a single plate by hand — "Plate ..." in the name, but not a
+ * plate-loaded machine or barbell, whose totals move in normal steps. */
+function isHandheldPlate(exercise: ExerciseInfo): boolean {
+  return (
+    !!exercise.name &&
+    /\bplate\b/i.test(exercise.name) &&
+    !/plate[\s-]loaded/i.test(exercise.name) &&
+    exercise.equipment !== 'Machine' &&
+    exercise.equipment !== 'Barbell'
+  )
+}
+
+/** The next plate up from `weight`, or undefined if it isn't a plate size
+ * (two stacked plates, say) or is already the biggest. */
+function nextPlate(weight: number): number | undefined {
+  const i = PLATE_LADDER.indexOf(weight)
+  return i >= 0 ? PLATE_LADDER[i + 1] : undefined
+}
+
+/** The biggest plate at or under `weight`. */
+function plateAtOrBelow(weight: number): number {
+  return [...PLATE_LADDER].reverse().find((p) => p <= weight) ?? PLATE_LADDER[0]
+}
+
 /** Rep bands a personal range snaps to. Fixed bands, not "your usual ±2":
  * a range centred on your recent reps moves up as your reps do (12, 13, 14
  * -> aim for 15, then 16...) and never lets the weight go up. Since the
@@ -250,6 +279,7 @@ export function suggestSets(
   const { low: repLow, high: repHigh } = workingRange(history, exercise)
   const increment = stepFromHistory(weightIncrement(exercise.equipment, exercise.muscleGroup), all)
   const isDumbbellLike = exercise.equipment === 'Dumbbell' || exercise.equipment === 'Kettlebell'
+  const handheldPlate = isHandheldPlate(exercise)
 
   function progress(set: LoggedSet, prevSet: LoggedSet | undefined): { reps: number; weight: number } {
     if (set.reps < repLow) {
@@ -261,8 +291,14 @@ export function suggestSets(
       return {
         // Land a dumbbell deload on a weight that exists on the rack —
         // unless the logged weight itself wasn't a multiple of 5 (you have
-        // finer-grained plates), in which case keep your precision.
-        weight: isDumbbellLike && set.weight % 5 === 0 ? Math.round(deload / 5) * 5 : deload,
+        // finer-grained plates), in which case keep your precision. A
+        // single held plate drops to the next plate down.
+        weight:
+          handheldPlate && missedTwice && PLATE_LADDER.includes(set.weight)
+            ? plateAtOrBelow(Math.min(deload, set.weight - 0.5))
+            : isDumbbellLike && set.weight % 5 === 0
+              ? Math.round(deload / 5) * 5
+              : deload,
         // Deloaded: back to the bottom of the range. Holding: just one more
         // rep than last time, not a jump straight to the bottom.
         reps: missedTwice ? repLow : Math.min(repLow, set.reps + 1),
@@ -274,7 +310,11 @@ export function suggestSets(
       // One step heavier, a touch harder than last time's effort (+1 rep
       // over the equal-effort count), never below the range or at/above
       // last time's reps.
-      const weight = set.weight + increment
+      // A held plate jumps to the next real plate (45 -> 55); topped out at
+      // the biggest one, keep adding reps.
+      const onLadder = handheldPlate && PLATE_LADDER.includes(set.weight)
+      if (onLadder && !nextPlate(set.weight)) return { weight: set.weight, reps: set.reps + 1 }
+      const weight = onLadder ? nextPlate(set.weight)! : set.weight + increment
       const reps = Math.round(equivalentReps(set.weight, set.reps, weight)) + 1
       return { weight, reps: Math.max(repLow, Math.min(set.reps - 1, reps)) }
     }
