@@ -471,6 +471,14 @@ export function LogTab({
   const [showHistory, setShowHistory] = useState(false)
   const timer = useRestTimer()
 
+  // Finishing or pausing the workout ends any rest countdown — otherwise its
+  // already-scheduled phone alert still goes off after you've left the gym.
+  const workoutStopped = !!session?.endedAt || session?.pausedAt != null
+  useEffect(() => {
+    if (workoutStopped && timer.mode === 'countdown' && !timer.idle) timer.reset()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on the stop itself
+  }, [workoutStopped])
+
   const autoOpenedRef = useRef(false)
   useEffect(() => {
     // Firestore's session data hasn't necessarily loaded yet on first
