@@ -354,25 +354,24 @@ function WorkoutTimerBar({
   return (
     <div className="flex items-center justify-between rounded-lg bg-neutral-900 px-3 py-2">
       <span className={clsx('flex items-center gap-1.5 text-xs tabular-nums', paused ? 'text-amber-400' : 'text-neutral-400')}>
-        {canPause ? (
+        {canPause && (
           <button
             onClick={onPauseToggle}
             className={clsx(
-              'flex items-center gap-1 rounded-md px-1.5 py-0.5',
-              paused ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25' : 'hover:bg-neutral-800 hover:text-neutral-200',
+              'mr-1 flex items-center gap-1 rounded-md px-2 py-1 font-medium',
+              paused
+                ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                : 'bg-neutral-800 text-neutral-200 hover:bg-neutral-700',
             )}
-            aria-label={paused ? 'Resume workout clock' : 'Pause workout clock'}
+            aria-label={paused ? 'Resume workout' : 'Pause workout'}
             title={paused ? 'Resume the workout clock' : 'Pause the workout clock — taking a break'}
           >
             {paused ? <Play size={12} /> : <Pause size={12} />}
-            {formatDuration(effectiveSeconds)}
+            {paused ? 'Resume' : 'Pause'}
           </button>
-        ) : (
-          <>
-            <Clock size={13} />
-            {formatDuration(effectiveSeconds)}
-          </>
         )}
+        {!canPause && <Clock size={13} />}
+        {formatDuration(effectiveSeconds)}
         {paused && <span>&nbsp;· paused</span>}
         {isManual && (
           <span className="text-neutral-600" title="Manually entered, not tracked live">
@@ -392,7 +391,7 @@ function WorkoutTimerBar({
             className="text-neutral-600"
             title="Rough estimate from MET values, your weight, and time — not a precise measurement. Covers everything logged today, cardio and lifting combined."
           >
-            &nbsp;· ~{calories} cal today
+            &nbsp;· ~{calories} cal<span className="hidden sm:inline"> today</span>
           </span>
         )}
       </span>
