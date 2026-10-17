@@ -278,26 +278,35 @@ export function suggestSets(
 
   const { low: repLow, high: repHigh } = workingRange(history, exercise)
   const increment = stepFromHistory(weightIncrement(exercise.equipment, exercise.muscleGroup), all)
-  const isDumbbellLike = exercise.equipment === 'Dumbbell' || exercise.equipment === 'Kettlebell'
   const handheldPlate = isHandheldPlate(exercise)
 
-  function progress(set: LoggedSet, prevSet: LoggedSet | undefined): { reps: number; weight: number } {
+  function progress(
+    set: LoggedSet,
+    prevSet: LoggedSet | undefined,
+    sessionSets: LoggedSet[],
+  ): { reps: number; weight: number } {
     if (set.reps < repLow) {
       // Missed the bottom of the range. Twice in a row at the SAME weight =
       // stuck: deload ~10%. A miss right after moving up in weight (the top
       // set of a ramp, 8x65 then 9x70) is progress, so hold the weight.
-      const missedTwice = !!prevSet && prevSet.reps < repLow && prevSet.weight === set.weight && increment > 0
+      // So is a heavy set you chose to go up to after hitting the range at
+      // a lighter weight that same day (8x185 then 3x205) — that's a top
+      // set, not a failure, and dropping it below your working sets would
+      // turn the ramp upside down.
+      const heavyTopSet = sessionSets.some((s) => s.weight > 0 && s.weight < set.weight && s.reps >= repLow)
+      const missedTwice =
+        !heavyTopSet && !!prevSet && prevSet.reps < repLow && prevSet.weight === set.weight && increment > 0
       const deload = missedTwice ? roundToHalf(set.weight * 0.9) : set.weight
       return {
-        // Land a dumbbell deload on a weight that exists on the rack —
-        // unless the logged weight itself wasn't a multiple of 5 (you have
-        // finer-grained plates), in which case keep your precision. A
+        // Land a deload on a weight you can actually load — 205 -> 185, not
+        // 184.5 — unless the logged weight itself was off that grid (you
+        // have finer-grained plates), in which case keep your precision. A
         // single held plate drops to the next plate down.
         weight:
           handheldPlate && missedTwice && PLATE_LADDER.includes(set.weight)
             ? plateAtOrBelow(Math.min(deload, set.weight - 0.5))
-            : isDumbbellLike && set.weight % 5 === 0
-              ? Math.round(deload / 5) * 5
+            : increment > 0 && set.weight % increment === 0
+              ? Math.round(deload / increment) * increment
               : deload,
         // Deloaded: back to the bottom of the range. Holding: just one more
         // rep than last time, not a jump straight to the bottom.
@@ -338,10 +347,13 @@ export function suggestSets(
   // Set i progresses off the most recent session that actually has a set i
   // (and the session before that one, for the stuck/deload check) — so a
   // missing set comes from your last full day, not from nowhere.
-  function fromHistory(sets: (h: LoggedSession) => LoggedSet[], i: number): [LoggedSet, LoggedSet | undefined] | undefined {
+  function fromHistory(
+    sets: (h: LoggedSession) => LoggedSet[],
+    i: number,
+  ): [LoggedSet, LoggedSet | undefined, LoggedSet[]] | undefined {
     const at = history.findIndex((h) => sets(h)[i])
     if (at < 0) return undefined
-    return [sets(history[at])[i], history[at + 1] ? sets(history[at + 1])[i] : undefined]
+    return [sets(history[at])[i], history[at + 1] ? sets(history[at + 1])[i] : undefined, sets(history[at])]
   }
 
   if (!sided) {
